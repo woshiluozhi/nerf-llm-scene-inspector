@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 
 from nerf_llm_scene_inspector.utils.paths import utc_timestamp
-from nerf_llm_scene_inspector.utils.shell import CommandResult, require_executable, run_command
+from nerf_llm_scene_inspector.utils.shell import require_executable, run_command
 
 
 NERFSTUDIO_INSTALL_HINT = """Install Nerfstudio:

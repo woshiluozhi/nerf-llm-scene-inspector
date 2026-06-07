@@ -17,6 +17,7 @@ from nerf_llm_scene_inspector.config import load_mapping  # noqa: E402
 from nerf_llm_scene_inspector.evaluation.report import write_project_report  # noqa: E402
 from nerf_llm_scene_inspector.utils.paths import slugify  # noqa: E402
 from nerf_llm_scene_inspector.visualization.make_video import make_mp4_or_gif  # noqa: E402
+from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--backend", choices=["lerf", "opennerf"], default="lerf")
     parser.add_argument("--queries", default="examples/queries_demo.yaml")
     parser.add_argument("--output", default="results/demo_assets")
+    parser.add_argument("--num-views", type=int, default=1)
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -39,7 +41,11 @@ def main() -> int:
     if not queries:
         print("No queries found in query file.", file=sys.stderr)
         return 1
-    backend = LERFBackend(dry_run=args.dry_run) if args.backend == "lerf" else OpenNeRFBackend(dry_run=args.dry_run)
+    backend = (
+        LERFBackend(dry_run=args.dry_run, num_views=args.num_views)
+        if args.backend == "lerf"
+        else OpenNeRFBackend(dry_run=args.dry_run)
+    )
     try:
         backend.load(args.config)
         results = []
@@ -51,6 +57,7 @@ def main() -> int:
         video_path = None
         if overlay_paths:
             video_path = make_mp4_or_gif(overlay_paths, output / "demo_montage.gif")
+        grid_path = _make_query_grid(overlay_paths, output / "query_grid.png")
         query_rows = [
             {
                 "query": result.query,
@@ -74,6 +81,14 @@ def main() -> int:
                 "This report is portfolio-ready but does not claim state-of-the-art performance.",
             ],
         )
+        _write_portfolio_result_card(
+            ROOT / "docs" / "portfolio_result_card.md",
+            scene_name=scene_name,
+            backend=args.backend,
+            num_queries=len(results),
+            grid_path=grid_path,
+            video_path=video_path,
+        )
     except Exception as exc:
         print(f"generate_demo_assets failed: {exc}", file=sys.stderr)
         return 1
@@ -84,12 +99,118 @@ def main() -> int:
         "num_queries": len(results),
         "output": str(output),
         "video": str(video_path) if video_path else None,
+        "query_grid": str(grid_path) if grid_path else None,
         "results": [result.to_dict() for result in results],
     }
     summary_path = output / "demo_summary.json"
     summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(json.dumps(payload, indent=2))
     return 0
+
+
+def _make_query_grid(image_paths: list[Path], output_path: Path, max_columns: int = 2) -> Path | None:
+    existing = [path for path in image_paths if path.exists()]
+    if not existing:
+        return None
+    thumbs = []
+    target_width = 720
+    for path in existing:
+        image = Image.open(path).convert("RGB")
+        scale = target_width / image.width
+        thumb = image.resize((target_width, int(image.height * scale)))
+        thumbs.append((path, thumb))
+
+    columns = min(max_columns, len(thumbs))
+    rows = (len(thumbs) + columns - 1) // columns
+    cell_w = target_width
+    cell_h = max(image.height for _path, image in thumbs) + 34
+    canvas = Image.new("RGB", (columns * cell_w, rows * cell_h), color=(248, 248, 248))
+    draw = ImageDraw.Draw(canvas)
+    font = ImageFont.load_default()
+    for index, (path, image) in enumerate(thumbs):
+        col = index % columns
+        row = index // columns
+        x = col * cell_w
+        y = row * cell_h
+        label = path.parent.name.replace("_", " ")
+        draw.text((x + 10, y + 10), label[:80], fill=(20, 20, 20), font=font)
+        canvas.paste(image, (x, y + 34))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(output_path)
+    return output_path
+
+
+def _write_portfolio_result_card(
+    path: Path,
+    *,
+    scene_name: str,
+    backend: str,
+    num_queries: int,
+    grid_path: Path | None,
+    video_path: Path | None,
+) -> None:
+    lines = [
+        "# NeRF-LLM Scene Inspector: Portfolio Result Card",
+        "",
+        "NeRF-LLM Scene Inspector is a research engineering project that connects",
+        "Nerfstudio-style scene reconstruction with LERF-style language-field querying.",
+        "It demonstrates how phone video or images can be converted into a 3D scene",
+        "representation that supports open-vocabulary text queries and structured reports.",
+        "The current checked-in demo is synthetic dry-run output; real results require",
+        "a trained semantic field and an NVIDIA GPU environment.",
+        "",
+        "## Architecture",
+        "",
+        "- Nerfstudio data processing and baseline NeRF training wrappers.",
+        "- LERF primary backend with OpenNeRF secondary adapter.",
+        "- Deterministic local query planner for object, affordance, material, and relation prompts.",
+        "- Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.",
+        "",
+        "## Implemented",
+        "",
+        f"- Scene name: `{scene_name}`",
+        f"- Backend: `{backend}`",
+        f"- Demo queries generated: `{num_queries}`",
+        "- CPU-only dry-run demo with mock RGB/relevancy/overlay outputs.",
+        "- Real-mode wrappers for Nerfstudio/LERF commands when upstream tools are installed.",
+        "",
+        "## Dry-Run vs Real GPU Mode",
+        "",
+        "- Dry-run mode validates pipeline structure and produces synthetic visual artifacts.",
+        "- Real mode runs Nerfstudio processing/training and attempts LERF internal relevancy rendering.",
+        "- Viewer fallback artifacts are generated when upstream internals are incompatible.",
+        "",
+        "## Reproduce",
+        "",
+        "```bash",
+        "python -m pip install -e \".[dev,video]\"",
+        "python scripts/run_dry_run_demo.py",
+        "```",
+        "",
+        "## Outputs",
+        "",
+        f"- Query grid: `{grid_path}`" if grid_path else "- Query grid: not generated",
+        f"- Demo montage: `{video_path}`" if video_path else "- Demo montage: not generated",
+        "- Evaluation summary: `results/evaluation/eval_summary.json`",
+        "- Qualitative report: `results/evaluation/qualitative_report.md`",
+        "",
+        "## Limitations",
+        "",
+        "- This is not a new NeRF architecture or state-of-the-art segmentation model.",
+        "- Dry-run outputs are synthetic and should not be interpreted as scene understanding results.",
+        "- Real LERF quality depends on capture quality, camera poses, GPU training, and upstream versions.",
+        "",
+        "## CV Bullets",
+        "",
+        "- Built a reproducible open-vocabulary 3D scene inspection system using Nerfstudio-style reconstruction and LERF-style language-field querying.",
+        "- Implemented deterministic query planning, semantic relevancy artifacts, spatial/evaluation utilities, and CPU-only dry-run demos.",
+        "",
+        "## Cold-Email Paragraph",
+        "",
+        "I built NeRF-LLM Scene Inspector as a research engineering project connecting NeRF reconstruction, language-embedded radiance fields, and natural-language scene querying. The project focuses on reproducible wrappers, typed artifacts, visualization, and lightweight evaluation rather than claiming algorithmic novelty. I am interested in extending this kind of system toward embodied AI and physical scene understanding.",
+    ]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

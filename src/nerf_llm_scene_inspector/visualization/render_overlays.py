@@ -62,6 +62,7 @@ def create_mock_rgb_and_heatmap(
     output_dir: str | Path,
     *,
     query: str,
+    view_id: str = "view_0000",
     width: int = 512,
     height: int = 384,
 ) -> tuple[Path, Path, Path]:
@@ -74,15 +75,16 @@ def create_mock_rgb_and_heatmap(
     rgb_array[..., 0] = np.clip(70 + x / width * 100, 0, 255)
     rgb_array[..., 1] = np.clip(90 + y / height * 90, 0, 255)
     rgb_array[..., 2] = 150
-    cx = width * (0.35 + (len(query) % 5) * 0.07)
-    cy = height * (0.35 + (len(query) % 3) * 0.09)
+    view_offset = sum(ord(ch) for ch in view_id) % 17
+    cx = width * (0.28 + ((len(query) + view_offset) % 6) * 0.08)
+    cy = height * (0.30 + ((len(query) + view_offset) % 4) * 0.10)
     sigma = min(width, height) * 0.16
     scores = np.exp(-(((x - cx) ** 2 + (y - cy) ** 2) / (2 * sigma * sigma)))
     rgb = Image.fromarray(rgb_array, mode="RGB")
     heatmap = heatmap_from_scores(scores)
-    rgb_path = directory / "view_0000_rgb.png"
-    heatmap_path = directory / "view_0000_relevancy.png"
-    overlay_path = directory / "view_0000_overlay.png"
+    rgb_path = directory / f"{view_id}_rgb.png"
+    heatmap_path = directory / f"{view_id}_relevancy.png"
+    overlay_path = directory / f"{view_id}_overlay.png"
     rgb.save(rgb_path)
     heatmap.save(heatmap_path)
     create_side_by_side_overlay(
@@ -90,7 +92,7 @@ def create_mock_rgb_and_heatmap(
         heatmap_path,
         overlay_path,
         query=query,
-        caption=f"Dry-run query: {query}",
+        caption=f"Dry-run query: {query} | {view_id}",
     )
     return rgb_path, heatmap_path, overlay_path
 

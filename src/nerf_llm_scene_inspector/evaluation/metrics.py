@@ -13,6 +13,25 @@ BBox = tuple[float, float, float, float]
 def bbox_iou(box_a: BBox, box_b: BBox) -> float:
     """Compute 2D intersection over union for xyxy boxes."""
 
+    intersection = bbox_intersection_area(box_a, box_b)
+    area_a = bbox_area(box_a)
+    area_b = bbox_area(box_b)
+    union = area_a + area_b - intersection
+    if union <= 0:
+        return 0.0
+    return intersection / union
+
+
+def bbox_area(box: BBox) -> float:
+    """Return non-negative xyxy box area."""
+
+    x1, y1, x2, y2 = box
+    return max(0.0, x2 - x1) * max(0.0, y2 - y1)
+
+
+def bbox_intersection_area(box_a: BBox, box_b: BBox) -> float:
+    """Return intersection area for xyxy boxes."""
+
     ax1, ay1, ax2, ay2 = box_a
     bx1, by1, bx2, by2 = box_b
     inter_x1 = max(ax1, bx1)
@@ -21,13 +40,31 @@ def bbox_iou(box_a: BBox, box_b: BBox) -> float:
     inter_y2 = min(ay2, by2)
     inter_w = max(0.0, inter_x2 - inter_x1)
     inter_h = max(0.0, inter_y2 - inter_y1)
-    intersection = inter_w * inter_h
-    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
-    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
-    union = area_a + area_b - intersection
-    if union <= 0:
+    return inter_w * inter_h
+
+
+def bbox_center(box: BBox) -> tuple[float, float]:
+    """Return xy center for an xyxy box."""
+
+    x1, y1, x2, y2 = box
+    return (x1 + x2) / 2.0, (y1 + y2) / 2.0
+
+
+def bbox_center_distance(box_a: BBox, box_b: BBox) -> float:
+    """Return Euclidean center distance for two boxes."""
+
+    ax, ay = bbox_center(box_a)
+    bx, by = bbox_center(box_b)
+    return ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5
+
+
+def containment_ratio(inner: BBox, outer: BBox) -> float:
+    """Return fraction of inner box area covered by outer box."""
+
+    inner_area = bbox_area(inner)
+    if inner_area <= 0:
         return 0.0
-    return intersection / union
+    return bbox_intersection_area(inner, outer) / inner_area
 
 
 def topk_localization_hit(

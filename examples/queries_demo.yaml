@@ -2,9 +2,9 @@ scene_name: desk_scene
 queries:
   - mug
   - laptop
-  - coffee
+  - objects that can hold water
+  - safe place to put a hot cup
   - metallic tools
-  - container
 tasks:
   - Find objects related to making coffee.
   - Where is the safest place to put a hot cup?

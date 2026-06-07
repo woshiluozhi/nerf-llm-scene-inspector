@@ -29,6 +29,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prefer-llm", action="store_true", help="Use optional LLM planner when configured.")
     parser.add_argument("--exact-query", action="store_true", help="Run the query text directly without expansion.")
     parser.add_argument("--dry-run", action="store_true", help="Create mock query artifacts.")
+    parser.add_argument("--num-views", type=int, default=1, help="Number of camera views to render per query.")
+    parser.add_argument(
+        "--render-output-names",
+        default="rgb,relevancy_0,composited_0",
+        help="Comma-separated backend render outputs to request/save.",
+    )
+    parser.add_argument(
+        "--save-manual-template",
+        action="store_true",
+        help="Write a manual QueryResult template when backend rendering falls back.",
+    )
+    parser.add_argument(
+        "--strict-backend",
+        action="store_true",
+        help="Fail instead of writing viewer fallback artifacts when automated rendering fails.",
+    )
     return parser
 
 
@@ -36,7 +52,20 @@ def main() -> int:
     args = build_parser().parse_args()
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
-    backend = LERFBackend(dry_run=args.dry_run) if args.backend == "lerf" else OpenNeRFBackend(dry_run=args.dry_run)
+    render_output_names = [
+        name.strip() for name in args.render_output_names.split(",") if name.strip()
+    ]
+    backend = (
+        LERFBackend(
+            dry_run=args.dry_run,
+            num_views=args.num_views,
+            render_output_names=render_output_names,
+            save_manual_template=args.save_manual_template,
+            strict_backend=args.strict_backend,
+        )
+        if args.backend == "lerf"
+        else OpenNeRFBackend(dry_run=args.dry_run)
+    )
     try:
         backend.load(args.config)
         planner = get_default_planner(prefer_llm=args.prefer_llm)

@@ -16,6 +16,8 @@ env/
 
 # Local data and heavy outputs
 data/
+data/raw/
+data/processed/
 runs/
 outputs/
 wandb/
@@ -23,6 +25,9 @@ viewer_logs/
 *.ckpt
 *.pt
 *.pth
+*.mp4
+*.mov
+*.avi
 
 # Generated artifacts
 results/*

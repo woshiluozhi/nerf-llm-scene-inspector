@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: "NeRF-LLM Scene Inspector"
+message: "If this project helps your research engineering work, cite the repository and the upstream methods it builds on."
+type: software
+authors:
+  - name: "Luo, Zhi"
+repository-code: "https://github.com/woshiluozhi/nerf-llm-scene-inspector"
+license: MIT
+version: "0.1.0"
+date-released: "2026-06-07"
+abstract: "A research engineering portfolio project for open-vocabulary 3D scene inspection using Nerfstudio/LERF-style pipelines, deterministic query planning, visualization, and CPU-safe dry-run evaluation."
+references:
+  - type: software
+    title: "Nerfstudio"
+    url: "https://github.com/nerfstudio-project/nerfstudio"
+  - type: software
+    title: "LERF"
+    url: "https://github.com/kerrj/lerf"
+  - type: software
+    title: "OpenNeRF"
+    url: "https://github.com/opennerf/opennerf"
+  - type: software
+    title: "RelationField"
+    url: "https://github.com/boschresearch/RelationField"

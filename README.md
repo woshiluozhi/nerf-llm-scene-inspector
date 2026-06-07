@@ -12,6 +12,8 @@ The checked-in preview below is generated in dry-run mode, so it is a synthetic 
 
 ![Dry-run query overlay](docs/assets/mug_overlay.png)
 
+![Dry-run multi-query grid](docs/assets/query_grid.png)
+
 ![Dry-run query montage](docs/assets/demo_montage.gif)
 
 ## One-Command Demo
@@ -34,6 +36,32 @@ The project connects four active research areas:
 - Lightweight language planning for semantic and spatial scene questions.
 
 It is designed as a portfolio-quality system rather than a paper novelty claim.
+
+## Research Positioning
+
+- **Neural radiance fields:** Nerfstudio wrappers handle posed data preparation and baseline NeRF training.
+- **Vision-language feature distillation:** LERF-style backends expose CLIP/VLM-aligned relevancy outputs for text prompts.
+- **Open-vocabulary 3D localization:** Queries are not limited to a fixed class set; the system records rendered relevancy artifacts and approximate regions.
+- **LLM-style query planning:** A deterministic local planner expands natural-language tasks into object, material, affordance, and relation prompts without requiring an API.
+- **Embodied AI relevance:** The project explores how persistent scene representations can connect geometry, language, objects, affordances, and physical context.
+
+## Implemented Now
+
+- CPU-safe CLI wrappers for data preparation, baseline training, language-field training, querying, demo generation, evaluation, and environment checks.
+- LERF primary backend with dry-run multi-view artifacts, best-effort internal rendering, strict mode, and manual viewer fallback templates.
+- Optional OpenNeRF adapter scaffold.
+- Typed JSON artifacts for query results and scene reports.
+- Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
+- Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
+- GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
+
+## Not Claimed
+
+- This is not a new NeRF architecture.
+- This is not a state-of-the-art segmentation or detection model.
+- This is not a robotics manipulation policy.
+- Dry-run outputs are synthetic and validate pipeline behavior only.
+- Real LERF quality depends on capture quality, COLMAP poses, GPU training, and upstream Nerfstudio/LERF versions.
 
 ## Architecture
 
@@ -59,6 +87,13 @@ Create a Python environment for the project wrappers:
 ```bash
 cd nerf-llm-scene-inspector
 python -m pip install -e ".[dev,video]"
+```
+
+Check the local environment:
+
+```bash
+python scripts/check_env.py --verbose
+python scripts/check_env.py --json
 ```
 
 Full reconstruction and training require Nerfstudio, LERF, CUDA-compatible PyTorch, Tiny CUDA NN, COLMAP, FFmpeg, and an NVIDIA GPU. The helper script prints a complete setup path:
@@ -96,6 +131,12 @@ ns-train -h
 
 ## End-To-End Workflow
 
+Five-minute CPU-only dry-run demo:
+
+```bash
+python scripts/run_dry_run_demo.py
+```
+
 Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
 ```bash
@@ -113,7 +154,7 @@ Real mode uses the installed upstream tools:
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
-python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs
+python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
 streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
 ```
@@ -133,9 +174,20 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
+- `results/demo_assets/query_grid.png`
+- `results/demo_assets/demo_montage.gif`
 - `results/evaluation/eval_summary.json`
 - `results/evaluation/eval_table.csv`
+- `results/evaluation/qualitative_report.md`
 - `docs/project_report.md`
+- `docs/portfolio_result_card.md`
+
+Portfolio-facing docs:
+
+- [Portfolio result card](docs/portfolio_result_card.md)
+- [CV bullets](docs/cv_bullets.md)
+- [Cold-email paragraphs](docs/cold_email_paragraph.md)
+- [Real scene capture checklist](docs/real_scene_capture_checklist.md)
 
 ## LERF Query Rendering
 
@@ -147,12 +199,28 @@ The tests do not require GPU, Nerfstudio, LERF, or trained checkpoints:
 
 ```bash
 pytest
+python scripts/check_env.py --json
+python scripts/run_dry_run_demo.py
 python scripts/prepare_data.py --help
 python scripts/train_baseline_nerf.py --help
 python scripts/train_language_field.py --help
 python scripts/query_scene.py --help
+python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
+python scripts/export_portfolio_pack.py --help
 ```
+
+If `ruff` is installed:
+
+```bash
+ruff check .
+```
+
+## CV Description
+
+Conservative one-line version:
+
+> Developed a reproducible research engineering project built on Nerfstudio and LERF-style methods for exploring open-vocabulary 3D scene querying from captured images/video.
 
 ## Limitations
 

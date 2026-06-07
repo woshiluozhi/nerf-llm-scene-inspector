@@ -16,19 +16,21 @@ Nerfstudio and LERF and is intended as a reproducible research engineering demo.
 | --- | --- | --- | --- | --- | --- |
 | coffee |  | False | 0.000 | 0.8862745098039215 |  |
 | container |  | False | 0.000 | 0.8862745098039215 |  |
-| laptop | open laptop on the desk | False | 0.358 | 0.8862745098039215 |  |
+| laptop | open laptop on the desk | False | 0.194 | 0.8862745098039215 |  |
 | metallic tools |  | False | 0.000 | 0.8862745098039215 |  |
-| mug | white mug on the desk | False | 0.087 | 0.8862745098039215 |  |
+| mug | white mug on the desk | False | 0.179 | 0.8862745098039215 |  |
+| objects that can hold water |  | False | 0.000 | 0.8862745098039215 |  |
+| safe place to put a hot cup |  | False | 0.000 | 0.8862745098039215 |  |
 
 ## Evaluation Summary
 
 | Metric | Value |
 | --- | --- |
 | top_k_hit_rate | 0.0 |
-| mean_iou_2d | 0.08907884488959275 |
+| mean_iou_2d | 0.053268581137313094 |
 | semantic_success_rate | 0.0 |
 | average_relevancy_score | 0.8862745098039215 |
-| num_evaluated_queries | 5 |
+| num_evaluated_queries | 7 |
 
 ## Notes
 

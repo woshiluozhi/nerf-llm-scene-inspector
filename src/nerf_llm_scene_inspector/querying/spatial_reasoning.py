@@ -7,6 +7,12 @@ from dataclasses import asdict, dataclass
 from typing import Iterable
 
 from nerf_llm_scene_inspector.backends.base import BoundingRegion, Candidate3DPoint, QueryResult
+from nerf_llm_scene_inspector.evaluation.metrics import (
+    bbox_area,
+    bbox_center,
+    bbox_center_distance,
+    containment_ratio,
+)
 
 
 @dataclass
@@ -28,6 +34,55 @@ def rank_candidate_regions(regions: Iterable[BoundingRegion]) -> list[BoundingRe
     """Sort regions by descending score, leaving missing scores last."""
 
     return sorted(regions, key=lambda region: region.score if region.score is not None else -1.0, reverse=True)
+
+
+def rank_by_confidence(regions: Iterable[BoundingRegion]) -> list[BoundingRegion]:
+    """Rank regions by confidence/relevancy score."""
+
+    return rank_candidate_regions(regions)
+
+
+def rank_by_bbox_compactness(regions: Iterable[BoundingRegion]) -> list[BoundingRegion]:
+    """Rank regions by high score and compact 2D area when boxes are available."""
+
+    def compactness(region: BoundingRegion) -> float:
+        score = region.score if region.score is not None else 0.0
+        if region.bbox_2d is None:
+            return score
+        return score / (1.0 + (bbox_area(region.bbox_2d) ** 0.5) / 100.0)
+
+    return sorted(regions, key=compactness, reverse=True)
+
+
+def aggregate_same_label_regions(regions: Iterable[BoundingRegion]) -> list[BoundingRegion]:
+    """Aggregate same-label 2D regions per source view using an enclosing box."""
+
+    grouped: dict[tuple[str, str | None], list[BoundingRegion]] = {}
+    for region in regions:
+        grouped.setdefault((region.label, region.source_view), []).append(region)
+
+    merged: list[BoundingRegion] = []
+    for (label, source_view), group in grouped.items():
+        boxes = [region.bbox_2d for region in group if region.bbox_2d is not None]
+        if not boxes:
+            merged.append(group[0])
+            continue
+        merged.append(
+            BoundingRegion(
+                label=label,
+                score=max((region.score or 0.0 for region in group), default=0.0),
+                coordinate_frame="image",
+                bbox_2d=(
+                    min(box[0] for box in boxes),
+                    min(box[1] for box in boxes),
+                    max(box[2] for box in boxes),
+                    max(box[3] for box in boxes),
+                ),
+                source_view=source_view,
+                notes=f"Aggregated {len(group)} same-label regions.",
+            )
+        )
+    return rank_candidate_regions(merged)
 
 
 def rank_query_results(results: Iterable[QueryResult]) -> list[QueryResult]:
@@ -134,6 +189,28 @@ def support_heuristic(
     return None
 
 
+def image_space_relations(
+    regions: Iterable[BoundingRegion],
+    near_threshold_px: float = 80.0,
+) -> list[SpatialRelation]:
+    """Compute pairwise 2D fallback relations for regions with boxes."""
+
+    region_list = [region for region in regions if region.bbox_2d is not None]
+    relations: list[SpatialRelation] = []
+    for index, source in enumerate(region_list):
+        for target in region_list[index + 1 :]:
+            relations.append(image_space_relation(source, target, near_threshold_px=near_threshold_px))
+            for maybe_relation in (
+                containment_relation(source, target),
+                containment_relation(target, source),
+                image_support_relation(source, target),
+                image_support_relation(target, source),
+            ):
+                if maybe_relation is not None:
+                    relations.append(maybe_relation)
+    return relations
+
+
 def image_space_relation(
     source: BoundingRegion,
     target: BoundingRegion,
@@ -150,11 +227,11 @@ def image_space_relation(
             evidence_type="2d_fallback",
             notes="Missing 2D boxes.",
         )
-    sx, sy = _bbox_center(source.bbox_2d)
-    tx, ty = _bbox_center(target.bbox_2d)
+    sx, sy = bbox_center(source.bbox_2d)
+    tx, ty = bbox_center(target.bbox_2d)
     dx = sx - tx
     dy = sy - ty
-    distance = math.sqrt(dx * dx + dy * dy)
+    distance = bbox_center_distance(source.bbox_2d, target.bbox_2d)
     if abs(dx) > abs(dy):
         relation = "right_of" if dx > 0 else "left_of"
     elif abs(dy) > near_threshold_px:
@@ -173,6 +250,49 @@ def image_space_relation(
     )
 
 
-def _bbox_center(bbox: tuple[float, float, float, float]) -> tuple[float, float]:
-    x1, y1, x2, y2 = bbox
-    return (x1 + x2) / 2.0, (y1 + y2) / 2.0
+def containment_relation(
+    source: BoundingRegion,
+    target: BoundingRegion,
+    threshold: float = 0.65,
+) -> SpatialRelation | None:
+    """Return a 2D fallback containment relation when source is mostly inside target."""
+
+    if source.bbox_2d is None or target.bbox_2d is None:
+        return None
+    ratio = containment_ratio(source.bbox_2d, target.bbox_2d)
+    if ratio < threshold:
+        return None
+    return SpatialRelation(
+        source_label=source.label,
+        target_label=target.label,
+        relation="likely-contained-in",
+        confidence=ratio,
+        evidence_type="2d_fallback",
+        notes="Source box is mostly inside target box; not metric 3D containment.",
+    )
+
+
+def image_support_relation(
+    source: BoundingRegion,
+    target: BoundingRegion,
+    horizontal_overlap_threshold: float = 0.25,
+) -> SpatialRelation | None:
+    """Return a 2D fallback support relation from vertical adjacency and overlap."""
+
+    if source.bbox_2d is None or target.bbox_2d is None:
+        return None
+    sx1, _sy1, sx2, sy2 = source.bbox_2d
+    tx1, ty1, tx2, _ty2 = target.bbox_2d
+    overlap = max(0.0, min(sx2, tx2) - max(sx1, tx1))
+    overlap_ratio = overlap / max(1.0, min(sx2 - sx1, tx2 - tx1))
+    vertical_gap = ty1 - sy2
+    if overlap_ratio < horizontal_overlap_threshold or not (-25.0 <= vertical_gap <= 60.0):
+        return None
+    return SpatialRelation(
+        source_label=source.label,
+        target_label=target.label,
+        relation="likely-supported-by",
+        confidence=min(1.0, overlap_ratio),
+        evidence_type="2d_fallback",
+        notes="Image-space heuristic from vertical adjacency and horizontal overlap.",
+    )

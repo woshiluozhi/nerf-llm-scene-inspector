@@ -6,7 +6,14 @@ import json
 import os
 from typing import Protocol
 
-from nerf_llm_scene_inspector.agent.local_rules import AFFORDANCE_KEYWORDS, CONTAINER_QUERIES
+from nerf_llm_scene_inspector.agent.local_rules import (
+    AFFORDANCE_KEYWORDS,
+    CONTAINER_QUERIES,
+    MATERIAL_QUERIES,
+    NEGATIVE_QUERY_HINTS,
+    SCENE_SEMANTIC_QUERIES,
+    SPATIAL_KEYWORDS,
+)
 from nerf_llm_scene_inspector.agent.prompt_templates import LOCAL_FINAL_TEMPLATE, PLANNER_SYSTEM_PROMPT
 from nerf_llm_scene_inspector.querying.query_types import QueryPlan
 
@@ -27,14 +34,43 @@ class LocalRulePlanner:
         normalized = task.lower().strip()
         primary: list[str] = []
         supporting: list[str] = []
+        negative: list[str] = []
         relations: list[str] = []
         reasoning: list[str] = []
+        confidence = 0.55
 
         for keyword, queries in AFFORDANCE_KEYWORDS.items():
             if keyword in normalized:
                 primary.extend(queries[:4])
                 supporting.extend(queries[4:])
                 reasoning.append(f"Expand '{keyword}' into concrete visual categories.")
+                confidence = max(confidence, 0.75)
+
+        for keyword, queries in MATERIAL_QUERIES.items():
+            if keyword in normalized:
+                primary.extend(queries[:4])
+                reasoning.append(f"Use material prompt expansion for '{keyword}'.")
+                confidence = max(confidence, 0.72)
+
+        for keyword, queries in SCENE_SEMANTIC_QUERIES.items():
+            if keyword in normalized:
+                primary.extend(queries[:4])
+                supporting.extend(queries[4:])
+                reasoning.append(f"Expand scene-level semantic category '{keyword}'.")
+                confidence = max(confidence, 0.78)
+
+        for keyword, (relation, queries) in SPATIAL_KEYWORDS.items():
+            if keyword in normalized:
+                relations.append(relation)
+                primary.extend(queries[:3])
+                supporting.extend(queries[3:])
+                reasoning.append(f"Add spatial relation hypothesis for '{keyword}'.")
+                confidence = max(confidence, 0.70)
+
+        for keyword, queries in NEGATIVE_QUERY_HINTS.items():
+            if keyword in normalized:
+                negative.extend(queries)
+                reasoning.append(f"Track disambiguation/avoidance prompts for '{keyword}'.")
 
         if not primary:
             primary = _extract_query_terms(normalized)
@@ -59,6 +95,7 @@ class LocalRulePlanner:
 
         primary = _merge_preserving_order(primary)
         supporting = [item for item in _merge_preserving_order(supporting) if item not in primary]
+        negative = [item for item in _merge_preserving_order(negative) if item not in primary]
         backend_calls = [
             {"backend": "lerf", "query": query, "top_k": 5, "purpose": "primary"}
             for query in primary
@@ -67,15 +104,22 @@ class LocalRulePlanner:
             {"backend": "lerf", "query": query, "top_k": 5, "purpose": "supporting"}
             for query in supporting
         )
+        backend_calls.extend(
+            {"backend": "lerf", "query": query, "top_k": 5, "purpose": "negative"}
+            for query in negative
+        )
 
         return QueryPlan(
             task=task,
             primary_visual_queries=primary,
             supporting_visual_queries=supporting,
+            negative_visual_queries=negative,
             relation_hypotheses=relations or ["semantic relevancy ranking"],
             recommended_backend_calls=backend_calls,
             final_answer_template=LOCAL_FINAL_TEMPLATE,
             planner_name=self.planner_name,
+            rationale=reasoning,
+            confidence=confidence if primary else 0.2,
             warnings=[] if primary else ["No visual queries were extracted."],
         )
 
@@ -129,6 +173,7 @@ class LLMPlanner:
                 task=task,
                 primary_visual_queries=[str(item) for item in primary],
                 supporting_visual_queries=[str(item) for item in supporting],
+                negative_visual_queries=[str(item) for item in raw.get("negative_visual_queries", [])],
                 relation_hypotheses=[str(item) for item in raw.get("relation_hypotheses", [])],
                 recommended_backend_calls=backend_calls,
                 final_answer_template=str(
@@ -136,6 +181,8 @@ class LLMPlanner:
                     or "Likely relevant scene regions are {items}."
                 ),
                 planner_name=self.planner_name,
+                rationale=[str(item) for item in raw.get("rationale", [])],
+                confidence=float(raw["confidence"]) if raw.get("confidence") is not None else None,
             )
         except Exception as exc:  # pragma: no cover - depends on external API behavior
             plan = self.local.plan(task)
@@ -169,6 +216,12 @@ def _extract_query_terms(text: str) -> list[str]:
         "of",
         "a",
         "an",
+        "could",
+        "can",
+        "please",
+        "show",
+        "me",
+        "side",
     }
     words = [word.strip(" .,?!;:") for word in text.split()]
     terms = [word for word in words if word and word not in stopwords]

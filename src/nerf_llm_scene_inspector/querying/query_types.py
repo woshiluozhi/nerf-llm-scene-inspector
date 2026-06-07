@@ -13,10 +13,13 @@ class QueryPlan:
     task: str
     primary_visual_queries: list[str]
     supporting_visual_queries: list[str] = field(default_factory=list)
+    negative_visual_queries: list[str] = field(default_factory=list)
     relation_hypotheses: list[str] = field(default_factory=list)
     recommended_backend_calls: list[dict[str, Any]] = field(default_factory=list)
     final_answer_template: str = "Likely relevant scene regions are ..."
     planner_name: str = "local_rules"
+    rationale: list[str] = field(default_factory=list)
+    confidence: float | None = None
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:

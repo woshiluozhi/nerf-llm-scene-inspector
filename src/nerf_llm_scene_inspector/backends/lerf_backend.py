@@ -43,6 +43,21 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
 
     backend_name = "lerf"
 
+    def __init__(
+        self,
+        dry_run: bool = False,
+        *,
+        num_views: int = 1,
+        render_output_names: list[str] | None = None,
+        save_manual_template: bool = False,
+        strict_backend: bool = False,
+    ) -> None:
+        super().__init__(dry_run=dry_run)
+        self.num_views = max(1, int(num_views))
+        self.render_output_names = render_output_names or ["rgb", "relevancy_0", "composited_0"]
+        self.save_manual_template = save_manual_template
+        self.strict_backend = strict_backend
+
     def query_text(self, query: str, output_dir: str, top_k: int = 5) -> QueryResult:
         if not self.config_path:
             raise RuntimeError("Call load(config_path) before query_text().")
@@ -74,6 +89,8 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
                 "timestamp": utc_timestamp(),
                 "commands": [self.viewer_command()],
                 "model_config_path": self.config_path,
+                "num_views": self.num_views,
+                "render_output_names": self.render_output_names,
                 "notes": [
                     "LERF positive prompts are set through image_encoder.set_positives.",
                     "Expected LERF render outputs include relevancy_0 and composited_0.",
@@ -94,6 +111,12 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
             if views:
                 return views
         except Exception as exc:  # pragma: no cover - depends on upstream installs
+            if self.strict_backend:
+                raise RuntimeError(
+                    "Automated LERF rendering failed in --strict-backend mode. "
+                    "Verify that Nerfstudio, LERF, checkpoints, and the config path are compatible. "
+                    f"Original error: {exc}"
+                ) from exc
             self.warnings.append(
                 "Automated LERF rendering failed; wrote viewer fallback instructions. "
                 f"Reason: {exc}"
@@ -106,40 +129,51 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
         result.to_json(output / "query_result.json")
 
     def _render_mock(self, query: str, output: Path) -> list[RenderedView]:
-        rgb_path, heatmap_path, overlay_path = create_mock_rgb_and_heatmap(output, query=query)
-        return [
-            RenderedView(
-                path=str(rgb_path),
-                kind="rgb",
+        views: list[RenderedView] = []
+        for index in range(self.num_views):
+            view_id = f"view_{index:04d}"
+            rgb_path, heatmap_path, overlay_path = create_mock_rgb_and_heatmap(
+                output,
                 query=query,
-                caption=f"Dry-run RGB render for '{query}'",
-                camera_id="view_0000",
-                width=512,
-                height=384,
-            ),
-            RenderedView(
-                path=str(heatmap_path),
-                kind="relevancy",
-                query=query,
-                caption=f"Dry-run LERF relevancy for '{query}'",
-                camera_id="view_0000",
-                width=512,
-                height=384,
-                score=1.0,
-            ),
-            RenderedView(
-                path=str(overlay_path),
-                kind="overlay",
-                query=query,
-                caption=f"Dry-run overlay for '{query}'",
-                camera_id="view_0000",
-                width=1536,
-                height=428,
-            ),
-        ]
+                view_id=view_id,
+            )
+            views.extend(
+                [
+                    RenderedView(
+                        path=str(rgb_path),
+                        kind="rgb",
+                        query=query,
+                        caption=f"Dry-run RGB render for '{query}'",
+                        camera_id=view_id,
+                        width=512,
+                        height=384,
+                    ),
+                    RenderedView(
+                        path=str(heatmap_path),
+                        kind="relevancy",
+                        query=query,
+                        caption=f"Dry-run LERF relevancy for '{query}'",
+                        camera_id=view_id,
+                        width=512,
+                        height=384,
+                        score=1.0,
+                    ),
+                    RenderedView(
+                        path=str(overlay_path),
+                        kind="overlay",
+                        query=query,
+                        caption=f"Dry-run overlay for '{query}'",
+                        camera_id=view_id,
+                        width=1536,
+                        height=428,
+                    ),
+                ]
+            )
+        return views
 
     def _write_viewer_fallback(self, query: str, output: Path) -> list[RenderedView]:
         fallback = output / "interactive_viewer_workflow.md"
+        template_path = write_query_report_template(query, self.config_path or "", output)
         fallback.write_text(
             "\n".join(
                 [
@@ -154,8 +188,12 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
                     "Then in the Nerfstudio viewer:",
                     "",
                     f"1. Enter the text prompt: `{query}`",
-                    "2. Select `relevancy_0` or `composited_0` as the output type.",
-                    "3. Save screenshots or camera-path renders into this output directory.",
+                    f"2. Select these render outputs when available: `{', '.join(self.render_output_names)}`.",
+                    f"3. Save screenshots or camera-path renders into: `{output}`",
+                    "4. Name screenshots like `view_0000_rgb.png`, `view_0000_relevancy.png`,",
+                    "   and `view_0000_overlay.png` when possible.",
+                    f"5. Fill or edit this JSON template: `{template_path.name}`.",
+                    "6. Re-run evaluation against the directory containing `query_result.json`.",
                     "",
                     "This fallback is expected for some upstream revisions because LERF documents",
                     "viewer prompt entry and notes that command-line prompt rendering is not a",
@@ -170,6 +208,12 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
                 kind="viewer_fallback",
                 query=query,
                 caption="Interactive LERF viewer workflow",
+            ),
+            RenderedView(
+                path=str(template_path),
+                kind="manual_template",
+                query=query,
+                caption="Manual QueryResult JSON template",
             )
         ]
 
@@ -203,65 +247,21 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
         if hasattr(model, "eval"):
             model.eval()
 
-        camera = _first_eval_camera(pipeline)
-        if hasattr(camera, "to"):
-            device = getattr(model, "device", "cuda" if torch.cuda.is_available() else "cpu")
-            camera = camera.to(device)
-
-        with torch.no_grad():
-            if hasattr(model, "get_outputs_for_camera"):
-                outputs = model.get_outputs_for_camera(camera)
-            else:
-                ray_bundle = camera.generate_rays(camera_indices=0)
-                outputs = model.get_outputs_for_camera_ray_bundle(ray_bundle)
-
-        rgb_path = output / "view_0000_rgb.png"
-        relevancy_path = output / "view_0000_relevancy.png"
-        composited_path = output / "view_0000_composited.png"
-        overlay_path = output / "view_0000_overlay.png"
-
-        _save_tensor_image(outputs["rgb"], rgb_path)
-        if "relevancy_0" not in outputs:
-            raise RuntimeError("LERF outputs did not contain relevancy_0.")
-        _save_tensor_image(outputs["relevancy_0"], relevancy_path)
-        if "composited_0" in outputs:
-            _save_tensor_image(outputs["composited_0"], composited_path)
-        else:
-            create_side_by_side_overlay(rgb_path, relevancy_path, composited_path, query=query)
-        create_side_by_side_overlay(rgb_path, relevancy_path, overlay_path, query=query)
-
-        width, height = Image.open(rgb_path).size
-        overlay_width, overlay_height = Image.open(overlay_path).size
-        return [
-            RenderedView(str(rgb_path), "rgb", query, "RGB render", "view_0000", width, height),
-            RenderedView(
-                str(relevancy_path),
-                "relevancy",
-                query,
-                "LERF relevancy_0 render",
-                "view_0000",
-                width,
-                height,
-            ),
-            RenderedView(
-                str(composited_path),
-                "composited",
-                query,
-                "LERF composited_0 render",
-                "view_0000",
-                width,
-                height,
-            ),
-            RenderedView(
-                str(overlay_path),
-                "overlay",
-                query,
-                "RGB plus relevancy overlay",
-                "view_0000",
-                overlay_width,
-                overlay_height,
-            ),
-        ]
+        cameras = _eval_cameras(pipeline, self.num_views)
+        rendered: list[RenderedView] = []
+        for index, camera in enumerate(cameras):
+            view_id = f"view_{index:04d}"
+            if hasattr(camera, "to"):
+                device = getattr(model, "device", "cuda" if torch.cuda.is_available() else "cpu")
+                camera = camera.to(device)
+            with torch.no_grad():
+                if hasattr(model, "get_outputs_for_camera"):
+                    outputs = model.get_outputs_for_camera(camera)
+                else:
+                    ray_bundle = camera.generate_rays(camera_indices=0)
+                    outputs = model.get_outputs_for_camera_ray_bundle(ray_bundle)
+            rendered.extend(_save_lerf_outputs(outputs, output, query, view_id, self.render_output_names))
+        return rendered
 
 
 def _extract_pipeline(eval_setup_result: Any) -> Any:
@@ -274,7 +274,7 @@ def _extract_pipeline(eval_setup_result: Any) -> Any:
     raise RuntimeError("Could not extract Nerfstudio pipeline from eval_setup result.")
 
 
-def _first_eval_camera(pipeline: Any) -> Any:
+def _eval_cameras(pipeline: Any, num_views: int) -> list[Any]:
     datamanager = getattr(pipeline, "datamanager", None)
     if datamanager is None:
         raise RuntimeError("Loaded pipeline does not expose datamanager.")
@@ -286,10 +286,92 @@ def _first_eval_camera(pipeline: Any) -> Any:
             cameras = loader.cameras
     if cameras is None:
         raise RuntimeError("Could not find eval cameras in the loaded pipeline.")
+    selected: list[Any] = []
+    for index in range(max(1, num_views)):
+        try:
+            selected.append(cameras[index : index + 1])
+        except Exception:
+            try:
+                selected.append(cameras[index])
+            except Exception:
+                break
+    if not selected:
+        raise RuntimeError("No eval cameras were available for rendering.")
+    return selected
+
+
+def _first_eval_camera(pipeline: Any) -> Any:
+    """Backward-compatible helper returning one camera."""
+
     try:
-        return cameras[0:1]
+        return _eval_cameras(pipeline, 1)[0]
     except Exception:
-        return cameras[0]
+        raise
+
+
+def _save_lerf_outputs(
+    outputs: dict[str, Any],
+    output_dir: Path,
+    query: str,
+    view_id: str,
+    output_names: list[str],
+) -> list[RenderedView]:
+    if "rgb" not in outputs:
+        raise RuntimeError("LERF outputs did not contain rgb.")
+    if "relevancy_0" not in outputs:
+        raise RuntimeError("LERF outputs did not contain relevancy_0.")
+
+    rgb_path = output_dir / f"{view_id}_rgb.png"
+    relevancy_path = output_dir / f"{view_id}_relevancy.png"
+    composited_path = output_dir / f"{view_id}_composited.png"
+    overlay_path = output_dir / f"{view_id}_overlay.png"
+
+    _save_tensor_image(outputs["rgb"], rgb_path)
+    _save_tensor_image(outputs["relevancy_0"], relevancy_path)
+    if "composited_0" in outputs and "composited_0" in output_names:
+        _save_tensor_image(outputs["composited_0"], composited_path)
+    else:
+        create_side_by_side_overlay(rgb_path, relevancy_path, composited_path, query=query)
+    create_side_by_side_overlay(rgb_path, relevancy_path, overlay_path, query=query)
+
+    width, height = Image.open(rgb_path).size
+    overlay_width, overlay_height = Image.open(overlay_path).size
+    views = [
+        RenderedView(str(rgb_path), "rgb", query, "RGB render", view_id, width, height),
+        RenderedView(
+            str(relevancy_path),
+            "relevancy",
+            query,
+            "LERF relevancy_0 render",
+            view_id,
+            width,
+            height,
+        ),
+    ]
+    if "composited_0" in output_names:
+        views.append(
+            RenderedView(
+                str(composited_path),
+                "composited",
+                query,
+                "LERF composited_0 render",
+                view_id,
+                width,
+                height,
+            )
+        )
+    views.append(
+        RenderedView(
+            str(overlay_path),
+            "overlay",
+            query,
+            "RGB plus relevancy overlay",
+            view_id,
+            overlay_width,
+            overlay_height,
+        )
+    )
+    return views
 
 
 def _save_tensor_image(tensor: Any, path: Path) -> None:

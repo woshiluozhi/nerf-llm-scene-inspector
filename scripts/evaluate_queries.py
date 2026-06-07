@@ -60,8 +60,10 @@ def main() -> int:
         }
         summary_path = output / "eval_summary.json"
         table_path = output / "eval_table.csv"
+        qualitative_path = output / "qualitative_report.md"
         summary_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
         _write_csv(table_path, rows)
+        _write_qualitative_report(qualitative_path, annotations.scene_name, rows, metrics)
         write_project_report(
             ROOT / "docs" / "project_report.md",
             title="NeRF-LLM Scene Inspector Report",
@@ -80,6 +82,7 @@ def main() -> int:
     print(json.dumps(metrics, indent=2))
     print(f"Wrote {summary_path}")
     print(f"Wrote {table_path}")
+    print(f"Wrote {qualitative_path}")
     return 0
 
 
@@ -124,6 +127,48 @@ def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _write_qualitative_report(
+    path: Path,
+    scene_name: str,
+    rows: list[dict[str, object]],
+    metrics: dict[str, object],
+) -> None:
+    lines = [
+        f"# Qualitative Evaluation Report: {scene_name}",
+        "",
+        "This report summarizes lightweight query evaluation against manual annotations.",
+        "Dry-run outputs validate pipeline wiring only; real scores require trained semantic fields.",
+        "",
+        "## Summary",
+        "",
+        "| Metric | Value |",
+        "| --- | --- |",
+    ]
+    lines.extend(f"| {key} | {value} |" for key, value in metrics.items())
+    lines.extend(
+        [
+            "",
+            "## Query Table",
+            "",
+            "| Query | Target | Top-k Hit | Best IoU | Confidence | Warnings |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in rows:
+        lines.append(
+            "| {query} | {target} | {hit} | {iou:.3f} | {confidence} | {warnings} |".format(
+                query=row.get("query", ""),
+                target=row.get("target_description", ""),
+                hit=row.get("topk_hit", ""),
+                iou=float(row.get("best_iou_2d") or 0.0),
+                confidence=row.get("confidence", ""),
+                warnings=str(row.get("warnings", "")).replace("|", "/"),
+            )
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _mean(values: list[float]) -> float:

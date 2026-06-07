@@ -80,6 +80,8 @@ def main() -> int:
             args.query,
             "--output",
             str(query_dir),
+            "--num-views",
+            "2",
             "--dry-run",
         ]
         demo_command = [
@@ -89,6 +91,8 @@ def main() -> int:
             str(language_dir / "config.yml"),
             "--backend",
             args.backend,
+            "--num-views",
+            "1",
             "--dry-run",
         ]
         eval_command = [
@@ -120,8 +124,11 @@ def main() -> int:
         "outputs": {
             "query_report": str(query_dir / "scene_query_report.json"),
             "demo_gif": str(ROOT / "results" / "demo_assets" / "demo_montage.gif"),
+            "query_grid": str(ROOT / "results" / "demo_assets" / "query_grid.png"),
             "project_report": str(ROOT / "docs" / "project_report.md"),
+            "portfolio_card": str(ROOT / "docs" / "portfolio_result_card.md"),
             "eval_summary": str(ROOT / "results" / "evaluation" / "eval_summary.json"),
+            "qualitative_report": str(ROOT / "results" / "evaluation" / "qualitative_report.md"),
         },
         "steps": steps,
     }
