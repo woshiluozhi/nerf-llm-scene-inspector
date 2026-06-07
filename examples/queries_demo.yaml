@@ -1,0 +1,13 @@
+scene_name: desk_scene
+queries:
+  - mug
+  - laptop
+  - coffee
+  - metallic tools
+  - container
+tasks:
+  - Find objects related to making coffee.
+  - Where is the safest place to put a hot cup?
+  - Find the object that supports the laptop.
+  - Locate metallic tools on the desk.
+  - Which objects are likely containers?

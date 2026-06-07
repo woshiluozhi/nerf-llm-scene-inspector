@@ -1,0 +1,19 @@
+{
+  "scene_name": "desk_scene",
+  "queries": [
+    {
+      "query": "mug",
+      "target_description": "white mug on the desk",
+      "acceptable_views": ["view_0003.png"],
+      "bbox_2d": [120, 90, 220, 210],
+      "notes": "manual annotation"
+    },
+    {
+      "query": "laptop",
+      "target_description": "open laptop on the desk",
+      "acceptable_views": ["view_0001.png", "view_0002.png"],
+      "bbox_2d": [40, 130, 300, 260],
+      "notes": "example annotation for metric testing"
+    }
+  ]
+}

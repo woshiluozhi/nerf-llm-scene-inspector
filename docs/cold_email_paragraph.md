@@ -1,0 +1,3 @@
+# Cold Email Paragraph
+
+I recently built a research engineering project called NeRF-LLM Scene Inspector, which connects Nerfstudio reconstruction, LERF-style language-embedded radiance fields, CLIP/VLM feature distillation, and a lightweight natural-language query planner for open-vocabulary 3D scene inspection. The project is not presented as a new state-of-the-art method; instead, it focuses on a reproducible end-to-end system with data processing, training wrappers, semantic query artifacts, visualization, and lightweight evaluation. I am especially interested in how these tools can support 3D vision, embodied AI, robotics, and physical scene understanding from real captured environments.

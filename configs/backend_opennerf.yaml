@@ -1,0 +1,10 @@
+backend:
+  primary: opennerf
+  supported_variants:
+    - opennerf
+  install_check_command:
+    - ns-train
+    - -h
+notes:
+  - OpenNeRF support is implemented as a secondary adapter and dry-run compatible pipeline.
+  - Exact render hooks can vary by OpenNeRF checkout; use LERF as the default backend for the portfolio demo.

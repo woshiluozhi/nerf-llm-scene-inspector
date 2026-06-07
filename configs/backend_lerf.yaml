@@ -1,0 +1,16 @@
+backend:
+  primary: lerf
+  supported_variants:
+    - lerf
+    - lerf-lite
+    - lerf-big
+  install_check_command:
+    - ns-train
+    - -h
+  viewer_output_names:
+    relevancy: relevancy_0
+    composited: composited_0
+notes:
+  - LERF stores positive text prompts on the image encoder and exposes set_positives.
+  - LERF model outputs include relevancy_0 and composited_0 during evaluation.
+  - Upstream LERF documents viewer-based prompt rendering; this project attempts an internal API render path first.

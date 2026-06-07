@@ -1,0 +1,158 @@
+# NeRF-LLM Scene Inspector
+
+Open-Vocabulary 3D Scene Understanding from Phone Video.
+
+This is a research engineering project built on Nerfstudio and LERF. It reconstructs a real scene from monocular video or images, trains a language-embedded radiance field, and exposes natural-language scene queries with structured artifacts, overlays, and lightweight evaluation. LERF is the primary semantic backend; OpenNeRF is included as an optional secondary adapter.
+
+## Why This Is AI-Relevant
+
+The project connects four active research areas:
+
+- Neural radiance fields and 3D reconstruction.
+- Vision-language feature distillation with CLIP/VLM embeddings.
+- Open-vocabulary object localization in 3D scenes.
+- Lightweight language planning for semantic and spatial scene questions.
+
+It is designed as a portfolio-quality system rather than a paper novelty claim.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A[Phone video or images] --> B[Nerfstudio ns-process-data]
+  B --> C[Posed scene dataset]
+  C --> D[Baseline Nerfacto training]
+  C --> E[LERF language-field training]
+  E --> F[Semantic backend adapter]
+  G[Natural-language task] --> H[LocalRulePlanner or optional LLMPlanner]
+  H --> I[Text queries and relation hypotheses]
+  I --> F
+  F --> J[Relevancy renders and QueryResult JSON]
+  J --> K[Spatial reasoning and aggregation]
+  K --> L[Overlay images, demo video, report, evaluation]
+```
+
+## Installation
+
+Create a Python environment for the project wrappers:
+
+```bash
+cd nerf-llm-scene-inspector
+python -m pip install -e ".[dev,video]"
+```
+
+Full reconstruction and training require Nerfstudio, LERF, CUDA-compatible PyTorch, Tiny CUDA NN, COLMAP, FFmpeg, and an NVIDIA GPU. The helper script prints a complete setup path:
+
+```bash
+bash scripts/setup_env.sh
+```
+
+Core upstream install commands:
+
+```bash
+conda create -n nerf-llm-scene-inspector python=3.10 -y
+conda activate nerf-llm-scene-inspector
+python -m pip install --upgrade pip
+python -m pip install nerfstudio
+ns-install-cli
+
+git clone https://github.com/kerrj/lerf
+cd lerf
+python -m pip install -e .
+ns-install-cli
+ns-train -h
+```
+
+`ns-train -h` should list `lerf`, `lerf-lite`, and `lerf-big`.
+
+## Phone Video Capture Advice
+
+- Move slowly with high frame overlap.
+- Keep the scene static.
+- Avoid motion blur and reflective-only surfaces.
+- Use good, even lighting.
+- Capture from multiple heights and angles.
+- Prefer 30 to 90 seconds for a small desk-scale scene.
+
+## End-To-End Workflow
+
+Dry-run mode creates mock metadata and artifacts without requiring a GPU:
+
+```bash
+python scripts/prepare_data.py --input examples --output data/processed/desk_scene --type images --dry-run
+python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene --dry-run
+python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
+python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
+python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.yml --backend lerf --dry-run
+python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs --dry-run
+```
+
+Real mode uses the installed upstream tools:
+
+```bash
+python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
+python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
+python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
+python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs
+streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
+python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
+```
+
+Launch the Nerfstudio viewer for a trained run:
+
+```bash
+ns-viewer --load-config path/to/config.yml
+```
+
+For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composited_0`.
+
+## Expected Outputs
+
+- `data/processed/<scene>/transforms.json`
+- `data/processed/<scene>/scene_inspector_metadata.json`
+- `results/<run_name>/train_summary.json`
+- `results/query_outputs/<query_id>/query_result.json`
+- Overlay images combining RGB render, relevancy heatmap, and query caption.
+- `results/evaluation/eval_summary.json`
+- `results/evaluation/eval_table.csv`
+- `docs/project_report.md`
+
+## LERF Query Rendering
+
+Upstream LERF stores positive prompts on the image encoder through `set_positives(...)` and renders `relevancy_0`/`composited_0` outputs in evaluation. This project attempts to load a trained config through Nerfstudio/LERF internals, set the prompt programmatically, and save the rendered outputs. If installed versions expose incompatible internal APIs, the CLI falls back to a structured query report and viewer workflow.
+
+## Testing
+
+The tests do not require GPU, Nerfstudio, LERF, or trained checkpoints:
+
+```bash
+pytest
+python scripts/prepare_data.py --help
+python scripts/train_baseline_nerf.py --help
+python scripts/train_language_field.py --help
+python scripts/query_scene.py --help
+python scripts/evaluate_queries.py --help
+```
+
+## Limitations
+
+- Automated LERF rendering depends on Nerfstudio/LERF internal APIs that may vary across versions.
+- Dry-run artifacts are synthetic and only verify pipeline behavior.
+- 3D point localization is approximate unless the backend exposes sampled 3D positions.
+- Spatial reasoning is heuristic and reports when it falls back to 2D image-space evidence.
+- OpenNeRF support is secondary and may require adapter updates for a specific checkout.
+
+## Future Work
+
+- Harden the OpenNeRF backend for multiple repository revisions.
+- Add RelationField-style relation prediction for support, containment, and interaction queries.
+- Connect query results to robotics manipulation policies.
+- Support lifelong semantic scene updates across repeated captures.
+- Add Gaussian splatting acceleration for faster rendering and interaction.
+
+## Upstream Repositories
+
+- Nerfstudio: https://github.com/nerfstudio-project/nerfstudio
+- LERF: https://github.com/kerrj/lerf
+- OpenNeRF: https://github.com/opennerf/opennerf
+- RelationField reference: https://github.com/boschresearch/RelationField

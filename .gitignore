@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Local data and heavy outputs
+data/
+runs/
+outputs/
+wandb/
+viewer_logs/
+*.ckpt
+*.pt
+*.pth
+
+# Generated artifacts
+results/*
+!results/.gitkeep
+docs/generated/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

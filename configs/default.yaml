@@ -1,0 +1,15 @@
+project_name: nerf-llm-scene-inspector
+scene_name: desk_scene
+backend:
+  primary: lerf
+  language_variant: lerf-lite
+  opennerf_enabled: false
+runtime:
+  dry_run: true
+  data_dir: data/processed
+  runs_dir: runs
+  results_dir: results
+query:
+  top_k: 5
+  render_height: 512
+  render_width: 512
