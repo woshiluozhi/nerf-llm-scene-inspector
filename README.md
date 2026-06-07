@@ -4,6 +4,26 @@ Open-Vocabulary 3D Scene Understanding from Phone Video.
 
 This is a research engineering project built on Nerfstudio and LERF. It reconstructs a real scene from monocular video or images, trains a language-embedded radiance field, and exposes natural-language scene queries with structured artifacts, overlays, and lightweight evaluation. LERF is the primary semantic backend; OpenNeRF is included as an optional secondary adapter.
 
+![CI](https://github.com/woshiluozhi/nerf-llm-scene-inspector/actions/workflows/ci.yml/badge.svg)
+
+## Demo Preview
+
+The checked-in preview below is generated in dry-run mode, so it is a synthetic visualization rather than a trained LERF result. It shows the exact artifact shape the real pipeline produces: RGB render, text-query relevancy heatmap, and an overlay panel.
+
+![Dry-run query overlay](docs/assets/mug_overlay.png)
+
+![Dry-run query montage](docs/assets/demo_montage.gif)
+
+## One-Command Demo
+
+Run the full GPU-free smoke demo:
+
+```bash
+python scripts/run_dry_run_demo.py
+```
+
+This creates mock Nerfstudio data, mock training summaries, semantic query overlays, a GIF montage, evaluation JSON/CSV, and an updated project report. Full real-scene training still requires Nerfstudio, LERF, CUDA-compatible PyTorch, COLMAP, FFmpeg, and an NVIDIA GPU.
+
 ## Why This Is AI-Relevant
 
 The project connects four active research areas:
@@ -84,7 +104,7 @@ python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method 
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
 python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.yml --backend lerf --dry-run
-python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs --dry-run
+python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/demo_assets --dry-run
 ```
 
 Real mode uses the installed upstream tools:
