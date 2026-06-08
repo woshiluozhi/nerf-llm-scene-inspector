@@ -16,7 +16,11 @@ from nerf_llm_scene_inspector.evaluation.portfolio_validation import validate_po
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pack", default="results/portfolio_pack", help="Exported portfolio pack directory.")
+    parser.add_argument(
+        "--pack",
+        default="results/portfolio_pack",
+        help="Exported portfolio pack directory or .zip archive.",
+    )
     parser.add_argument(
         "--output",
         help="Optional JSON report path. Defaults to <pack>/portfolio_pack_validation.json.",
@@ -28,7 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     report = validate_portfolio_pack(args.pack)
-    output = Path(args.output) if args.output else Path(args.pack) / "portfolio_pack_validation.json"
+    output = Path(args.output) if args.output else _default_output_path(Path(args.pack))
     report.to_json(output)
     print(json.dumps(report.to_dict(), indent=2))
     print(f"\nWrote {output}")
@@ -37,6 +41,12 @@ def main() -> int:
     if args.strict and report.warnings:
         return 1
     return 0
+
+
+def _default_output_path(pack: Path) -> Path:
+    if pack.suffix.lower() == ".zip":
+        return pack.with_name(f"{pack.stem}_validation.json")
+    return pack / "portfolio_pack_validation.json"
 
 
 if __name__ == "__main__":

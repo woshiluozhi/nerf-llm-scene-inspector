@@ -2,6 +2,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 from nerf_llm_scene_inspector.evaluation.portfolio_validation import validate_portfolio_pack
@@ -121,6 +122,30 @@ def test_validate_portfolio_pack_report_is_share_safe_inside_pack(tmp_path: Path
     assert rerun.path_leaks == []
 
 
+def test_validate_portfolio_pack_accepts_zip_archive(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    zip_path = _zip_pack(pack)
+
+    report = validate_portfolio_pack(zip_path)
+
+    assert report.ok is True, report.to_dict()
+    assert report.pack_dir == "portfolio_pack.zip"
+    assert "portfolio_pack_index.json" in report.checked_files
+    assert report.path_leaks == []
+
+
+def test_validate_portfolio_pack_rejects_unsafe_zip_member(tmp_path: Path) -> None:
+    zip_path = tmp_path / "portfolio_pack.zip"
+    with zipfile.ZipFile(zip_path, "w") as archive:
+        archive.writestr("../evil.txt", "bad")
+        archive.writestr("portfolio_pack_index.json", "{}")
+
+    report = validate_portfolio_pack(zip_path)
+
+    assert report.ok is False
+    assert any("unsafe member paths" in error for error in report.errors)
+
+
 def test_validate_portfolio_pack_cli_writes_report(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     output = tmp_path / "validation.json"
@@ -142,6 +167,30 @@ def test_validate_portfolio_pack_cli_writes_report(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert json.loads(output.read_text(encoding="utf-8"))["ok"] is True
+
+
+def test_validate_portfolio_pack_cli_writes_default_report_for_zip(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    zip_path = _zip_pack(pack)
+    default_output = tmp_path / "portfolio_pack_validation.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "validate_portfolio_pack.py"),
+            "--pack",
+            str(zip_path),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(default_output.read_text(encoding="utf-8"))
+    assert payload["ok"] is True
+    assert payload["pack_dir"] == "portfolio_pack.zip"
 
 
 def _write_complete_pack(tmp_path: Path) -> Path:
@@ -267,6 +316,15 @@ def _write_complete_pack(tmp_path: Path) -> Path:
     index["copied"].append({"source": "run_index.md", "destination": "run_index.md"})
     (pack / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     return pack
+
+
+def _zip_pack(pack: Path) -> Path:
+    zip_path = pack.with_suffix(".zip")
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(pack.rglob("*")):
+            if path.is_file():
+                archive.write(path, path.relative_to(pack).as_posix())
+    return zip_path
 
 
 def _file_payload(relative_path: str) -> str:

@@ -66,6 +66,7 @@ python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_
 python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
 

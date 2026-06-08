@@ -206,6 +206,8 @@ def _write_portfolio_result_card(
         "python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene",
         "python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench",
         "python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack",
+        "python scripts/validate_portfolio_pack.py --pack results/portfolio_pack",
+        "python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip",
         "python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json",
         "```",
         "",

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
+import tempfile
+import zipfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -147,20 +149,58 @@ class PortfolioValidationReport:
 
 
 def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
-    """Validate that a portfolio pack is complete, portable, and share-safe."""
+    """Validate that a portfolio pack directory or zip archive is complete and share-safe."""
 
     pack_path = Path(pack_dir)
+    errors: list[str] = []
+    if not pack_path.exists():
+        errors.append(f"Portfolio pack path does not exist: {pack_path}")
+        return _report(pack_path, [], [], [], [], [], errors)
+    if pack_path.is_file():
+        if pack_path.suffix.lower() != ".zip":
+            errors.append(f"Portfolio pack path is not a directory or .zip archive: {pack_path}")
+            return _report(pack_path, [], [], [], [], [], errors)
+        return _validate_portfolio_zip(pack_path)
+    if not pack_path.is_dir():
+        errors.append(f"Portfolio pack path is not a directory or .zip archive: {pack_path}")
+        return _report(pack_path, [], [], [], [], [], errors)
+    return _validate_portfolio_directory(pack_path)
+
+
+def _validate_portfolio_zip(zip_path: Path) -> PortfolioValidationReport:
+    errors: list[str] = []
+    if not zipfile.is_zipfile(zip_path):
+        errors.append(f"Portfolio pack zip is not a valid zip archive: {zip_path}")
+        return _report(zip_path, [], [], [], [], [], errors)
+
+    try:
+        with zipfile.ZipFile(zip_path) as archive:
+            unsafe_members = _unsafe_zip_members(archive)
+            if unsafe_members:
+                preview = ", ".join(unsafe_members[:5])
+                errors.append(f"Portfolio pack zip contains unsafe member paths: {preview}")
+                return _report(zip_path, [], [], [], [], [], errors)
+            with tempfile.TemporaryDirectory(prefix="nerf-portfolio-pack-") as tmp_dir:
+                extract_root = Path(tmp_dir) / "pack"
+                extract_root.mkdir()
+                archive.extractall(extract_root)
+                return _validate_portfolio_directory(extract_root, report_path=zip_path)
+    except (OSError, zipfile.BadZipFile) as exc:
+        errors.append(f"Could not validate portfolio pack zip {zip_path}: {exc}")
+        return _report(zip_path, [], [], [], [], [], errors)
+
+
+def _validate_portfolio_directory(
+    pack_path: Path,
+    *,
+    report_path: Path | None = None,
+) -> PortfolioValidationReport:
+    """Validate an already-extracted portfolio pack directory."""
+
     errors: list[str] = []
     warnings: list[str] = []
     missing_files: list[str] = []
     artifact_issues: list[str] = []
-
-    if not pack_path.exists():
-        errors.append(f"Portfolio pack directory does not exist: {pack_path}")
-        return _report(pack_path, [], missing_files, [], artifact_issues, warnings, errors)
-    if not pack_path.is_dir():
-        errors.append(f"Portfolio pack path is not a directory: {pack_path}")
-        return _report(pack_path, [], missing_files, [], artifact_issues, warnings, errors)
 
     _check_required_files(pack_path, PROJECT_REQUIRED_FILES, missing_files)
     if (pack_path / "run").exists():
@@ -180,7 +220,7 @@ def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
     checked_files, path_leaks = _scan_path_leaks(pack_path)
 
     return _report(
-        pack_path,
+        report_path or pack_path,
         checked_files,
         missing_files,
         path_leaks,
@@ -217,6 +257,24 @@ def _check_required_files(pack_path: Path, relative_paths: list[str], missing_fi
     for relative_path in relative_paths:
         if not (pack_path / relative_path).exists():
             missing_files.append(relative_path)
+
+
+def _unsafe_zip_members(archive: zipfile.ZipFile) -> list[str]:
+    unsafe: list[str] = []
+    for info in archive.infolist():
+        name = info.filename
+        normalized = name.replace("\\", "/")
+        stripped = normalized.rstrip("/")
+        parts = [part for part in stripped.split("/") if part]
+        if (
+            not stripped
+            or normalized.startswith("/")
+            or re.match(r"^[A-Za-z]:", normalized)
+            or "\x00" in normalized
+            or any(part == ".." for part in parts)
+        ):
+            unsafe.append(name)
+    return unsafe
 
 
 def _check_index(

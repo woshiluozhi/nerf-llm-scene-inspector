@@ -98,6 +98,7 @@ The finalizer also exports and validates the shareable pack. To rerun only the s
 
 ```bash
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 ```
 

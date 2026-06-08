@@ -145,6 +145,7 @@ shareable zip also includes `portfolio_pack_validation.json`.
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled path/to/annotations_filled.json --profile portfolio --export-pack --zip-pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack
 ```
 

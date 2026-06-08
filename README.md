@@ -235,6 +235,7 @@ Refresh the latest annotated run and export a shareable portfolio package:
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
@@ -248,7 +249,8 @@ and the next action to take before CV/professor outreach.
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, copied-file SHA256/size digests still match, and text/JSON files do
-not leak user-home, temporary, or CI workspace directories.
+not leak user-home, temporary, or CI workspace directories. It accepts either the exported
+directory or the final `.zip` archive.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
 evidence and a validated shareable pack:
@@ -539,7 +541,7 @@ python scripts/validate_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
-python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 ```
 
 If `ruff` is installed:
