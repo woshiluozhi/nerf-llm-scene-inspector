@@ -172,11 +172,13 @@ def _replay_command(source_command: list[str], summary: dict[str, Any]) -> str:
 
 def _verification_commands(root: Path) -> list[str]:
     run_dir = _display_run_dir(root)
+    runs_root = _display_path(root.parent)
     return [
         _format_command(["python", "scripts/audit_run.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/recommend_next_steps.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_evidence_scorecard.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/compare_runs.py", "--root", runs_root]),
         _format_command(
             [
                 "python",
@@ -216,33 +218,42 @@ def _prerequisites(*, dry_run: bool) -> list[str]:
 
 
 def _artifacts(root: Path) -> list[ReproductionArtifact]:
-    candidates = {
-        "pipeline_summary": ("pipeline_summary.json", "Top-level run status and provenance."),
-        "capture_manifest": ("capture_manifest.md", "Scene-capture metadata and reproducibility context."),
-        "capture_manifest_validation": (
+    candidates = [
+        ("pipeline_summary", root / "pipeline_summary.json", "pipeline_summary.json", "Top-level run status and provenance."),
+        ("capture_manifest", root / "capture_manifest.md", "capture_manifest.md", "Scene-capture metadata and reproducibility context."),
+        (
+            "capture_manifest_validation",
+            root / "capture_manifest_validation.md",
             "capture_manifest_validation.md",
             "Validation of capture conditions, overlap, static scene, and privacy review.",
         ),
-        "preflight_report": ("preflight_report.md", "Real-run readiness checks before training."),
-        "environment_report": ("environment_report.json", "Runtime and upstream dependency checks."),
-        "scene_inspection": ("scene_data_inspection.md", "Processed scene quality and pose readiness."),
-        "run_audit": ("run_audit.md", "Run health audit."),
-        "recommendations": ("run_recommendations.md", "Actionable next steps."),
-        "evidence_scorecard": ("evidence_scorecard.md", "Portfolio evidence quality scorecard."),
-        "portfolio_page": ("portfolio_page.html", "Static HTML page for sharing run evidence."),
-        "query_grid": ("demo_assets/query_grid.png", "Qualitative query visualization."),
-        "evaluation_summary": ("evaluation/eval_summary.json", "Quantitative/qualitative metric summary."),
-        "annotation_review": ("evaluation/annotation_review.md", "Visual QA report for manual bbox annotations."),
-        "annotation_review_contact_sheet": (
+        ("preflight_report", root / "preflight_report.md", "preflight_report.md", "Real-run readiness checks before training."),
+        ("environment_report", root / "environment_report.json", "environment_report.json", "Runtime and upstream dependency checks."),
+        ("scene_inspection", root / "scene_data_inspection.md", "scene_data_inspection.md", "Processed scene quality and pose readiness."),
+        ("run_audit", root / "run_audit.md", "run_audit.md", "Run health audit."),
+        ("recommendations", root / "run_recommendations.md", "run_recommendations.md", "Actionable next steps."),
+        ("evidence_scorecard", root / "evidence_scorecard.md", "evidence_scorecard.md", "Portfolio evidence quality scorecard."),
+        ("portfolio_page", root / "portfolio_page.html", "portfolio_page.html", "Static HTML page for sharing run evidence."),
+        (
+            "run_comparison",
+            root.parent / "run_comparison.md",
+            "../run_comparison.md",
+            "Ranked comparison across repeated captures/training attempts.",
+        ),
+        ("query_grid", root / "demo_assets" / "query_grid.png", "demo_assets/query_grid.png", "Qualitative query visualization."),
+        ("evaluation_summary", root / "evaluation" / "eval_summary.json", "evaluation/eval_summary.json", "Quantitative/qualitative metric summary."),
+        ("annotation_review", root / "evaluation" / "annotation_review.md", "evaluation/annotation_review.md", "Visual QA report for manual bbox annotations."),
+        (
+            "annotation_review_contact_sheet",
+            root / "evaluation" / "annotation_review_contact_sheet.png",
             "evaluation/annotation_review_contact_sheet.png",
             "Contact sheet of manual bbox annotations over rendered views.",
         ),
-        "portfolio_card": ("portfolio_result_card.md", "Short project-page result narrative."),
-        "command_logs": ("logs", "Subprocess command stdout/stderr records."),
-    }
+        ("portfolio_card", root / "portfolio_result_card.md", "portfolio_result_card.md", "Short project-page result narrative."),
+        ("command_logs", root / "logs", "logs", "Subprocess command stdout/stderr records."),
+    ]
     artifacts: list[ReproductionArtifact] = []
-    for name, (relative_path, purpose) in candidates.items():
-        path = root / relative_path
+    for name, path, relative_path, purpose in candidates:
         artifacts.append(
             ReproductionArtifact(
                 name=name,
@@ -285,6 +296,13 @@ def _display_run_dir(path: Path) -> str:
         return str(path.resolve().relative_to(project_root().resolve())).replace("\\", "/")
     except ValueError:
         return path.name
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(project_root().resolve())).replace("\\", "/")
+    except ValueError:
+        return "."
 
 
 def _command_lines(commands: list[str]) -> list[str]:

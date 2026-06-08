@@ -225,7 +225,8 @@ CSV keeps all rows while summary metrics use the best row per unique query.
 
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
-artifacts, query reports, annotation templates, and evaluation metrics. Install it with:
+artifacts, query reports, annotation templates, evaluation metrics, and the multi-run
+comparison report used to choose a portfolio candidate. Install it with:
 
 ```bash
 python -m pip install -e ".[dashboard]"

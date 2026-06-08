@@ -21,6 +21,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_dir": str(root),
         "pipeline_summary": pipeline_summary,
         "run_index": _read_json(root.parent / "run_index.json"),
+        "run_comparison": _read_json(root.parent / "run_comparison.json"),
+        "run_comparison_markdown": _read_text(root.parent / "run_comparison.md"),
         "capture_manifest": _read_json(root / "capture_manifest.json"),
         "capture_manifest_markdown": _read_text(root / "capture_manifest.md"),
         "capture_manifest_validation": _read_json(root / "capture_manifest_validation.json"),
@@ -191,6 +193,18 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                     "entries": index.get("entries"),
                 }
             )
+    if bundle["run_comparison"]:
+        comparison = bundle["run_comparison"]
+        best_run = comparison.get("best_run") if isinstance(comparison.get("best_run"), dict) else {}
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Best Run", str(best_run.get("scene_name", "unknown")))
+        col_b.metric("Best Status", str(best_run.get("selection_status", "unknown")))
+        col_c.metric("Candidates", str(comparison.get("portfolio_candidate_count", 0)))
+        with st.expander("Run Comparison", expanded=not comparison.get("portfolio_candidate_count")):
+            if bundle["run_comparison_markdown"]:
+                st.markdown(bundle["run_comparison_markdown"])
+            else:
+                st.json(comparison)
 
     if bundle["preflight_report"]:
         preflight = bundle["preflight_report"]

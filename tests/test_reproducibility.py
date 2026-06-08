@@ -20,12 +20,14 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert "python scripts/audit_run.py --run-dir run" in bundle.verification_commands
     assert "python scripts/create_evidence_scorecard.py --run-dir run" in bundle.verification_commands
     assert "python scripts/generate_portfolio_page.py --run-dir run" in bundle.verification_commands
+    assert "python scripts/compare_runs.py --root ." in bundle.verification_commands
     assert any("python scripts/review_annotations.py" in command for command in bundle.verification_commands)
     assert any(artifact.name == "pipeline_summary" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "capture_manifest" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "preflight_report" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "evidence_scorecard" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "portfolio_page" and artifact.exists for artifact in bundle.artifacts)
+    assert any(artifact.name == "run_comparison" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "annotation_review" and artifact.exists for artifact in bundle.artifacts)
 
 
@@ -45,6 +47,7 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     script_text = script.read_text(encoding="utf-8")
     assert "set -euo pipefail" in script_text
     assert "python scripts/run_scene_pipeline.py --dry-run --query mug" in script_text
+    assert "python scripts/compare_runs.py --root ." in script_text
 
 
 def test_create_reproduction_bundle_cli_writes_outputs(tmp_path: Path) -> None:
@@ -108,6 +111,7 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "evaluation" / "annotation_review_contact_sheet.png", "image")
     _write_text(run_dir / "portfolio_result_card.md", "# Card\n")
     _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0})
+    _write_text(tmp_path / "run_comparison.md", "# Pipeline Run Comparison\n")
     return run_dir
 
 

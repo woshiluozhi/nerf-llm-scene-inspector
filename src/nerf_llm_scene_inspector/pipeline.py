@@ -608,6 +608,25 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
+    run_index = index_pipeline_runs(runs_root)
+    run_index.to_json(runs_root / "run_index.json")
+    run_index.to_markdown(runs_root / "run_index.md")
+    run_comparison = compare_pipeline_runs(runs_root)
+    comparison_json = run_comparison.to_json(runs_root / "run_comparison.json")
+    comparison_md = run_comparison.to_markdown(runs_root / "run_comparison.md")
+    steps.append(
+        PipelineStep(
+            "compare_runs",
+            "success" if run_comparison.total_runs else "warning",
+            summary={
+                "total_runs": run_comparison.total_runs,
+                "portfolio_candidate_count": run_comparison.portfolio_candidate_count,
+                "best_run": run_comparison.best_run,
+            },
+            outputs={"json": str(comparison_json), "markdown": str(comparison_md)},
+        )
+    )
+    summary.to_json(summary_path)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction_manifest = reproduction.to_json(run_dir / "reproduction_manifest.json")
     reproduction_report = reproduction.to_markdown(run_dir / "reproduction_report.md")
@@ -626,25 +645,6 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 "markdown": str(reproduction_report),
                 "script": str(reproduce_script),
             },
-        )
-    )
-    summary.to_json(summary_path)
-    run_index = index_pipeline_runs(runs_root)
-    run_index.to_json(runs_root / "run_index.json")
-    run_index.to_markdown(runs_root / "run_index.md")
-    run_comparison = compare_pipeline_runs(runs_root)
-    comparison_json = run_comparison.to_json(runs_root / "run_comparison.json")
-    comparison_md = run_comparison.to_markdown(runs_root / "run_comparison.md")
-    steps.append(
-        PipelineStep(
-            "compare_runs",
-            "success" if run_comparison.total_runs else "warning",
-            summary={
-                "total_runs": run_comparison.total_runs,
-                "portfolio_candidate_count": run_comparison.portfolio_candidate_count,
-                "best_run": run_comparison.best_run,
-            },
-            outputs={"json": str(comparison_json), "markdown": str(comparison_md)},
         )
     )
     summary.to_json(summary_path)

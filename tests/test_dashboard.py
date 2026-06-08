@@ -30,6 +30,16 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         },
     )
     _write_json(tmp_path / "run_index.json", {"total_runs": 1, "entries": [{"scene_name": "run"}]})
+    _write_json(
+        tmp_path / "run_comparison.json",
+        {
+            "total_runs": 1,
+            "portfolio_candidate_count": 0,
+            "best_run": {"scene_name": "run", "selection_status": "dry_run_smoke_demo"},
+            "entries": [],
+        },
+    )
+    (tmp_path / "run_comparison.md").write_text("# Pipeline Run Comparison\n", encoding="utf-8")
     _write_json(run_dir / "capture_manifest.json", {"scene_name": "run"})
     (run_dir / "capture_manifest.md").write_text("# Capture Manifest\n", encoding="utf-8")
     _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "ok": True})
@@ -81,6 +91,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
 
     assert bundle["pipeline_summary"]["success"] is True
     assert bundle["run_index"]["total_runs"] == 1
+    assert bundle["run_comparison"]["best_run"]["scene_name"] == "run"
+    assert "# Pipeline Run Comparison" in bundle["run_comparison_markdown"]
     assert bundle["capture_manifest"]["scene_name"] == "run"
     assert bundle["capture_manifest_validation"]["status"] == "ready"
     assert bundle["evaluation_table"][0]["query"] == "mug"
