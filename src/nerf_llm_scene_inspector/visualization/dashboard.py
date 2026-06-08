@@ -18,6 +18,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
 
     root = Path(run_dir)
     pipeline_summary = _read_json(root / "pipeline_summary.json")
+    submission_packet = _read_json(root / "submission_packet" / "submission_packet.json")
     return {
         "run_dir": str(root),
         "pipeline_summary": pipeline_summary,
@@ -47,7 +48,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "real_run_plan_markdown": _read_text(root / "real_run_plan" / "real_run_plan.md"),
         "research_report": _read_json(root / "research_report.json"),
         "research_report_markdown": _read_text(root / "research_report.md"),
-        "submission_packet": _read_json(root / "submission_packet" / "submission_packet.json"),
+        "submission_packet": submission_packet,
+        "submission_readiness": submission_readiness_summary(submission_packet),
         "submission_checklist": _read_text(root / "submission_packet" / "submission_checklist.md"),
         "submission_cv_entry": _read_text(root / "submission_packet" / "cv_project_entry.md"),
         "submission_email_brief": _read_text(root / "submission_packet" / "professor_email_brief.md"),
@@ -159,6 +161,34 @@ def collect_command_logs(run_dir: str | Path) -> list[dict[str, Any]]:
         if payload:
             logs.append({"path": str(path), "label": _relative_label(path, root), "payload": payload})
     return logs
+
+
+def submission_readiness_summary(packet: dict[str, Any]) -> dict[str, Any]:
+    """Return a compact dashboard summary for a submission packet."""
+
+    summary = packet.get("readiness_summary")
+    if isinstance(summary, dict) and summary:
+        return dict(summary)
+    if not packet:
+        return {}
+    checklist = packet.get("checklist") if isinstance(packet.get("checklist"), list) else []
+    warnings = packet.get("warnings") if isinstance(packet.get("warnings"), list) else []
+    failed_items = [item for item in checklist if isinstance(item, dict) and item.get("status") == "fail"]
+    warning_items = [item for item in checklist if isinstance(item, dict) and item.get("status") == "warn"]
+    status = "fail" if failed_items else "warn" if warning_items or warnings else "unknown"
+    return {
+        "status": status,
+        "readiness_level": packet.get("readiness_level", "unknown"),
+        "failed_check_count": len(failed_items),
+        "warning_check_count": len(warning_items),
+        "packet_warning_count": len(warnings),
+        "failed_checks": [str(item.get("name", "unknown")) for item in failed_items],
+        "warning_checks": [str(item.get("name", "unknown")) for item in warning_items],
+        "top_blockers": [_check_item_summary(item) for item in failed_items[:5]],
+        "top_warnings": [_check_item_summary(item) for item in warning_items[:5]],
+        "pack_ok": packet.get("pack_ok"),
+        "recommended_next_action": packet.get("share_decision") or "Review the submission checklist.",
+    }
 
 
 def main() -> None:
@@ -308,6 +338,18 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["run_result_card_markdown"])
             else:
                 st.json(card)
+    if bundle["submission_readiness"]:
+        readiness = bundle["submission_readiness"]
+        col_a, col_b, col_c, col_d = st.columns(4)
+        col_a.metric("Submission Status", str(readiness.get("status", "unknown")))
+        col_b.metric("Submission Readiness", str(readiness.get("readiness_level", "unknown")))
+        col_c.metric("Submission Fails", str(readiness.get("failed_check_count", 0)))
+        col_d.metric("Submission Warnings", str(readiness.get("warning_check_count", 0)))
+        next_action = readiness.get("recommended_next_action")
+        if next_action:
+            st.info(str(next_action))
+        with st.expander("Submission Readiness Details", expanded=readiness.get("status") == "fail"):
+            st.json(readiness)
     if bundle["portfolio_page"]:
         st.markdown(f"[Open static portfolio page]({bundle['portfolio_page']})")
 
@@ -579,6 +621,19 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
             ]
         )
     return [relative for relative in expected if not (run_dir / relative).exists()]
+
+
+def _check_item_summary(item: dict[str, Any]) -> str:
+    name = str(item.get("name", "unknown"))
+    evidence = str(item.get("evidence", "")).strip()
+    action = str(item.get("action", "")).strip()
+    artifact = str(item.get("artifact", "")).strip()
+    parts = [f"{name}: {evidence}" if evidence else name]
+    if action:
+        parts.append(f"Action: {action}")
+    if artifact:
+        parts.append(f"Artifact: {artifact}")
+    return " ".join(parts)
 
 
 def _step_succeeded(pipeline_summary: dict[str, Any] | None, step_name: str) -> bool:

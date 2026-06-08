@@ -319,8 +319,9 @@ export.
 
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
-artifacts, query reports, annotation templates, evaluation metrics, the run quality gate, and
-the multi-run comparison report used to choose a portfolio candidate. Install it with:
+artifacts, query reports, annotation templates, evaluation metrics, the run quality gate,
+submission readiness, and the multi-run comparison report used to choose a portfolio
+candidate. Install it with:
 
 ```bash
 python -m pip install -e ".[dashboard]"

@@ -6,6 +6,7 @@ from nerf_llm_scene_inspector.visualization.dashboard import (
     collect_query_reports,
     collect_run_images,
     load_run_bundle,
+    submission_readiness_summary,
 )
 
 
@@ -100,7 +101,23 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     )
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
-        {"readiness_level": "shareable_smoke_demo"},
+        {
+            "readiness_level": "shareable_smoke_demo",
+            "pack_ok": True,
+            "readiness_summary": {
+                "status": "warn",
+                "readiness_level": "shareable_smoke_demo",
+                "failed_check_count": 0,
+                "warning_check_count": 1,
+                "packet_warning_count": 0,
+                "failed_checks": [],
+                "warning_checks": ["quality_gate"],
+                "top_blockers": [],
+                "top_warnings": ["quality_gate: smoke profile has warnings"],
+                "pack_ok": True,
+                "recommended_next_action": "Share only as a smoke demo.",
+            },
+        },
     )
     (run_dir / "submission_packet" / "submission_checklist.md").write_text(
         "# Submission Checklist\n",
@@ -200,6 +217,10 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["real_run_plan"]["scene_name"] == "run"
     assert "# Real-Run Action Plan" in bundle["real_run_plan_markdown"]
     assert bundle["submission_packet"]["readiness_level"] == "shareable_smoke_demo"
+    assert bundle["submission_readiness"]["status"] == "warn"
+    assert bundle["submission_readiness"]["readiness_level"] == "shareable_smoke_demo"
+    assert bundle["submission_readiness"]["warning_checks"] == ["quality_gate"]
+    assert bundle["submission_readiness"]["recommended_next_action"] == "Share only as a smoke demo."
     assert "# Submission Checklist" in bundle["submission_checklist"]
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["annotation_review"]["ok"] is True
@@ -226,6 +247,39 @@ def test_dashboard_collectors_tolerate_missing_run(tmp_path: Path) -> None:
     assert collect_command_logs(missing_run) == []
     bundle = load_run_bundle(missing_run)
     assert "pipeline_summary.json" in bundle["missing"]
+    assert bundle["submission_readiness"] == {}
+
+
+def test_submission_readiness_summary_supports_legacy_packets() -> None:
+    summary = submission_readiness_summary(
+        {
+            "readiness_level": "needs_pack_validation",
+            "pack_ok": False,
+            "share_decision": "Regenerate and validate the portfolio pack before external sharing.",
+            "warnings": ["Pack was not validated."],
+            "checklist": [
+                {
+                    "name": "portfolio_pack",
+                    "status": "warn",
+                    "evidence": "portfolio pack was not validated",
+                    "action": "Run finalize_annotations.py with --export-pack --zip-pack.",
+                    "artifact": "results/portfolio_pack",
+                },
+                {
+                    "name": "claim_audit",
+                    "status": "pass",
+                    "evidence": "status=pass",
+                },
+            ],
+        }
+    )
+
+    assert summary["status"] == "warn"
+    assert summary["readiness_level"] == "needs_pack_validation"
+    assert summary["warning_check_count"] == 1
+    assert summary["warning_checks"] == ["portfolio_pack"]
+    assert "portfolio_pack" in summary["top_warnings"][0]
+    assert summary["recommended_next_action"].startswith("Regenerate and validate")
 
 
 def _write_json(path: Path, payload: dict) -> None:
