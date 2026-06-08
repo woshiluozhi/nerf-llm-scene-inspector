@@ -165,6 +165,7 @@ python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-fram
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene --dry-run
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
+python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.yml --backend lerf --dry-run
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/demo_assets --dry-run
 ```
@@ -177,6 +178,7 @@ python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-fram
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
 python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
+python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
 ```
@@ -214,6 +216,7 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.md`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
+- `results/pipeline_runs/<scene>/annotation_template.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
 - `results/pipeline_runs/<scene>/project_report.md`

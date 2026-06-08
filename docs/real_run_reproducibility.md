@@ -45,6 +45,7 @@ python scripts/run_scene_pipeline.py \
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
 - `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
+- `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `demo_assets/query_grid.png`: compact qualitative query visualization.
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
@@ -73,3 +74,24 @@ Share `results/portfolio_pack.zip` together with the GitHub repository link when
 portfolio or cold-email artifact. Do not claim benchmark superiority from a dry-run or a
 single qualitative scene; report it as a reproducible research-engineering demo unless you
 run a larger annotated evaluation.
+
+## Manual Annotation Loop
+
+After a real query run, open `annotation_template.json` and inspect the overlay images. For
+each query, fill:
+
+- `target_description`: what the correct object or region is
+- `acceptable_views`: view ids where the target is visible, such as `view_0000`
+- `bbox_2d`: `[x1, y1, x2, y2]` in the selected rendered view
+- `notes`: uncertainty, ambiguity, or qualitative-only rationale
+
+Then rerun:
+
+```bash
+python scripts/evaluate_queries.py \
+  --queries results/pipeline_runs/desk_scene/queries.yaml \
+  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --results results/pipeline_runs/desk_scene/queries \
+  --output results/pipeline_runs/desk_scene/evaluation \
+  --report-output results/pipeline_runs/desk_scene/project_report.md
+```

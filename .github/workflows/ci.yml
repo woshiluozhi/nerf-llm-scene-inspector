@@ -44,6 +44,7 @@ jobs:
           python scripts/train_baseline_nerf.py --help
           python scripts/train_language_field.py --help
           python scripts/query_scene.py --help
+          python scripts/create_annotation_template.py --help
           python scripts/generate_demo_assets.py --help
           python scripts/evaluate_queries.py --help
           python scripts/export_portfolio_pack.py --help

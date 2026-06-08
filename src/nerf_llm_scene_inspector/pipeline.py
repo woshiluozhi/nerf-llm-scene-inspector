@@ -262,6 +262,26 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 )
             )
 
+        if config.queries:
+            annotation_template_result = _run_helper_script(
+                [
+                    sys.executable,
+                    str(root / "scripts" / "create_annotation_template.py"),
+                    "--queries",
+                    str(run_queries_path),
+                    "--results",
+                    str(query_dir),
+                    "--output",
+                    str(run_dir / "annotation_template.json"),
+                    "--overwrite",
+                ],
+                root=root,
+            )
+            annotation_template_result.outputs.update(
+                {"annotation_template": str(run_dir / "annotation_template.json")}
+            )
+            steps.append(annotation_template_result)
+
         if config.skip_demo or not model_config_path:
             steps.append(PipelineStep("generate_demo_assets", "skipped"))
         else:
