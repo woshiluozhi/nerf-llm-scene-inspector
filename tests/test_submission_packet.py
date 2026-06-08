@@ -34,6 +34,11 @@ def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> No
 
     assert packet.readiness_level == "shareable_smoke_demo"
     assert packet.pack_ok is True
+    assert packet.readiness_summary["status"] == "warn"
+    assert packet.readiness_summary["readiness_level"] == "shareable_smoke_demo"
+    assert packet.readiness_summary["failed_checks"] == []
+    assert "quality_gate" in packet.readiness_summary["warning_checks"]
+    assert "Run a real CUDA-backed scene." in packet.readiness_summary["recommended_next_action"]
     assert any("CPU-safe pipeline wiring" in claim for claim in packet.allowed_claims)
     assert any("trained LERF outputs" in claim for claim in packet.avoid_claims)
     assert any(item.name == "claim_audit" and item.status == "pass" for item in packet.checklist)
@@ -48,13 +53,19 @@ def test_write_submission_packet_outputs_markdown_and_briefs(tmp_path: Path) -> 
     packet = write_submission_packet(run_dir, output_dir=output_dir)
 
     assert packet.readiness_level == "needs_pack_validation"
+    assert packet.readiness_summary["status"] == "warn"
+    assert "portfolio_pack" in packet.readiness_summary["warning_checks"]
     assert packet.next_actions[0].startswith("Finalize annotations")
     assert "--export-pack --zip-pack" in packet.next_actions[0]
     assert (output_dir / "submission_packet.json").exists()
     assert (output_dir / "submission_checklist.md").exists()
     assert (output_dir / "cv_project_entry.md").exists()
     assert (output_dir / "professor_email_brief.md").exists()
-    assert "# Submission Checklist" in (output_dir / "submission_checklist.md").read_text(encoding="utf-8")
+    markdown = (output_dir / "submission_checklist.md").read_text(encoding="utf-8")
+    assert "# Submission Checklist" in markdown
+    assert "## Readiness Summary" in markdown
+    assert "- Warning checks:" in markdown
+    assert "portfolio_pack" in markdown
     assert "dry-run smoke demo" in (output_dir / "professor_email_brief.md").read_text(encoding="utf-8")
 
 
@@ -83,6 +94,7 @@ def test_create_submission_packet_cli(tmp_path: Path) -> None:
     payload = json.loads((output_dir / "submission_packet.json").read_text(encoding="utf-8"))
     assert payload["repo_url"] == "https://github.com/example/repo"
     assert payload["readiness_level"] == "needs_pack_validation"
+    assert payload["readiness_summary"]["readiness_level"] == "needs_pack_validation"
 
 
 def test_submission_packet_blocks_failed_claim_audit(tmp_path: Path) -> None:
@@ -92,6 +104,9 @@ def test_submission_packet_blocks_failed_claim_audit(tmp_path: Path) -> None:
     packet = build_submission_packet(run_dir)
 
     assert packet.readiness_level == "blocked"
+    assert packet.readiness_summary["status"] == "fail"
+    assert "claim_audit" in packet.readiness_summary["failed_checks"]
+    assert any("claim_audit" in item for item in packet.readiness_summary["top_blockers"])
     assert any(item.name == "claim_audit" and item.status == "fail" for item in packet.checklist)
 
 

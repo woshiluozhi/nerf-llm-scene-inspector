@@ -286,6 +286,11 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
         (run_dir / "submission_packet" / "submission_packet.json").read_text(encoding="utf-8")
     )
     assert submission_payload["readiness_level"] == "needs_pack_validation"
+    assert submission_payload["readiness_summary"]["readiness_level"] == "needs_pack_validation"
+    assert "portfolio_pack" in submission_payload["readiness_summary"]["warning_checks"]
+    assert "## Readiness Summary" in (run_dir / "submission_packet" / "submission_checklist.md").read_text(
+        encoding="utf-8"
+    )
     plan_step = next(step for step in summary.steps if step.name == "create_real_run_plan")
     assert plan_step.outputs["markdown"] == str(run_dir / "real_run_plan" / "real_run_plan.md")
     plan_payload = json.loads((run_dir / "real_run_plan" / "real_run_plan.json").read_text(encoding="utf-8"))

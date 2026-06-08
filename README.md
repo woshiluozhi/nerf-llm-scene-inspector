@@ -242,6 +242,9 @@ python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scen
 Use `export_portfolio_pack.py` directly only for low-level pack debugging. The finalizer is
 the preferred portfolio path after annotation edits because it refreshes evaluation,
 reporting, quality checks, submission materials, pack validation, and the final zip.
+Open `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` first before
+sharing: its `Readiness Summary` section lists failed checks, warning checks, pack status,
+and the next action to take before CV/professor outreach.
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, and text/JSON files do not leak user-home, temporary, or CI workspace
@@ -420,8 +423,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/research_report.md`
 - `results/pipeline_runs/<scene>/real_run_plan/real_run_plan.json`
 - `results/pipeline_runs/<scene>/real_run_plan/real_run_plan.md`
-- `results/pipeline_runs/<scene>/submission_packet/submission_packet.json`
-- `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md`
+- `results/pipeline_runs/<scene>/submission_packet/submission_packet.json` with a machine-readable `readiness_summary`
+- `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` with the reviewer-facing readiness summary
 - `results/pipeline_runs/<scene>/submission_packet/cv_project_entry.md`
 - `results/pipeline_runs/<scene>/submission_packet/professor_email_brief.md`
 - `results/pipeline_runs/<scene>/reproduction_manifest.json`

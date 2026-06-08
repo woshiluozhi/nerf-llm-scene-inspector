@@ -91,6 +91,11 @@ python scripts/run_scene_pipeline.py \
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
 
+For external sharing, start with `submission_packet/submission_checklist.md`. Its
+`Readiness Summary` section is the compact send/no-send view: failed checks, warning checks,
+pack validation state, and the recommended next action. The same information is available in
+`submission_packet/submission_packet.json` under `readiness_summary` for automation.
+
 You can inspect these files in one place with the Streamlit dashboard:
 
 ```bash

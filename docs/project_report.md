@@ -84,7 +84,10 @@ without claiming more than the run artifacts support.
 Run `scripts/create_submission_packet.py --run-dir results/pipeline_runs/<scene> --pack
 results/portfolio_pack` after validating a portfolio pack. The output records share readiness,
 allowed claims, claims to avoid, recommended links, and next actions for CV or professor-outreach
-use. Dry-run packets explicitly mark the run as smoke-demo evidence only.
+use. The JSON includes a `readiness_summary` block and the Markdown checklist includes a
+`Readiness Summary` section that surfaces failed checks, warning checks, pack status, and the
+single next action to take before sharing. Dry-run packets explicitly mark the run as
+smoke-demo evidence only.
 
 ## Real-Run Action Plan
 

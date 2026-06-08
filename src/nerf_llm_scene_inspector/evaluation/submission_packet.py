@@ -46,6 +46,7 @@ class SubmissionPacket:
     readiness_level: ReadinessLevel
     share_decision: str
     generated_at: str
+    readiness_summary: dict[str, Any] = field(default_factory=dict)
     repo_url: str = ""
     ci_url: str = ""
     pack_dir: str = ""
@@ -80,6 +81,10 @@ class SubmissionPacket:
             f"- Readiness: `{self.readiness_level}`",
             f"- Share decision: {self.share_decision}",
             f"- Generated: `{self.generated_at}`",
+            "",
+            "## Readiness Summary",
+            "",
+            *_readiness_summary_lines(self.readiness_summary),
             "",
             "## Recommended Links",
             "",
@@ -188,6 +193,7 @@ def build_submission_packet(
     )
     readiness = _readiness(dry_run, summary, scorecard, quality, pack_validation, checklist)
     warnings = _warnings(quality, audit, annotations, claim_audit, pack_validation)
+    next_actions = _next_actions(recommendations, readiness, pack_validation)
     return SubmissionPacket(
         run_dir=_display_path(root),
         scene_name=scene_name,
@@ -196,6 +202,13 @@ def build_submission_packet(
         readiness_level=readiness,
         share_decision=_share_decision(readiness),
         generated_at=utc_timestamp(),
+        readiness_summary=_readiness_summary(
+            readiness=readiness,
+            checklist=checklist,
+            warnings=warnings,
+            next_actions=next_actions,
+            pack_validation=pack_validation,
+        ),
         repo_url=repo_url,
         ci_url=ci_url,
         pack_dir=_display_path(Path(pack_dir)) if pack_dir else "",
@@ -205,7 +218,7 @@ def build_submission_packet(
         avoid_claims=_avoid_claims(dry_run),
         checklist=checklist,
         warnings=warnings,
-        next_actions=_next_actions(recommendations, readiness, pack_validation),
+        next_actions=next_actions,
     )
 
 
@@ -478,6 +491,55 @@ def _share_decision(readiness: ReadinessLevel) -> str:
     return decisions[readiness]
 
 
+def _readiness_summary(
+    *,
+    readiness: ReadinessLevel,
+    checklist: list[SubmissionChecklistItem],
+    warnings: list[str],
+    next_actions: list[str],
+    pack_validation: dict[str, Any],
+) -> dict[str, Any]:
+    failed_items = [item for item in checklist if item.status == "fail"]
+    warning_items = [item for item in checklist if item.status == "warn"]
+    status = "fail" if failed_items else "warn" if warning_items or warnings else "pass"
+    top_warnings = [_item_summary(item) for item in warning_items[:5]]
+    top_warnings.extend(f"packet_warning: {warning}" for warning in warnings[:5])
+    return {
+        "status": status,
+        "readiness_level": readiness,
+        "failed_check_count": len(failed_items),
+        "warning_check_count": len(warning_items),
+        "packet_warning_count": len(warnings),
+        "failed_checks": [item.name for item in failed_items],
+        "warning_checks": [item.name for item in warning_items],
+        "top_blockers": [_item_summary(item) for item in failed_items[:5]],
+        "top_warnings": _dedupe(top_warnings)[:5],
+        "pack_ok": _pack_ok(pack_validation),
+        "recommended_next_action": next_actions[0] if next_actions else _default_next_action(readiness),
+    }
+
+
+def _item_summary(item: SubmissionChecklistItem) -> str:
+    summary = f"{item.name}: {item.evidence}"
+    if item.action:
+        summary += f" Action: {item.action}"
+    if item.artifact:
+        summary += f" Artifact: {item.artifact}"
+    return summary
+
+
+def _default_next_action(readiness: ReadinessLevel) -> str:
+    if readiness == "blocked":
+        return "Resolve failed checklist items, then regenerate the submission packet."
+    if readiness == "needs_pack_validation":
+        return "Export and validate the portfolio pack, then regenerate the submission packet with --pack."
+    if readiness == "shareable_smoke_demo":
+        return "Share only as a dry-run smoke demo, or run a real CUDA-backed scene for stronger evidence."
+    if readiness == "real_run_review_ready":
+        return "Review warning-level items before sending externally."
+    return "Attach the repository, portfolio pack, and latest successful CI URL when sharing."
+
+
 def _allowed_claims(dry_run: bool, readiness: ReadinessLevel) -> list[str]:
     claims = [
         "Built a reproducible research engineering project on Nerfstudio and LERF-style language fields.",
@@ -608,6 +670,29 @@ def _dict_lines(items: dict[str, str]) -> list[str]:
     if not items:
         return ["- None recorded."]
     return [f"- {key}: `{value}`" for key, value in items.items()]
+
+
+def _readiness_summary_lines(summary: dict[str, Any]) -> list[str]:
+    if not summary:
+        return ["- No readiness summary was recorded."]
+    lines = [
+        f"- Status: `{summary.get('status', 'unknown')}`",
+        f"- Readiness level: `{summary.get('readiness_level', 'unknown')}`",
+        f"- Failed checks: {summary.get('failed_check_count', 0)}",
+        f"- Warning checks: {summary.get('warning_check_count', 0)}",
+        f"- Packet warnings: {summary.get('packet_warning_count', 0)}",
+        f"- Pack OK: `{summary.get('pack_ok')}`",
+        f"- Recommended next action: {summary.get('recommended_next_action') or 'Review the checklist.'}",
+    ]
+    blockers = summary.get("top_blockers") if isinstance(summary.get("top_blockers"), list) else []
+    if blockers:
+        lines.append("- Top blockers:")
+        lines.extend(f"  - {item}" for item in blockers)
+    warnings = summary.get("top_warnings") if isinstance(summary.get("top_warnings"), list) else []
+    if warnings:
+        lines.append("- Top warnings:")
+        lines.extend(f"  - {item}" for item in warnings)
+    return lines
 
 
 def _list_lines(items: list[str]) -> list[str]:
