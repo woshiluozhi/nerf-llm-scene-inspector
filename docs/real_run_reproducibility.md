@@ -136,6 +136,8 @@ share-safe provenance excerpt and records SHA256/size digests for copied files s
 `validate_portfolio_pack.py` can detect accidental edits or tampering before sharing.
 When `--zip` is used, the archive is self-contained and includes the same
 `portfolio_pack_index.json` with digest metadata.
+The normal finalization path runs validation and re-archives the pack afterward, so the
+shareable zip also includes `portfolio_pack_validation.json`.
 
 ## Finalize And Export
 

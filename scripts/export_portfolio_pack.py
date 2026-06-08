@@ -623,13 +623,29 @@ def _relative_display_path(path: Path, base: Path) -> str:
 def _clean_output(output: Path) -> None:
     resolved_output = output.resolve()
     resolved_root = ROOT.resolve()
+    if not resolved_output.is_dir():
+        raise RuntimeError(f"Refusing to clean non-directory export output: {resolved_output}")
     try:
         resolved_output.relative_to(resolved_root)
     except ValueError:
-        raise RuntimeError(f"Refusing to clean output outside repository: {resolved_output}")
-    if resolved_output == resolved_root:
+        if not _looks_like_portfolio_output(resolved_output):
+            raise RuntimeError(
+                "Refusing to clean an existing non-pack directory outside the repository: "
+                f"{resolved_output}"
+            )
+    if resolved_output in {resolved_root, Path(resolved_output.anchor).resolve(), Path.home().resolve()}:
         raise RuntimeError("Refusing to use repository root as export output.")
     shutil.rmtree(resolved_output)
+
+
+def _looks_like_portfolio_output(path: Path) -> bool:
+    if path.name.lower().startswith("portfolio_pack"):
+        return True
+    if (path / "portfolio_pack_index.json").exists():
+        return True
+    if (path / "project").is_dir() and (path / "run").is_dir():
+        return True
+    return not any(path.iterdir())
 
 
 if __name__ == "__main__":

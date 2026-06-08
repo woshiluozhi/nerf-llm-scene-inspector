@@ -202,7 +202,7 @@ def _report(
     ok = not (missing_files or path_leaks or artifact_issues or errors)
     return PortfolioValidationReport(
         ok=ok,
-        pack_dir=_display_path(pack_path),
+        pack_dir=_display_pack_dir(pack_path),
         timestamp=utc_timestamp(),
         checked_files=checked_files,
         missing_files=missing_files,
@@ -489,3 +489,12 @@ def _relative_path(path: Path, base: Path) -> str:
 
 def _display_path(path: Path) -> str:
     return str(path).replace("\\", "/")
+
+
+def _display_pack_dir(path: Path) -> str:
+    """Return a share-safe pack identifier for reports that may live inside the pack."""
+
+    try:
+        return path.resolve().name or "portfolio_pack"
+    except OSError:
+        return path.name or "portfolio_pack"

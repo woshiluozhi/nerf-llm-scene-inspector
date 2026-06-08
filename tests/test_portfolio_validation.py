@@ -106,6 +106,21 @@ def test_validate_portfolio_pack_fails_digest_mismatch(tmp_path: Path) -> None:
     assert "copied destination size mismatch: run/pipeline_summary.json" in report.artifact_issues
 
 
+def test_validate_portfolio_pack_report_is_share_safe_inside_pack(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    report = validate_portfolio_pack(pack)
+    report.to_json(pack / "portfolio_pack_validation.json")
+
+    payload = json.loads((pack / "portfolio_pack_validation.json").read_text(encoding="utf-8"))
+    assert payload["pack_dir"] == "portfolio_pack"
+    assert str(tmp_path) not in json.dumps(payload)
+
+    rerun = validate_portfolio_pack(pack)
+
+    assert rerun.ok is True, rerun.to_dict()
+    assert rerun.path_leaks == []
+
+
 def test_validate_portfolio_pack_cli_writes_report(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     output = tmp_path / "validation.json"

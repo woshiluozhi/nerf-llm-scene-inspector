@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 from nerf_llm_scene_inspector.evaluation import annotation_finalize
@@ -115,6 +116,34 @@ def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: 
     assert step_names.index("final_export_portfolio_pack") > step_names.index("refresh_reproduction_bundle")
     assert step_names.index("final_validate_portfolio_pack") > step_names.index("final_export_portfolio_pack")
     assert step_names.index("final_archive_portfolio_pack") > step_names.index("final_validate_portfolio_pack")
+
+
+def test_finalize_zip_pack_contains_final_validation_report(tmp_path: Path) -> None:
+    run_dir = _pipeline_run(tmp_path, "finalize_zip_scene")
+    filled = run_dir / "evaluation" / "annotation_workbench" / "annotation_seed.json"
+    pack_dir = tmp_path / "portfolio_pack"
+
+    report = finalize_workbench_annotations(
+        run_dir=run_dir,
+        filled_path=filled,
+        profile="smoke",
+        pack_dir=pack_dir,
+        export_pack=True,
+        zip_pack=True,
+        continue_on_error=False,
+    )
+
+    assert report.ok is True, report.errors
+    assert (pack_dir / "portfolio_pack_validation.json").exists()
+    archive_path = Path(f"{pack_dir}.zip")
+    assert archive_path.exists()
+    with zipfile.ZipFile(archive_path) as archive:
+        names = set(archive.namelist())
+        assert "portfolio_pack_index.json" in names
+        assert "portfolio_pack_validation.json" in names
+        assert "run/submission_packet/submission_packet.json" in names
+        validation = json.loads(archive.read("portfolio_pack_validation.json").decode("utf-8"))
+    assert validation["ok"] is True
 
 
 def _pipeline_run(tmp_path: Path, scene_name: str) -> Path:

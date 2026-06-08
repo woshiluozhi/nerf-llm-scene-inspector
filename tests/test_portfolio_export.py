@@ -206,3 +206,27 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert zipped_index["archive"].endswith("portfolio_pack.bundle.zip")
     assert len(zipped_copied["run/pipeline_summary.json"]["sha256"]) == 64
     assert zipped_copied["run/pipeline_summary.json"]["size_bytes"] > 0
+
+
+def test_export_portfolio_pack_refreshes_existing_external_pack(tmp_path: Path) -> None:
+    output_dir = tmp_path / "portfolio_pack"
+    output_dir.mkdir()
+    (output_dir / "portfolio_pack_index.json").write_text("{}", encoding="utf-8")
+    (output_dir / "stale.txt").write_text("stale", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "export_portfolio_pack.py"),
+            "--output",
+            str(output_dir),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (output_dir / "portfolio_pack_index.json").exists()
+    assert not (output_dir / "stale.txt").exists()
