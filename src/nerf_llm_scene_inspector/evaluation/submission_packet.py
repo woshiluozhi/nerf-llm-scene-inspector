@@ -211,7 +211,7 @@ def build_submission_packet(
         ),
         repo_url=repo_url,
         ci_url=ci_url,
-        pack_dir=_display_path(Path(pack_dir)) if pack_dir else "",
+        pack_dir=_display_pack_path(Path(pack_dir)) if pack_dir else "",
         pack_ok=_pack_ok(pack_validation),
         recommended_links=_recommended_links(root, repo_url, ci_url, pack_dir),
         allowed_claims=_allowed_claims(dry_run, readiness),
@@ -627,7 +627,7 @@ def _recommended_links(
     if ci_url:
         links["ci_run"] = ci_url
     if pack_dir:
-        links["portfolio_pack"] = _display_path(Path(pack_dir))
+        links["portfolio_pack"] = _display_pack_path(Path(pack_dir))
     return {key: value for key, value in links.items() if value}
 
 
@@ -641,7 +641,7 @@ def _pack_validation(
         return {}
     pack = Path(pack_dir)
     if not pack.exists():
-        return {"ok": False, "errors": [f"Pack directory does not exist: {_display_path(pack)}"]}
+        return {"ok": False, "errors": [f"Pack path does not exist: {_display_pack_path(pack)}"]}
     return validate_portfolio_pack(pack).to_dict()
 
 
@@ -664,6 +664,10 @@ def _read_json(path: str | Path) -> dict[str, Any]:
 
 def _display_path(path: Path) -> str:
     return str(path).replace("\\", "/")
+
+
+def _display_pack_path(path: Path) -> str:
+    return path.name or "portfolio_pack"
 
 
 def _dict_lines(items: dict[str, str]) -> list[str]:

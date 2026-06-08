@@ -94,7 +94,9 @@ python scripts/run_scene_pipeline.py \
 For external sharing, start with `submission_packet/submission_checklist.md`. Its
 `Readiness Summary` section is the compact send/no-send view: failed checks, warning checks,
 pack validation state, and the recommended next action. The same information is available in
-`submission_packet/submission_packet.json` under `readiness_summary` for automation.
+`submission_packet/submission_packet.json` under `readiness_summary` for automation. Pack
+references in this packet use share-safe artifact names such as `portfolio_pack.zip` instead
+of machine-specific absolute paths.
 
 You can inspect these files in one place with the Streamlit dashboard:
 

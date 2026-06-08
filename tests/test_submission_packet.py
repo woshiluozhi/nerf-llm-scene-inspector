@@ -69,6 +69,47 @@ def test_write_submission_packet_outputs_markdown_and_briefs(tmp_path: Path) -> 
     assert "dry-run smoke demo" in (output_dir / "professor_email_brief.md").read_text(encoding="utf-8")
 
 
+def test_submission_packet_uses_share_safe_pack_path(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    pack = tmp_path / "portfolio_pack.zip"
+    pack.write_text("not a real zip", encoding="utf-8")
+    validation = tmp_path / "portfolio_pack_validation.json"
+    _write_json(validation, {"ok": True, "warnings": [], "errors": [], "path_leaks": []})
+
+    packet = build_submission_packet(run_dir, pack_dir=pack, pack_validation_path=validation)
+
+    assert packet.pack_dir == "portfolio_pack.zip"
+    assert packet.recommended_links["portfolio_pack"] == "portfolio_pack.zip"
+    pack_payload = json.dumps(
+        {
+            "pack_dir": packet.pack_dir,
+            "portfolio_pack": packet.recommended_links["portfolio_pack"],
+        }
+    )
+    assert str(tmp_path) not in pack_payload
+
+
+def test_submission_packet_missing_pack_error_is_share_safe(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    missing_pack = tmp_path / "missing" / "portfolio_pack.zip"
+
+    packet = build_submission_packet(run_dir, pack_dir=missing_pack)
+
+    assert packet.pack_dir == "portfolio_pack.zip"
+    assert packet.recommended_links["portfolio_pack"] == "portfolio_pack.zip"
+    assert packet.pack_ok is False
+    pack_item = next(item for item in packet.checklist if item.name == "portfolio_pack")
+    assert pack_item.status == "fail"
+    pack_payload = json.dumps(
+        {
+            "pack_dir": packet.pack_dir,
+            "portfolio_pack": packet.recommended_links["portfolio_pack"],
+            "portfolio_pack_check": pack_item.to_dict(),
+        }
+    )
+    assert str(tmp_path) not in pack_payload
+
+
 def test_create_submission_packet_cli(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path / "run", dry_run=True)
     output_dir = tmp_path / "packet"
@@ -95,6 +136,39 @@ def test_create_submission_packet_cli(tmp_path: Path) -> None:
     assert payload["repo_url"] == "https://github.com/example/repo"
     assert payload["readiness_level"] == "needs_pack_validation"
     assert payload["readiness_summary"]["readiness_level"] == "needs_pack_validation"
+
+
+def test_create_submission_packet_cli_uses_share_safe_pack_path(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    output_dir = tmp_path / "packet"
+    pack = tmp_path / "portfolio_pack.zip"
+    pack.write_text("not a real zip", encoding="utf-8")
+    validation = tmp_path / "portfolio_pack_validation.json"
+    _write_json(validation, {"ok": True, "warnings": [], "errors": [], "path_leaks": []})
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "create_submission_packet.py"),
+            "--run-dir",
+            str(run_dir),
+            "--output",
+            str(output_dir),
+            "--pack",
+            str(pack),
+            "--pack-validation",
+            str(validation),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads((output_dir / "submission_packet.json").read_text(encoding="utf-8"))
+    assert payload["pack_dir"] == "portfolio_pack.zip"
+    assert payload["recommended_links"]["portfolio_pack"] == "portfolio_pack.zip"
 
 
 def test_submission_packet_blocks_failed_claim_audit(tmp_path: Path) -> None:
