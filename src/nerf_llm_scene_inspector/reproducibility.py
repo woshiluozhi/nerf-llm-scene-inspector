@@ -177,6 +177,19 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(["python", "scripts/recommend_next_steps.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_evidence_scorecard.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
+        _format_command(
+            [
+                "python",
+                "scripts/review_annotations.py",
+                "--annotations",
+                f"{run_dir}/annotation_template.json",
+                "--results",
+                f"{run_dir}/queries",
+                "--output",
+                f"{run_dir}/evaluation",
+                "--allow-warnings",
+            ]
+        ),
         _format_command(["python", "scripts/export_portfolio_pack.py", "--run-dir", run_dir, "--zip"]),
         _format_command(["python", "scripts/validate_portfolio_pack.py", "--pack", "results/portfolio_pack"]),
     ]
@@ -214,6 +227,11 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         "portfolio_page": ("portfolio_page.html", "Static HTML page for sharing run evidence."),
         "query_grid": ("demo_assets/query_grid.png", "Qualitative query visualization."),
         "evaluation_summary": ("evaluation/eval_summary.json", "Quantitative/qualitative metric summary."),
+        "annotation_review": ("evaluation/annotation_review.md", "Visual QA report for manual bbox annotations."),
+        "annotation_review_contact_sheet": (
+            "evaluation/annotation_review_contact_sheet.png",
+            "Contact sheet of manual bbox annotations over rendered views.",
+        ),
         "portfolio_card": ("portfolio_result_card.md", "Short project-page result narrative."),
         "command_logs": ("logs", "Subprocess command stdout/stderr records."),
     }

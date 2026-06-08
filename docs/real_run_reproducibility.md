@@ -53,6 +53,8 @@ python scripts/run_scene_pipeline.py \
 - `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
+- `evaluation/annotation_review.md`: visual QA table for manual bbox annotations.
+- `evaluation/annotation_review_contact_sheet.png`: contact sheet with bboxes drawn over rendered views.
 - `run_audit.md`: run-level health summary for environment, data, query, annotation, and evaluation readiness.
 - `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
 - `evidence_scorecard.md`: conservative 100-point scorecard for whether the run is strong enough to share.
@@ -134,6 +136,12 @@ python scripts/validate_annotations.py \
   --annotations results/pipeline_runs/desk_scene/annotation_template.json \
   --results results/pipeline_runs/desk_scene/queries \
   --output results/pipeline_runs/desk_scene/evaluation/annotation_validation.json
+
+python scripts/review_annotations.py \
+  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --results results/pipeline_runs/desk_scene/queries \
+  --output results/pipeline_runs/desk_scene/evaluation \
+  --allow-warnings
 
 python scripts/evaluate_queries.py \
   --queries results/pipeline_runs/desk_scene/queries.yaml \

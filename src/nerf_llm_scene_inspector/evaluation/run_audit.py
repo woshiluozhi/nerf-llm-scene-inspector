@@ -186,6 +186,13 @@ def _check_required_files(
                 "evaluation/eval_summary.json",
             ]
         )
+    if _step_status(summary, "review_annotations") == "success":
+        required.extend(
+            [
+                "evaluation/annotation_review.json",
+                "evaluation/annotation_review.md",
+            ]
+        )
     if _step_status(summary, "generate_demo_assets") == "success":
         required.extend(
             [
@@ -468,6 +475,8 @@ def _key_artifacts(root: Path) -> dict[str, str]:
         "environment_report": "environment_report.json",
         "scene_data_inspection": "scene_data_inspection.md",
         "annotation_validation": "evaluation/annotation_validation.json",
+        "annotation_review": "evaluation/annotation_review.md",
+        "annotation_review_contact_sheet": "evaluation/annotation_review_contact_sheet.png",
         "evaluation_summary": "evaluation/eval_summary.json",
         "query_grid": "demo_assets/query_grid.png",
         "demo_montage": "demo_assets/demo_montage.gif",

@@ -18,4 +18,4 @@ Robots and embodied agents need persistent scene representations that connect ge
 
 ## How This Project Differs From A Pure Reproduction
 
-This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, a local query planner, spatial-reasoning utilities, visualization generation, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.
+This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, a local query planner, spatial-reasoning utilities, visualization generation, annotation QA, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.

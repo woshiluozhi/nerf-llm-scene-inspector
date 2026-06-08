@@ -58,6 +58,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["preflight_report"] == "run/preflight_report.md"
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
+    assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
     assert index["run_summary"]["scene_name"] == "export_scene"
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
@@ -90,6 +91,9 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "annotation_template.json").exists()
     assert (output_dir / "run" / "project_report.md").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_validation.json").exists()
+    assert (output_dir / "run" / "evaluation" / "annotation_review.json").exists()
+    assert (output_dir / "run" / "evaluation" / "annotation_review.md").exists()
+    assert (output_dir / "run" / "evaluation" / "annotation_review_contact_sheet.png").exists()
     assert (output_dir / "run" / "evaluation" / "eval_summary.json").exists()
     assert (output_dir / "run" / "demo_assets" / "query_grid.png").exists()
     validation = validate_portfolio_pack(output_dir)

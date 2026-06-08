@@ -53,6 +53,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Typed JSON artifacts for query results and scene reports.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
+- Annotation review artifacts that draw manual `bbox_2d` labels over rendered views for QA before reporting metrics.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Real-run preflight reports that check raw input, processed scene data, config paths, CUDA/upstream tools, and backend method registration before expensive training.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
@@ -189,6 +190,7 @@ python scripts/train_language_field.py --data data/processed/desk_scene --backen
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/validate_annotations.py --annotations examples/annotations_example.json --queries examples/queries_demo.yaml --results results/query_outputs
+python scripts/review_annotations.py --annotations examples/annotations_example.json --results results/query_outputs --output results/evaluation --allow-warnings
 python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.yml --backend lerf --dry-run
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/demo_assets --dry-run
 ```
@@ -205,6 +207,7 @@ python scripts/train_language_field.py --data data/processed/desk_scene --backen
 python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/validate_annotations.py --annotations results/annotations_template.json --queries examples/queries_demo.yaml --results results/query_outputs
+python scripts/review_annotations.py --annotations results/annotations_template.json --results results/query_outputs --output results/evaluation --allow-warnings
 streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
 ```
@@ -271,6 +274,9 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/annotation_template.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/annotation_validation.json`
+- `results/pipeline_runs/<scene>/evaluation/annotation_review.json`
+- `results/pipeline_runs/<scene>/evaluation/annotation_review.md`
+- `results/pipeline_runs/<scene>/evaluation/annotation_review_contact_sheet.png`
 - `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
 - `results/pipeline_runs/<scene>/run_audit.json`
 - `results/pipeline_runs/<scene>/run_audit.md`
@@ -348,6 +354,7 @@ python scripts/query_scene.py --help
 python scripts/import_viewer_outputs.py --help
 python scripts/create_annotation_template.py --help
 python scripts/validate_annotations.py --help
+python scripts/review_annotations.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/generate_portfolio_page.py --help
 python scripts/generate_project_site.py --help

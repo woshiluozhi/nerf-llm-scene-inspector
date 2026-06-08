@@ -13,6 +13,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - LERF primary backend with OpenNeRF secondary adapter.
 - Deterministic local query planner for object, affordance, material, and relation prompts.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
+- Annotation review contact sheets for checking manual `bbox_2d` labels before reporting metrics.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
@@ -55,6 +56,7 @@ python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_sce
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
 - Evidence scorecard: `results/pipeline_runs/desk_scene/evidence_scorecard.md`
 - Static portfolio page: `results/pipeline_runs/desk_scene/portfolio_page.html`
+- Annotation review: `results/pipeline_runs/desk_scene/evaluation/annotation_review.md`
 - Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`
 - Run-scoped evaluation: `results/pipeline_runs/desk_scene/evaluation/eval_summary.json`
 - Portfolio pack: `results/portfolio_pack.zip`

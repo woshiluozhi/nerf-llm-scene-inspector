@@ -48,6 +48,7 @@ jobs:
           python scripts/import_viewer_outputs.py --help
           python scripts/create_annotation_template.py --help
           python scripts/validate_annotations.py --help
+          python scripts/review_annotations.py --help
           python scripts/generate_demo_assets.py --help
           python scripts/generate_portfolio_page.py --help
           python scripts/generate_project_site.py --help

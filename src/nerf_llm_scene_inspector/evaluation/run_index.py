@@ -172,6 +172,8 @@ def _artifacts(run_dir: Path) -> dict[str, str]:
         "query_grid": "demo_assets/query_grid.png",
         "evaluation_summary": "evaluation/eval_summary.json",
         "annotation_validation": "evaluation/annotation_validation.json",
+        "annotation_review": "evaluation/annotation_review.md",
+        "annotation_review_contact_sheet": "evaluation/annotation_review_contact_sheet.png",
     }
     return {name: relative for name, relative in candidates.items() if (run_dir / relative).exists()}
 

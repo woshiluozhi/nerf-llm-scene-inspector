@@ -128,6 +128,12 @@ def _copy_run_materials(
         (run_dir / "evaluation" / "eval_summary.json", "run/evaluation/eval_summary.json"),
         (run_dir / "evaluation" / "eval_table.csv", "run/evaluation/eval_table.csv"),
         (run_dir / "evaluation" / "annotation_validation.json", "run/evaluation/annotation_validation.json"),
+        (run_dir / "evaluation" / "annotation_review.json", "run/evaluation/annotation_review.json"),
+        (run_dir / "evaluation" / "annotation_review.md", "run/evaluation/annotation_review.md"),
+        (
+            run_dir / "evaluation" / "annotation_review_contact_sheet.png",
+            "run/evaluation/annotation_review_contact_sheet.png",
+        ),
         (run_dir / "evaluation" / "qualitative_report.md", "run/evaluation/qualitative_report.md"),
         (run_dir / "demo_assets" / "demo_summary.json", "run/demo_assets/demo_summary.json"),
         (run_dir / "demo_assets" / "query_grid.png", "run/demo_assets/query_grid.png"),
@@ -154,6 +160,14 @@ def _copy_run_materials(
         _copy_file(
             overlay,
             output / "run" / "demo_assets" / "overlays" / overlay.parent.name / overlay.name,
+            output,
+            copied,
+            missing,
+        )
+    for review_image in sorted((run_dir / "evaluation" / "annotation_review_images").glob("*.png"))[:20]:
+        _copy_file(
+            review_image,
+            output / "run" / "evaluation" / "annotation_review_images" / review_image.name,
             output,
             copied,
             missing,
@@ -320,6 +334,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "portfolio_page": "run/portfolio_page.html",
         "evaluation_summary": "run/evaluation/eval_summary.json",
         "annotation_validation": "run/evaluation/annotation_validation.json",
+        "annotation_review": "run/evaluation/annotation_review.md",
+        "annotation_review_contact_sheet": "run/evaluation/annotation_review_contact_sheet.png",
         "demo_grid": "run/demo_assets/query_grid.png",
         "demo_montage": "run/demo_assets/demo_montage.gif",
     }

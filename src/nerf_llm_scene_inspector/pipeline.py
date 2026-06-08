@@ -152,6 +152,9 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "queries": str(query_dir),
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
+        "annotation_review_json": str(eval_dir / "annotation_review.json"),
+        "annotation_review_markdown": str(eval_dir / "annotation_review.md"),
+        "annotation_review_contact_sheet": str(eval_dir / "annotation_review_contact_sheet.png"),
         "training": str(training_dir),
         "logs": str(logs_dir),
         "run_queries": str(run_queries_path),
@@ -441,6 +444,40 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 }
             )
             steps.append(eval_result)
+            if eval_result.status == "success":
+                review_result = _run_helper_script(
+                    [
+                        sys.executable,
+                        str(root / "scripts" / "review_annotations.py"),
+                        "--annotations",
+                        str(config.annotations_path),
+                        "--results",
+                        str(eval_results_dir),
+                        "--output",
+                        str(eval_dir),
+                        "--allow-warnings",
+                    ],
+                    root=root,
+                    log_path=logs_dir / "review_annotations_command.json",
+                )
+                review_result.outputs.update(
+                    {
+                        "annotation_review": str(eval_dir / "annotation_review.json"),
+                        "annotation_review_markdown": str(eval_dir / "annotation_review.md"),
+                        "annotation_review_contact_sheet": str(
+                            eval_dir / "annotation_review_contact_sheet.png"
+                        ),
+                    }
+                )
+                steps.append(review_result)
+            else:
+                steps.append(
+                    PipelineStep(
+                        "review_annotations",
+                        "skipped",
+                        error="Skipped because evaluate_queries did not complete successfully.",
+                    )
+                )
     except Exception as exc:
         steps.append(PipelineStep("pipeline", "failed", error=str(exc)))
 

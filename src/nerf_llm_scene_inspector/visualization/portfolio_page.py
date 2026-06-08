@@ -154,6 +154,7 @@ def _images(root: Path) -> list[dict[str, str]]:
     candidates: list[Path] = [
         root / "demo_assets" / "query_grid.png",
         root / "demo_assets" / "demo_montage.gif",
+        root / "evaluation" / "annotation_review_contact_sheet.png",
     ]
     candidates.extend(sorted((root / "demo_assets").rglob("*overlay.png")))
     candidates.extend(sorted((root / "queries").rglob("*overlay.png")))
@@ -179,6 +180,8 @@ def _artifacts(root: Path) -> list[dict[str, str]]:
         "Evaluation summary": "evaluation/eval_summary.json",
         "Evaluation table": "evaluation/eval_table.csv",
         "Annotation template": "annotation_template.json",
+        "Annotation review": "evaluation/annotation_review.md",
+        "Annotation review JSON": "evaluation/annotation_review.json",
         "Reproduction report": "reproduction_report.md",
         "Reproduction script": "reproduce_run.sh",
         "Portfolio result card": "portfolio_result_card.md",

@@ -102,6 +102,9 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
     assert (run_dir / "demo_assets" / "query_grid.png").exists()
     assert (run_dir / "evaluation" / "annotation_validation.json").exists()
+    assert (run_dir / "evaluation" / "annotation_review.json").exists()
+    assert (run_dir / "evaluation" / "annotation_review.md").exists()
+    assert (run_dir / "evaluation" / "annotation_review_contact_sheet.png").exists()
     assert (run_dir / "evaluation" / "eval_summary.json").exists()
     assert (run_dir / "evaluation" / "qualitative_report.md").exists()
     assert (run_dir / "project_report.md").exists()
@@ -118,12 +121,18 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "logs" / "create_annotation_template_command.json").exists()
     assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()
     assert (run_dir / "logs" / "evaluate_queries_command.json").exists()
+    assert (run_dir / "logs" / "review_annotations_command.json").exists()
     eval_step = next(step for step in summary.steps if step.name == "evaluate_queries")
     assert eval_step.outputs["eval_summary"] == str(run_dir / "evaluation" / "eval_summary.json")
     assert eval_step.outputs["annotation_validation"] == str(
         run_dir / "evaluation" / "annotation_validation.json"
     )
     assert eval_step.outputs["command_log"] == str(run_dir / "logs" / "evaluate_queries_command.json")
+    review_step = next(step for step in summary.steps if step.name == "review_annotations")
+    assert review_step.outputs["annotation_review"] == str(run_dir / "evaluation" / "annotation_review.json")
+    assert review_step.outputs["annotation_review_markdown"] == str(
+        run_dir / "evaluation" / "annotation_review.md"
+    )
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
     audit_step = next(step for step in summary.steps if step.name == "audit_run")

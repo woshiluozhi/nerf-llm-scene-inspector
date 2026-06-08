@@ -37,6 +37,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
             "language": _read_json(root / "training" / "language_train_summary.json"),
         },
         "annotation_validation": _read_json(root / "evaluation" / "annotation_validation.json"),
+        "annotation_review": _read_json(root / "evaluation" / "annotation_review.json"),
+        "annotation_review_markdown": _read_text(root / "evaluation" / "annotation_review.md"),
         "evaluation_summary": _read_json(root / "evaluation" / "eval_summary.json"),
         "evaluation_table": _read_csv(root / "evaluation" / "eval_table.csv"),
         "annotation_template": _read_json(root / "annotation_template.json"),
@@ -59,10 +61,12 @@ def collect_run_images(run_dir: str | Path, *, limit: int = 40) -> list[dict[str
         [
             root / "demo_assets" / "query_grid.png",
             root / "demo_assets" / "demo_montage.gif",
+            root / "evaluation" / "annotation_review_contact_sheet.png",
         ]
     )
     for pattern in (
         "demo_assets/**/*overlay.png",
+        "evaluation/annotation_review_images/*.png",
         "queries/**/*overlay.png",
         "queries/**/*relevancy.png",
         "queries/**/*rgb.png",
@@ -285,6 +289,12 @@ def _render_evaluation(st: Any, bundle: dict[str, Any]) -> None:
     if bundle["annotation_validation"]:
         with st.expander("Annotation Validation"):
             st.json(bundle["annotation_validation"])
+    if bundle["annotation_review"]:
+        with st.expander("Annotation Review", expanded=True):
+            if bundle["annotation_review_markdown"]:
+                st.markdown(bundle["annotation_review_markdown"])
+            else:
+                st.json(bundle["annotation_review"])
     if bundle["annotation_template"]:
         st.json(bundle["annotation_template"])
     else:
@@ -361,6 +371,13 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "evaluation/eval_summary.json",
         "portfolio_page.html",
     ]
+    if _step_succeeded(pipeline_summary, "review_annotations"):
+        expected.extend(
+            [
+                "evaluation/annotation_review.json",
+                "evaluation/annotation_review.md",
+            ]
+        )
     if _step_succeeded(pipeline_summary, "train_baseline_nerf"):
         expected.append("training/baseline_train_summary.json")
     if _step_succeeded(pipeline_summary, "train_language_field"):
