@@ -19,10 +19,27 @@ inspection artifacts under `results/pipeline_runs/<scene>/`.
 | coffee |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 | container |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 | laptop | open laptop on the desk | evaluated | False | 0.194 | 0.8862745098039215 |  |
+| laptop | open laptop on the desk | evaluated | False | 0.194 | 0.8862745098039215 |  |
+| metallic object |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| metallic tool |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 | metallic tools |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| scissors |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| screwdriver |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| wrench |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| mug | white mug on the desk | evaluated | False | 0.179 | 0.8862745098039215 |  |
+| mug | white mug on the desk | evaluated | False | 0.179 | 0.8862745098039215 |  |
+| bottle |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| bowl |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| cup |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| glass |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 | mug | white mug on the desk | evaluated | False | 0.179 | 0.8862745098039215 |  |
 | objects that can hold water |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| coaster |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| desk |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| flat surface |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 | safe place to put a hot cup |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| table |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| tray |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 
 ## Evaluation Summary
 
@@ -33,11 +50,11 @@ inspection artifacts under `results/pipeline_runs/<scene>/`.
 | semantic_success_rate | 0.0 |
 | average_relevancy_score | 0.8862745098039215 |
 | num_evaluated_queries | 2 |
-| num_result_queries | 7 |
-| num_unique_result_queries | 7 |
+| num_result_queries | 24 |
+| num_unique_result_queries | 21 |
 | num_annotated_queries | 2 |
 | num_bbox_annotated_queries | 2 |
-| num_qualitative_only_queries | 5 |
+| num_qualitative_only_queries | 19 |
 
 ## Scene Relation Analysis
 

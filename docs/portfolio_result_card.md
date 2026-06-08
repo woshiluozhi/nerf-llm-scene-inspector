@@ -39,6 +39,8 @@ a trained semantic field and an NVIDIA GPU environment.
 - Scene name: `desk_scene`
 - Backend: `lerf`
 - Demo queries generated: `5`
+- Demo backend calls rendered: `17`
+- Demo planner mode: `planned`
 - CPU-only dry-run demo with mock RGB/relevancy/overlay outputs.
 - Real-mode wrappers for Nerfstudio/LERF commands when upstream tools are installed.
 - Run-scoped pipeline artifacts avoid stale query/evaluation results across reruns.

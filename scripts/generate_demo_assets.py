@@ -15,6 +15,9 @@ from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend  # noqa: 
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend  # noqa: E402
 from nerf_llm_scene_inspector.config import load_mapping  # noqa: E402
 from nerf_llm_scene_inspector.evaluation.report import write_project_report  # noqa: E402
+from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner  # noqa: E402
+from nerf_llm_scene_inspector.backends.base import QueryResult  # noqa: E402
+from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine  # noqa: E402
 from nerf_llm_scene_inspector.utils.paths import slugify  # noqa: E402
 from nerf_llm_scene_inspector.visualization.make_video import make_mp4_or_gif  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
@@ -29,6 +32,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--report-output", default="docs/project_report.md")
     parser.add_argument("--portfolio-card-output", default="docs/portfolio_result_card.md")
     parser.add_argument("--num-views", type=int, default=1)
+    parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--max-queries", type=int, default=5)
+    parser.add_argument(
+        "--planner-mode",
+        choices=["planned", "direct"],
+        default="planned",
+        help="Use SemanticQueryEngine planning for demo tasks, or direct backend queries.",
+    )
+    parser.add_argument(
+        "--include-tasks",
+        action="store_true",
+        help="Also run entries under the YAML tasks field.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -39,7 +55,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     raw_queries = load_mapping(args.queries)
     scene_name = str(raw_queries.get("scene_name", "desk_scene"))
-    queries = [str(item) for item in raw_queries.get("queries", [])]
+    queries = _collect_demo_queries(raw_queries, include_tasks=args.include_tasks)
     if not queries:
         print("No queries found in query file.", file=sys.stderr)
         return 1
@@ -50,12 +66,23 @@ def main() -> int:
     )
     try:
         backend.load(args.config)
-        results = []
-        overlay_paths: list[Path] = []
-        for query in queries:
-            result = backend.query_text(query, str(output / slugify(query)), top_k=5)
-            results.append(result)
-            overlay_paths.extend(Path(view.path) for view in result.rendered_images if view.kind == "overlay")
+        if args.planner_mode == "planned":
+            results, overlay_paths, scene_report_paths = _run_planned_queries(
+                backend=backend,
+                scene_name=scene_name,
+                queries=queries,
+                output=output,
+                top_k=args.top_k,
+                max_queries=args.max_queries,
+            )
+        else:
+            results, overlay_paths = _run_direct_queries(
+                backend=backend,
+                queries=queries,
+                output=output,
+                top_k=args.top_k,
+            )
+            scene_report_paths = []
         video_path = None
         if overlay_paths:
             video_path = make_mp4_or_gif(overlay_paths, output / "demo_montage.gif")
@@ -87,7 +114,9 @@ def main() -> int:
             Path(args.portfolio_card_output),
             scene_name=scene_name,
             backend=args.backend,
-            num_queries=len(results),
+            num_queries=len(queries),
+            num_backend_results=len(results),
+            planner_mode=args.planner_mode,
             grid_path=grid_path,
             video_path=video_path,
         )
@@ -98,16 +127,90 @@ def main() -> int:
     payload = {
         "scene_name": scene_name,
         "backend": args.backend,
+        "planner_mode": args.planner_mode,
         "num_queries": len(results),
+        "num_user_queries": len(queries),
+        "num_backend_results": len(results),
         "output": str(output),
         "video": str(video_path) if video_path else None,
         "query_grid": str(grid_path) if grid_path else None,
+        "scene_reports": [str(path) for path in scene_report_paths],
+        "user_queries": queries,
         "results": [result.to_dict() for result in results],
     }
     summary_path = output / "demo_summary.json"
     summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(json.dumps(payload, indent=2))
     return 0
+
+
+def _collect_demo_queries(raw_queries: dict[str, object], *, include_tasks: bool) -> list[str]:
+    queries = [str(item) for item in raw_queries.get("queries", []) if str(item).strip()]
+    if include_tasks:
+        queries.extend(str(item) for item in raw_queries.get("tasks", []) if str(item).strip())
+    return _dedupe_preserving_order(queries)
+
+
+def _run_planned_queries(
+    *,
+    backend,
+    scene_name: str,
+    queries: list[str],
+    output: Path,
+    top_k: int,
+    max_queries: int,
+) -> tuple[list[QueryResult], list[Path], list[Path]]:
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=LocalRulePlanner(),
+        top_k=top_k,
+        max_queries=max_queries,
+        scene_name=scene_name,
+    )
+    results: list[QueryResult] = []
+    overlay_paths: list[Path] = []
+    scene_report_paths: list[Path] = []
+    for query in queries:
+        task_dir = output / slugify(query)
+        report = engine.run_task(query, task_dir)
+        scene_report_paths.append(report.to_json(task_dir / "scene_query_report.json"))
+        report.to_markdown(task_dir / "scene_query_report.md")
+        results.extend(report.query_results)
+        overlay_paths.extend(
+            Path(view.path)
+            for result in report.query_results
+            for view in result.rendered_images
+            if view.kind == "overlay"
+        )
+    return results, overlay_paths, scene_report_paths
+
+
+def _run_direct_queries(
+    *,
+    backend,
+    queries: list[str],
+    output: Path,
+    top_k: int,
+) -> tuple[list[QueryResult], list[Path]]:
+    results: list[QueryResult] = []
+    overlay_paths: list[Path] = []
+    for query in queries:
+        result = backend.query_text(query, str(output / slugify(query)), top_k=top_k)
+        results.append(result)
+        overlay_paths.extend(Path(view.path) for view in result.rendered_images if view.kind == "overlay")
+    return results, overlay_paths
+
+
+def _dedupe_preserving_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in items:
+        normalized = item.strip()
+        key = normalized.lower()
+        if normalized and key not in seen:
+            seen.add(key)
+            deduped.append(normalized)
+    return deduped
 
 
 def _make_query_grid(image_paths: list[Path], output_path: Path, max_columns: int = 2) -> Path | None:
@@ -148,6 +251,8 @@ def _write_portfolio_result_card(
     scene_name: str,
     backend: str,
     num_queries: int,
+    num_backend_results: int,
+    planner_mode: str,
     grid_path: Path | None,
     video_path: Path | None,
 ) -> None:
@@ -193,6 +298,8 @@ def _write_portfolio_result_card(
         f"- Scene name: `{scene_name}`",
         f"- Backend: `{backend}`",
         f"- Demo queries generated: `{num_queries}`",
+        f"- Demo backend calls rendered: `{num_backend_results}`",
+        f"- Demo planner mode: `{planner_mode}`",
         "- CPU-only dry-run demo with mock RGB/relevancy/overlay outputs.",
         "- Real-mode wrappers for Nerfstudio/LERF commands when upstream tools are installed.",
         "- Run-scoped pipeline artifacts avoid stale query/evaluation results across reruns.",

@@ -299,6 +299,13 @@ python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/demo_assets --dry-run
 ```
 
+`generate_demo_assets.py` defaults to `--planner-mode planned`, so each demo prompt is
+run through `SemanticQueryEngine`: high-level tasks are expanded into backend text queries,
+relation-anchor calls are preserved in provenance, and per-task `scene_query_report.json`
+and Markdown reports are written beside the rendered overlays. Use
+`--planner-mode direct` when you want the compatibility behavior of one prompt producing
+one backend query result.
+
 Real mode uses the installed upstream tools:
 
 ```bash
