@@ -32,6 +32,7 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_recommendations.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "reproduction_manifest.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "logs" / "prepare_data_command.json").exists()
     assert (
         tmp_path
@@ -94,6 +95,9 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "run_audit.md").exists()
     assert (run_dir / "run_recommendations.json").exists()
     assert (run_dir / "run_recommendations.md").exists()
+    assert (run_dir / "reproduction_manifest.json").exists()
+    assert (run_dir / "reproduction_report.md").exists()
+    assert (run_dir / "reproduce_run.sh").exists()
     run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert (run_dir / "logs" / "prepare_data_command.json").exists()
@@ -114,6 +118,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert recommendation_step.outputs["json"] == str(run_dir / "run_recommendations.json")
     recommendation_payload = json.loads((run_dir / "run_recommendations.json").read_text(encoding="utf-8"))
     assert recommendation_payload["readiness_level"] == "dry_run_ready_for_smoke_demo"
+    reproduction_step = next(step for step in summary.steps if step.name == "create_reproduction_bundle")
+    assert reproduction_step.outputs["manifest"] == str(run_dir / "reproduction_manifest.json")
+    reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
+    assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
 
 
 def test_run_scene_pipeline_writes_run_scoped_training_summaries(tmp_path: Path) -> None:

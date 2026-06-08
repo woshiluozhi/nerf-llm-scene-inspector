@@ -24,6 +24,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_audit": _read_json(root / "run_audit.json"),
         "run_recommendations": _read_json(root / "run_recommendations.json"),
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
+        "reproduction_manifest": _read_json(root / "reproduction_manifest.json"),
+        "reproduction_report": _read_text(root / "reproduction_report.md"),
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
         "training_summaries": {
@@ -179,6 +181,12 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
 
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})
+    if bundle["reproduction_manifest"]:
+        with st.expander("Reproduction Recipe", expanded=False):
+            if bundle["reproduction_report"]:
+                st.markdown(bundle["reproduction_report"])
+            else:
+                st.json(bundle["reproduction_manifest"])
 
     st.subheader("Step Status")
     rows = [
@@ -312,6 +320,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "pipeline_summary.json",
         "run_audit.json",
         "run_recommendations.json",
+        "reproduction_manifest.json",
         "environment_report.json",
         "scene_data_inspection.json",
         "annotation_template.json",

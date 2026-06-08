@@ -56,6 +56,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
+- Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
 - Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
 
@@ -147,6 +148,7 @@ Practical one-command dry-run pipeline:
 python scripts/run_scene_pipeline.py --dry-run
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
+python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/index_runs.py --root results/pipeline_runs
 ```
 
@@ -262,6 +264,9 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/run_audit.md`
 - `results/pipeline_runs/<scene>/run_recommendations.json`
 - `results/pipeline_runs/<scene>/run_recommendations.md`
+- `results/pipeline_runs/<scene>/reproduction_manifest.json`
+- `results/pipeline_runs/<scene>/reproduction_report.md`
+- `results/pipeline_runs/<scene>/reproduce_run.sh`
 - `results/pipeline_runs/run_index.json`
 - `results/pipeline_runs/run_index.md`
 - `results/pipeline_runs/<scene>/logs/*.json`
@@ -329,6 +334,7 @@ python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
 python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help
+python scripts/create_reproduction_bundle.py --help
 python scripts/index_runs.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/validate_portfolio_pack.py --help

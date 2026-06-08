@@ -35,6 +35,11 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"readiness_level": "ready_for_portfolio", "recommendations": []},
     )
     (run_dir / "run_recommendations.md").write_text("# Run Recommendations\n", encoding="utf-8")
+    _write_json(
+        run_dir / "reproduction_manifest.json",
+        {"scene_name": "run", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"},
+    )
+    (run_dir / "reproduction_report.md").write_text("# Reproduction Report\n", encoding="utf-8")
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
     _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
@@ -65,6 +70,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["run_audit"]["status"] == "ready"
     assert bundle["run_recommendations"]["readiness_level"] == "ready_for_portfolio"
     assert "# Run Recommendations" in bundle["run_recommendations_markdown"]
+    assert bundle["reproduction_manifest"]["scene_name"] == "run"
+    assert "# Reproduction Report" in bundle["reproduction_report"]
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["command_logs"][0]["label"] == "logs/prepare_data_command.json"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"

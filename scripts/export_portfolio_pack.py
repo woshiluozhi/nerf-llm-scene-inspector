@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-TEXT_SUFFIXES = {".cff", ".csv", ".json", ".md", ".txt", ".yaml", ".yml"}
+TEXT_SUFFIXES = {".cff", ".csv", ".json", ".md", ".sh", ".txt", ".yaml", ".yml"}
 TEXT_NAMES = {"LICENSE", "README", "README.md"}
 
 
@@ -109,6 +109,9 @@ def _copy_run_materials(
         (run_dir / "run_audit.md", "run/run_audit.md"),
         (run_dir / "run_recommendations.json", "run/run_recommendations.json"),
         (run_dir / "run_recommendations.md", "run/run_recommendations.md"),
+        (run_dir / "reproduction_manifest.json", "run/reproduction_manifest.json"),
+        (run_dir / "reproduction_report.md", "run/reproduction_report.md"),
+        (run_dir / "reproduce_run.sh", "run/reproduce_run.sh"),
         (run_dir / "environment_report.json", "run/environment_report.json"),
         (run_dir / "scene_data_inspection.json", "run/scene_data_inspection.json"),
         (run_dir / "scene_data_inspection.md", "run/scene_data_inspection.md"),
@@ -297,6 +300,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "run_index": "run_index.md",
         "run_audit": "run/run_audit.md",
         "run_recommendations": "run/run_recommendations.md",
+        "reproduction_report": "run/reproduction_report.md",
+        "reproduce_script": "run/reproduce_run.sh",
         "command_logs": "run/logs/",
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",

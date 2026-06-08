@@ -89,6 +89,9 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/run_audit.md",
         "run/run_recommendations.json",
         "run/run_recommendations.md",
+        "run/reproduction_manifest.json",
+        "run/reproduction_report.md",
+        "run/reproduce_run.sh",
         "run/environment_report.json",
         "run/scene_data_inspection.json",
         "run/scene_data_inspection.md",
@@ -129,6 +132,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "run_index": "run_index.md",
                 "run_audit": "run/run_audit.md",
                 "run_recommendations": "run/run_recommendations.md",
+                "reproduction_report": "run/reproduction_report.md",
+                "reproduce_script": "run/reproduce_run.sh",
                 "command_logs": "run/logs/",
                 "evaluation_summary": "run/evaluation/eval_summary.json",
                 "annotation_validation": "run/evaluation/annotation_validation.json",
@@ -147,6 +152,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"status": "ready", "score": 100})
     if relative_path.endswith("run_recommendations.json"):
         return json.dumps({"readiness_level": "ready_for_portfolio", "recommendations": []})
+    if relative_path.endswith("reproduction_manifest.json"):
+        return json.dumps({"scene_name": "desk_scene", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"})
     if relative_path.endswith("annotation_validation.json"):
         return json.dumps({"ok": True, "warnings": []})
     if relative_path.endswith("pipeline_summary.json"):

@@ -17,6 +17,7 @@ from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
+from nerf_llm_scene_inspector.reproducibility import build_reproduction_bundle
 from nerf_llm_scene_inspector.scene_validation import inspect_processed_scene
 from nerf_llm_scene_inspector.training import train_baseline_nerf, train_language_field
 from nerf_llm_scene_inspector.utils.env_check import build_env_report
@@ -155,6 +156,9 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_audit_markdown": str(run_dir / "run_audit.md"),
         "run_recommendations_json": str(run_dir / "run_recommendations.json"),
         "run_recommendations_markdown": str(run_dir / "run_recommendations.md"),
+        "reproduction_manifest": str(run_dir / "reproduction_manifest.json"),
+        "reproduction_report": str(run_dir / "reproduction_report.md"),
+        "reproduce_script": str(run_dir / "reproduce_run.sh"),
         "project_report": str(run_dir / "project_report.md"),
         "portfolio_card": str(run_dir / "portfolio_result_card.md"),
     }
@@ -448,6 +452,27 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 "top_next_action": recommendations.top_next_action,
             },
             outputs={"json": str(recommendations_json), "markdown": str(recommendations_md)},
+        )
+    )
+    summary.to_json(summary_path)
+    reproduction = build_reproduction_bundle(run_dir)
+    reproduction_manifest = reproduction.to_json(run_dir / "reproduction_manifest.json")
+    reproduction_report = reproduction.to_markdown(run_dir / "reproduction_report.md")
+    reproduce_script = reproduction.to_shell_script(run_dir / "reproduce_run.sh")
+    steps.append(
+        PipelineStep(
+            "create_reproduction_bundle",
+            "success",
+            summary={
+                "replay_command": reproduction.replay_command,
+                "verification_commands": reproduction.verification_commands,
+                "artifact_count": len(reproduction.artifacts),
+            },
+            outputs={
+                "manifest": str(reproduction_manifest),
+                "markdown": str(reproduction_report),
+                "script": str(reproduce_script),
+            },
         )
     )
     summary.to_json(summary_path)

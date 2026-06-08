@@ -52,6 +52,10 @@ python scripts/run_scene_pipeline.py \
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
 - `run_audit.md`: run-level health summary for environment, data, query, annotation, and evaluation readiness.
+- `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
+- `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
+- `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
+- `reproduce_run.sh`: shell recipe that installs local dependencies, runs checks, replays the pipeline, and verifies the pack.
 - `demo_assets/query_grid.png`: compact qualitative query visualization.
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
@@ -134,6 +138,12 @@ python scripts/evaluate_queries.py \
   --report-output results/pipeline_runs/desk_scene/project_report.md
 
 python scripts/audit_run.py \
+  --run-dir results/pipeline_runs/desk_scene
+
+python scripts/recommend_next_steps.py \
+  --run-dir results/pipeline_runs/desk_scene
+
+python scripts/create_reproduction_bundle.py \
   --run-dir results/pipeline_runs/desk_scene
 ```
 
