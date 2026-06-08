@@ -77,6 +77,7 @@ def _copy_project_materials(
         (ROOT / "docs" / "cv_bullets.md", "project/docs/cv_bullets.md"),
         (ROOT / "docs" / "cold_email_paragraph.md", "project/docs/cold_email_paragraph.md"),
         (ROOT / "docs" / "real_scene_capture_checklist.md", "project/docs/real_scene_capture_checklist.md"),
+        (ROOT / "docs" / "real_run_reproducibility.md", "project/docs/real_run_reproducibility.md"),
         (ROOT / "docs" / "assets" / "query_grid.png", "project/docs/assets/query_grid.png"),
         (ROOT / "docs" / "assets" / "demo_montage.gif", "project/docs/assets/demo_montage.gif"),
     ]
@@ -203,6 +204,20 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "timestamp": summary.get("timestamp"),
         "queries": summary.get("queries"),
         "artifacts": artifacts,
+        "provenance": _provenance_excerpt(summary.get("provenance")),
+    }
+
+
+def _provenance_excerpt(raw: object) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        "project_version": raw.get("project_version"),
+        "python_version": raw.get("python_version"),
+        "git_available": raw.get("git_available"),
+        "git_commit": raw.get("git_commit"),
+        "git_branch": raw.get("git_branch"),
+        "git_dirty": raw.get("git_dirty"),
     }
 
 

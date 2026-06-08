@@ -18,6 +18,7 @@ from nerf_llm_scene_inspector.scene_validation import inspect_processed_scene
 from nerf_llm_scene_inspector.training import train_baseline_nerf, train_language_field
 from nerf_llm_scene_inspector.utils.env_check import build_env_report
 from nerf_llm_scene_inspector.utils.paths import project_root, slugify, utc_timestamp
+from nerf_llm_scene_inspector.utils.provenance import build_provenance
 from nerf_llm_scene_inspector.utils.shell import format_command, run_command
 
 
@@ -58,6 +59,7 @@ class PipelineConfig:
     skip_demo: bool = False
     skip_eval: bool = False
     clean_run_outputs: bool = True
+    command: list[str] | None = None
 
 
 @dataclass
@@ -87,6 +89,7 @@ class PipelineRunSummary:
     paths: dict[str, str]
     queries: list[str]
     steps: list[PipelineStep]
+    provenance: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,6 +102,7 @@ class PipelineRunSummary:
             "paths": self.paths,
             "queries": list(self.queries),
             "steps": [step.to_dict() for step in self.steps],
+            "provenance": dict(self.provenance),
             "warnings": list(self.warnings),
         }
 
@@ -337,6 +341,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         paths=paths,
         queries=config.queries,
         steps=steps,
+        provenance=build_provenance(command=config.command, repo_root=root).to_dict(),
         warnings=warnings,
     )
     summary.to_json(run_dir / "pipeline_summary.json")

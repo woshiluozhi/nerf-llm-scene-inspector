@@ -62,6 +62,7 @@ Review `results/pipeline_runs/desk_scene/pipeline_summary.json` and
 `results/pipeline_runs/desk_scene/scene_data_inspection.md` before using the results in a portfolio report.
 The pipeline cleans the current run's `queries/`, `demo_assets/`, and `evaluation/` folders by default so
 reruns do not accidentally evaluate stale artifacts. Use `--no-clean-run` only when preserving prior files is intentional.
+For a stricter reproducibility checklist, see `docs/real_run_reproducibility.md`.
 
 Export a shareable run package:
 

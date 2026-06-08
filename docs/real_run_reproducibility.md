@@ -1,0 +1,75 @@
+# Real-Run Reproducibility Notes
+
+This project is designed so a dry-run portfolio demo and a real GPU run produce the same
+artifact shape. For a real scene, keep the full run directory and the exported portfolio pack.
+
+## Before Running
+
+```bash
+git status --short
+python scripts/check_env.py --check-upstream --require-gpu --verbose
+```
+
+Record the upstream versions that matter for interpretation:
+
+```bash
+python -c "import sys; print(sys.version)"
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))"
+ns-train -h
+colmap -h
+ffmpeg -version
+```
+
+## Recommended Real Run
+
+```bash
+python scripts/run_scene_pipeline.py \
+  --input path/to/video.mp4 \
+  --scene-name desk_scene \
+  --type video \
+  --backend lerf \
+  --variant lerf-lite \
+  --query "mug" \
+  --query "objects that can hold water" \
+  --query "safe place to put a hot cup" \
+  --annotations examples/annotations_example.json \
+  --num-views 3 \
+  --min-frames 50 \
+  --min-pose-extent 0.05 \
+  --strict
+```
+
+## What To Inspect
+
+- `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
+- `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
+- `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
+- `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
+- `demo_assets/query_grid.png`: compact qualitative query visualization.
+- `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
+- `portfolio_result_card.md`: short result narrative suitable for a project page.
+
+## Provenance Fields
+
+Each pipeline run stores a `provenance` block with:
+
+- project package version
+- Python version and platform
+- CLI command used for the run
+- git commit, branch, dirty state, and sanitized origin remote when available
+- non-fatal warnings if git metadata cannot be read
+
+The exported portfolio pack keeps the original run files but sanitizes machine-specific paths
+inside the packaged copy. The top-level `portfolio_pack_index.json` exposes only a compact,
+share-safe provenance excerpt.
+
+## Export
+
+```bash
+python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+```
+
+Share `results/portfolio_pack.zip` together with the GitHub repository link when sending a
+portfolio or cold-email artifact. Do not claim benchmark superiority from a dry-run or a
+single qualitative scene; report it as a reproducible research-engineering demo unless you
+run a larger annotated evaluation.

@@ -85,6 +85,7 @@ def main() -> int:
         skip_demo=args.skip_demo,
         skip_eval=args.skip_eval,
         clean_run_outputs=not args.no_clean_run,
+        command=list(sys.argv),
     )
     summary = run_scene_pipeline(config)
     print(json.dumps(summary.to_dict(), indent=2))

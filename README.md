@@ -54,7 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
-- Practical one-command pipeline runner that records environment, data, training, query, demo, and evaluation steps.
+- Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
 
 ## Not Claimed
@@ -242,6 +242,15 @@ Portfolio-facing docs:
 - [CV bullets](docs/cv_bullets.md)
 - [Cold-email paragraphs](docs/cold_email_paragraph.md)
 - [Real scene capture checklist](docs/real_scene_capture_checklist.md)
+- [Real-run reproducibility notes](docs/real_run_reproducibility.md)
+
+## Reproducibility
+
+Every `run_scene_pipeline.py` execution writes a `provenance` block inside
+`results/pipeline_runs/<scene>/pipeline_summary.json`. It records the project version,
+Python/platform details, the CLI command, git commit, branch, dirty state, and sanitized
+remote URL when available. The exported portfolio pack keeps a share-safe provenance excerpt
+in `portfolio_pack_index.json` and sanitizes machine-specific paths in the packaged summary.
 
 ## LERF Query Rendering
 

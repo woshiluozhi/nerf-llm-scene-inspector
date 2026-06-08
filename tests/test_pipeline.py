@@ -37,6 +37,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     ).exists()
     inspect_step = next(step for step in summary.steps if step.name == "inspect_scene_data")
     assert inspect_step.summary["ready_for_training"] is True
+    assert summary.provenance["project_version"] == "0.1.0"
+    assert "git_available" in summary.provenance
 
 
 def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path) -> None:
