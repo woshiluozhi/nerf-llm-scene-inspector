@@ -25,6 +25,7 @@ def prepare_data(
     data_type: str,
     *,
     dry_run: bool = False,
+    command_log_path: str | Path | None = None,
 ) -> dict[str, object]:
     """Run Nerfstudio ns-process-data and write metadata."""
 
@@ -55,10 +56,10 @@ def prepare_data(
     try:
         if dry_run:
             _write_mock_transforms(output_resolved)
-            result = run_command(command, dry_run=True)
+            result = run_command(command, dry_run=True, log_path=command_log_path)
         else:
             _validate_processing_prerequisites(input_resolved, data_type)
-            result = run_command(command, check=False)
+            result = run_command(command, check=False, log_path=command_log_path)
             if not result.ok:
                 raise RuntimeError(
                     f"ns-process-data failed with exit code {result.returncode}\n"

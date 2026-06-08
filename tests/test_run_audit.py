@@ -19,6 +19,7 @@ def test_audit_pipeline_run_reports_ready_run(tmp_path: Path) -> None:
     assert report.query_report_count == 1
     assert report.evaluated_query_count == 1
     assert report.run_dir == "run"
+    assert report.key_artifacts["command_logs"] == "logs/"
 
 
 def test_audit_pipeline_run_blocks_missing_successful_artifact(tmp_path: Path) -> None:
@@ -29,6 +30,16 @@ def test_audit_pipeline_run_blocks_missing_successful_artifact(tmp_path: Path) -
 
     assert report.status == "blocked"
     assert any(finding.category == "missing_artifact" for finding in report.findings)
+
+
+def test_audit_pipeline_run_blocks_missing_declared_command_log(tmp_path: Path) -> None:
+    run_dir = _write_complete_run(tmp_path)
+    (run_dir / "logs" / "prepare_data_command.json").unlink()
+
+    report = audit_pipeline_run(run_dir)
+
+    assert report.status == "blocked"
+    assert any(finding.category == "command_logs" for finding in report.findings)
 
 
 def test_audit_run_cli_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -62,7 +73,11 @@ def _write_complete_run(tmp_path: Path) -> Path:
     run_dir = tmp_path / "run"
     steps = [
         {"name": "check_environment", "status": "success"},
-        {"name": "prepare_data", "status": "success"},
+        {
+            "name": "prepare_data",
+            "status": "success",
+            "outputs": {"command_log": str(tmp_path / "run" / "logs" / "prepare_data_command.json")},
+        },
         {"name": "inspect_scene_data", "status": "success"},
         {"name": "train_baseline_nerf", "status": "success"},
         {"name": "train_language_field", "status": "success"},
@@ -83,6 +98,7 @@ def _write_complete_run(tmp_path: Path) -> Path:
         },
     )
     _write_json(run_dir / "environment_report.json", {"ok": True, "strict_failures": []})
+    _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0})
     _write_json(
         run_dir / "scene_data_inspection.json",
         {"ready_for_training": True, "quality_score": 0.95},

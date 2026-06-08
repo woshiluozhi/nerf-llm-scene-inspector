@@ -56,7 +56,15 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
     assert str(tmp_path) not in packed_summary
+    packed_log = (output_dir / "run" / "logs" / "prepare_data_command.json").read_text(encoding="utf-8")
+    assert str(tmp_path) not in packed_log
+    demo_log = json.loads(
+        (output_dir / "run" / "logs" / "generate_demo_assets_command.json").read_text(encoding="utf-8")
+    )
+    assert demo_log["command"][0] == "python"
     assert (output_dir / "run" / "pipeline_summary.json").exists()
+    assert (output_dir / "run" / "logs" / "prepare_data_command.json").exists()
+    assert (output_dir / "run" / "logs" / "generate_demo_assets_command.json").exists()
     assert (output_dir / "run" / "run_audit.json").exists()
     assert (output_dir / "run" / "run_audit.md").exists()
     assert (output_dir / "run" / "annotation_template.json").exists()

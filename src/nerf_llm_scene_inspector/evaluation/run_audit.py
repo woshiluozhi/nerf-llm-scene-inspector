@@ -127,6 +127,7 @@ def audit_pipeline_run(run_dir: str | Path) -> RunAuditReport:
     _check_required_files(root, pipeline_summary, findings)
     _check_pipeline_summary(pipeline_summary, findings)
     _check_steps(pipeline_summary, findings)
+    _check_declared_command_logs(root, pipeline_summary, findings)
     _check_environment(environment_report, findings, dry_run=dry_run)
     _check_scene_inspection(scene_inspection, findings, dry_run=dry_run)
     _check_training(root, pipeline_summary, findings)
@@ -267,6 +268,31 @@ def _check_steps(summary: dict[str, Any], findings: list[AuditFinding]) -> None:
             )
 
 
+def _check_declared_command_logs(
+    root: Path,
+    summary: dict[str, Any],
+    findings: list[AuditFinding],
+) -> None:
+    for step in summary.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        outputs = step.get("outputs") if isinstance(step.get("outputs"), dict) else {}
+        raw_log = outputs.get("command_log") if isinstance(outputs, dict) else None
+        if not raw_log:
+            continue
+        log_path = _resolve_declared_log_path(root, str(raw_log))
+        if not log_path.exists():
+            findings.append(
+                AuditFinding(
+                    severity="blocker",
+                    category="command_logs",
+                    message=f"Declared command log is missing for step {step.get('name')}: {raw_log}.",
+                    recommendation="Rerun the pipeline so full stdout/stderr logs are preserved.",
+                    artifact=str(raw_log),
+                )
+            )
+
+
 def _check_environment(
     report: dict[str, Any],
     findings: list[AuditFinding],
@@ -402,6 +428,7 @@ def _key_artifacts(root: Path) -> dict[str, str]:
     candidates = {
         "pipeline_summary": "pipeline_summary.json",
         "run_audit": "run_audit.json",
+        "command_logs": "logs/",
         "environment_report": "environment_report.json",
         "scene_data_inspection": "scene_data_inspection.md",
         "annotation_validation": "evaluation/annotation_validation.json",
@@ -422,6 +449,17 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _resolve_declared_log_path(root: Path, raw_log: str) -> Path:
+    log_path = Path(raw_log)
+    if log_path.is_absolute():
+        return log_path
+    candidates = [root / log_path, project_root() / log_path, log_path]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def _display_run_dir(path: Path) -> str:

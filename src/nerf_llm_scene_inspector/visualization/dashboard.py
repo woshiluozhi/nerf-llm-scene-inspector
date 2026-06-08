@@ -33,6 +33,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "annotation_template": _read_json(root / "annotation_template.json"),
         "portfolio_card": _read_text(root / "portfolio_result_card.md"),
         "project_report": _read_text(root / "project_report.md"),
+        "command_logs": collect_command_logs(root),
         "images": collect_run_images(root),
         "query_reports": collect_query_reports(root),
         "missing": _missing_run_files(root, pipeline_summary),
@@ -89,6 +90,18 @@ def collect_query_reports(run_dir: str | Path) -> list[dict[str, Any]]:
         if payload:
             reports.append({"path": str(path), "kind": "query_result", "payload": payload})
     return reports
+
+
+def collect_command_logs(run_dir: str | Path) -> list[dict[str, Any]]:
+    """Load run-scoped command logs produced by the pipeline."""
+
+    root = Path(run_dir)
+    logs: list[dict[str, Any]] = []
+    for path in sorted((root / "logs").glob("*.json")):
+        payload = _read_json(path)
+        if payload:
+            logs.append({"path": str(path), "label": _relative_label(path, root), "payload": payload})
+    return logs
 
 
 def main() -> None:
@@ -167,6 +180,13 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
     if bundle["environment_report"]:
         with st.expander("Environment Report"):
             st.json(bundle["environment_report"])
+    if bundle["command_logs"]:
+        st.subheader("Command Logs")
+        for command_log in bundle["command_logs"]:
+            payload = command_log["payload"]
+            status = "ok" if payload.get("returncode") == 0 else "failed"
+            with st.expander(f"{command_log['label']} ({status})"):
+                st.json(payload)
 
 
 def _render_artifacts(st: Any, bundle: dict[str, Any]) -> None:

@@ -43,6 +43,7 @@ python scripts/run_scene_pipeline.py \
 
 - `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
+- `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
 - `training/baseline_train_summary.json`: baseline Nerfstudio command, status, final config, and viewer command.
 - `training/language_train_summary.json`: LERF/OpenNeRF command, status, final config, and viewer command.

@@ -19,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", required=True, help="Path to input video or image directory.")
     parser.add_argument("--output", required=True, help="Output processed scene directory.")
     parser.add_argument("--type", required=True, choices=["video", "images"], help="Input type.")
+    parser.add_argument("--log-path", help="Optional command log JSON path.")
     parser.add_argument("--dry-run", action="store_true", help="Print command and create mock metadata.")
     return parser
 
@@ -26,7 +27,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     try:
-        metadata = prepare_data(args.input, args.output, args.type, dry_run=args.dry_run)
+        metadata = prepare_data(
+            args.input,
+            args.output,
+            args.type,
+            dry_run=args.dry_run,
+            command_log_path=args.log_path,
+        )
     except Exception as exc:
         print(f"prepare_data failed: {exc}", file=sys.stderr)
         return 1

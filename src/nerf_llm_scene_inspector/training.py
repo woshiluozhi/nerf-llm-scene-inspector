@@ -29,6 +29,7 @@ def train_baseline_nerf(
     *,
     max_num_iterations: int | None = None,
     dry_run: bool = False,
+    command_log_path: str | Path | None = None,
 ) -> dict[str, object]:
     """Train a baseline Nerfstudio model such as nerfacto."""
 
@@ -39,7 +40,13 @@ def train_baseline_nerf(
         command.extend(["--max-num-iterations", str(max_num_iterations)])
     command.extend(["--output-dir", str(output_path)])
 
-    result = _run_train(command, output_path, dry_run=dry_run, config_name=method)
+    result = _run_train(
+        command,
+        output_path,
+        dry_run=dry_run,
+        config_name=method,
+        command_log_path=command_log_path,
+    )
     config_path = _resolve_config_path(result, [output_path, Path("outputs")], dry_run=dry_run)
     summary = _train_summary(
         run_type="baseline",
@@ -62,6 +69,8 @@ def train_language_field(
     *,
     max_num_iterations: int | None = None,
     dry_run: bool = False,
+    command_log_path: str | Path | None = None,
+    method_check_log_path: str | Path | None = None,
 ) -> dict[str, object]:
     """Train a LERF or OpenNeRF language field."""
 
@@ -73,13 +82,19 @@ def train_language_field(
     output_path.mkdir(parents=True, exist_ok=True)
 
     if not dry_run:
-        validate_ns_train_method(method, backend=backend)
+        validate_ns_train_method(method, backend=backend, log_path=method_check_log_path)
 
     command = ["ns-train", method, "--data", str(data)]
     if max_num_iterations is not None:
         command.extend(["--max-num-iterations", str(max_num_iterations)])
     command.extend(["--output-dir", str(output_path)])
-    result = _run_train(command, output_path, dry_run=dry_run, config_name=method)
+    result = _run_train(
+        command,
+        output_path,
+        dry_run=dry_run,
+        config_name=method,
+        command_log_path=command_log_path,
+    )
     config_path = _resolve_config_path(result, [output_path, Path("outputs")], dry_run=dry_run)
     summary = _train_summary(
         run_type="language",
@@ -96,13 +111,18 @@ def train_language_field(
     return summary
 
 
-def validate_ns_train_method(method: str, *, backend: str) -> None:
+def validate_ns_train_method(
+    method: str,
+    *,
+    backend: str,
+    log_path: str | Path | None = None,
+) -> None:
     """Check that ns-train recognizes the requested method."""
 
     if shutil.which("ns-train") is None:
         hint = LERF_INSTALL_INSTRUCTIONS if backend == "lerf" else OPENNERF_INSTALL_INSTRUCTIONS
         raise RuntimeError(f"ns-train was not found on PATH.\n\n{NERFSTUDIO_TRAIN_HINT}\n\n{hint}")
-    result = run_command(["ns-train", "-h"], check=False)
+    result = run_command(["ns-train", "-h"], check=False, log_path=log_path)
     if not result.ok:
         raise RuntimeError(f"Could not inspect ns-train methods:\n{result.stderr}")
     help_text = f"{result.stdout}\n{result.stderr}"
@@ -126,6 +146,7 @@ def _run_train(
     *,
     dry_run: bool,
     config_name: str,
+    command_log_path: str | Path | None = None,
 ) -> CommandResult:
     if dry_run:
         mock_config = output_path / "config.yml"
@@ -142,7 +163,12 @@ def _run_train(
         )
     else:
         require_executable("ns-train", NERFSTUDIO_TRAIN_HINT)
-    return run_command(command, dry_run=dry_run, check=False, log_path=output_path / "train_command.json")
+    return run_command(
+        command,
+        dry_run=dry_run,
+        check=False,
+        log_path=command_log_path or output_path / "train_command.json",
+    )
 
 
 def _resolve_config_path(

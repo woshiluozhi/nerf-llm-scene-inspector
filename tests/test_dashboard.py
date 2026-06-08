@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from nerf_llm_scene_inspector.visualization.dashboard import (
+    collect_command_logs,
     collect_query_reports,
     collect_run_images,
     load_run_bundle,
@@ -34,6 +35,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "training" / "language_train_summary.json", {"run_type": "language"})
     _write_json(run_dir / "evaluation" / "annotation_validation.json", {"ok": True})
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"top_k_hit_rate": 1.0})
+    _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0, "stdout": "ok"})
     (run_dir / "evaluation" / "eval_table.csv").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "evaluation" / "eval_table.csv").write_text(
         "query,topk_hit\nmug,True\n",
@@ -55,6 +57,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["training_summaries"]["language"]["run_type"] == "language"
     assert bundle["run_audit"]["status"] == "ready"
     assert bundle["annotation_validation"]["ok"] is True
+    assert bundle["command_logs"][0]["label"] == "logs/prepare_data_command.json"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"
     assert bundle["missing"] == []
@@ -65,6 +68,7 @@ def test_dashboard_collectors_tolerate_missing_run(tmp_path: Path) -> None:
 
     assert collect_run_images(missing_run) == []
     assert collect_query_reports(missing_run) == []
+    assert collect_command_logs(missing_run) == []
     bundle = load_run_bundle(missing_run)
     assert "pipeline_summary.json" in bundle["missing"]
 

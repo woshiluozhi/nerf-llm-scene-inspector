@@ -151,6 +151,8 @@ Each pipeline run writes run-scoped query, demo, evaluation, and report artifact
 `results/pipeline_runs/<scene>/`. Existing run-scoped query/demo/evaluation folders are
 cleaned by default to avoid stale results; pass `--no-clean-run` only when you intentionally
 want to preserve prior files.
+Full command stdout/stderr logs are saved under `results/pipeline_runs/<scene>/logs/`
+for debugging Nerfstudio, LERF, annotation, demo, and evaluation failures.
 
 Export the latest run into a shareable portfolio package:
 
@@ -242,6 +244,7 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
 - `results/pipeline_runs/<scene>/run_audit.json`
 - `results/pipeline_runs/<scene>/run_audit.md`
+- `results/pipeline_runs/<scene>/logs/*.json`
 - `results/pipeline_runs/<scene>/project_report.md`
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
 - `results/portfolio_pack/portfolio_pack_index.json`

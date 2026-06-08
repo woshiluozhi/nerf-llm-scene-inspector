@@ -21,6 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big"], default="lerf-lite")
     parser.add_argument("--max-num-iterations", type=int, default=None)
     parser.add_argument("--output", required=True, help="Training output directory.")
+    parser.add_argument("--log-path", help="Optional training command log JSON path.")
+    parser.add_argument("--method-check-log-path", help="Optional ns-train method check log JSON path.")
     parser.add_argument("--dry-run", action="store_true", help="Print command and create mock summary.")
     return parser
 
@@ -35,6 +37,8 @@ def main() -> int:
             args.output,
             max_num_iterations=args.max_num_iterations,
             dry_run=args.dry_run,
+            command_log_path=args.log_path,
+            method_check_log_path=args.method_check_log_path,
         )
     except Exception as exc:
         print(f"train_language_field failed: {exc}", file=sys.stderr)

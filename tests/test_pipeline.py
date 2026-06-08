@@ -29,6 +29,7 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert summary.success is True
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "pipeline_summary.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "logs" / "prepare_data_command.json").exists()
     assert (
         tmp_path
         / "pipeline_runs"
@@ -88,11 +89,16 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "project_report.md").exists()
     assert (run_dir / "run_audit.json").exists()
     assert (run_dir / "run_audit.md").exists()
+    assert (run_dir / "logs" / "prepare_data_command.json").exists()
+    assert (run_dir / "logs" / "create_annotation_template_command.json").exists()
+    assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()
+    assert (run_dir / "logs" / "evaluate_queries_command.json").exists()
     eval_step = next(step for step in summary.steps if step.name == "evaluate_queries")
     assert eval_step.outputs["eval_summary"] == str(run_dir / "evaluation" / "eval_summary.json")
     assert eval_step.outputs["annotation_validation"] == str(
         run_dir / "evaluation" / "annotation_validation.json"
     )
+    assert eval_step.outputs["command_log"] == str(run_dir / "logs" / "evaluate_queries_command.json")
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
     audit_step = next(step for step in summary.steps if step.name == "audit_run")
@@ -123,6 +129,8 @@ def test_run_scene_pipeline_writes_run_scoped_training_summaries(tmp_path: Path)
     language_summary = run_dir / "training" / "language_train_summary.json"
     assert baseline_summary.exists()
     assert language_summary.exists()
+    assert (run_dir / "logs" / "train_baseline_nerf_command.json").exists()
+    assert (run_dir / "logs" / "train_language_field_command.json").exists()
     assert json.loads(baseline_summary.read_text(encoding="utf-8"))["run_type"] == "baseline"
     assert json.loads(language_summary.read_text(encoding="utf-8"))["run_type"] == "language"
     baseline_step = next(step for step in summary.steps if step.name == "train_baseline_nerf")

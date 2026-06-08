@@ -121,6 +121,7 @@ def _copy_run_materials(
     ]
     for source, relative_destination in run_files:
         _copy_file(source, output / relative_destination, output, copied, missing)
+    _copy_command_logs(run_dir, output, copied)
     _copy_file(
         run_dir / "training" / "baseline_train_summary.json",
         output / "run/training/baseline_train_summary.json",
@@ -166,6 +167,31 @@ def _copy_file(
         missing.append(_display_source_path(source))
 
 
+def _copy_command_logs(
+    run_dir: Path,
+    output: Path,
+    copied: list[dict[str, str]],
+) -> None:
+    logs_dir = run_dir / "logs"
+    if not logs_dir.exists():
+        return
+    for source in sorted(logs_dir.glob("*.json")):
+        destination = output / "run" / "logs" / source.name
+        payload = _load_json_if_exists(source)
+        if payload is None:
+            _copy_file(source, destination, output, copied, [])
+            continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        sanitized = _sanitize_for_portfolio(payload, run_dir)
+        destination.write_text(json.dumps(sanitized, indent=2), encoding="utf-8")
+        copied.append(
+            {
+                "source": _display_source_path(source),
+                "destination": _relative_display_path(destination, output),
+            }
+        )
+
+
 def _copy_pipeline_summary(
     source: Path,
     destination: Path,
@@ -207,6 +233,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
     artifacts = {
         "pipeline_summary": "run/pipeline_summary.json",
         "run_audit": "run/run_audit.md",
+        "command_logs": "run/logs/",
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",
         "baseline_train_summary": "run/training/baseline_train_summary.json",
@@ -269,6 +296,11 @@ def _sanitize_text_for_portfolio(text: str, run_dir: Path) -> str:
     for raw, replacement in _sensitive_path_replacements(run_dir):
         if raw:
             sanitized = sanitized.replace(raw, replacement)
+    stripped = sanitized.strip("'\"")
+    if not any(character.isspace() for character in stripped):
+        executable_name = re.split(r"[\\/]", stripped)[-1].lower()
+        if ("/" in stripped or "\\" in stripped) and executable_name in {"python", "python.exe"}:
+            return "python"
     sanitized = re.sub(r"'~[\\/][^']*?python(?:\.exe)?'", "python", sanitized, flags=re.IGNORECASE)
     sanitized = re.sub(r'"~[\\/][^"]*?python(?:\.exe)?"', "python", sanitized, flags=re.IGNORECASE)
     sanitized = re.sub(r"~[\\/]\S*?python(?:\.exe)?", "python", sanitized, flags=re.IGNORECASE)

@@ -126,9 +126,10 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     demo_dir = run_dir / "demo_assets"
     eval_dir = run_dir / "evaluation"
     training_dir = run_dir / "training"
+    logs_dir = run_dir / "logs"
     run_dir.mkdir(parents=True, exist_ok=True)
     if config.clean_run_outputs:
-        for subdir in (query_dir, demo_dir, eval_dir):
+        for subdir in (query_dir, demo_dir, eval_dir, logs_dir):
             _reset_run_subdir(subdir, run_dir)
     run_queries_path = _write_run_queries_file(run_dir, config.scene_name, config.queries)
 
@@ -143,6 +144,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
         "training": str(training_dir),
+        "logs": str(logs_dir),
         "run_queries": str(run_queries_path),
         "run_audit_json": str(run_dir / "run_audit.json"),
         "run_audit_markdown": str(run_dir / "run_audit.md"),
@@ -176,13 +178,17 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 processed_dir,
                 config.data_type,
                 dry_run=config.dry_run,
+                command_log_path=logs_dir / "prepare_data_command.json",
             )
             steps.append(
                 PipelineStep(
                     "prepare_data",
                     "success",
                     summary=_small_dict(metadata),
-                    outputs={"metadata": str(processed_dir / "scene_inspector_metadata.json")},
+                    outputs={
+                        "metadata": str(processed_dir / "scene_inspector_metadata.json"),
+                        "command_log": str(logs_dir / "prepare_data_command.json"),
+                    },
                 )
             )
 
@@ -226,6 +232,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 baseline_dir,
                 max_num_iterations=config.max_num_iterations,
                 dry_run=config.dry_run,
+                command_log_path=logs_dir / "train_baseline_nerf_command.json",
             )
             baseline_summary_path = _write_step_json(
                 training_dir / "baseline_train_summary.json",
@@ -236,7 +243,10 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     "train_baseline_nerf",
                     "success",
                     summary=_small_dict(baseline_summary),
-                    outputs={"train_summary": str(baseline_summary_path)},
+                    outputs={
+                        "train_summary": str(baseline_summary_path),
+                        "command_log": str(logs_dir / "train_baseline_nerf_command.json"),
+                    },
                 )
             )
 
@@ -251,6 +261,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 language_dir,
                 max_num_iterations=config.max_num_iterations,
                 dry_run=config.dry_run,
+                command_log_path=logs_dir / "train_language_field_command.json",
+                method_check_log_path=logs_dir / "train_language_field_method_check.json",
             )
             model_config_path = str(language_summary.get("config_path") or model_config_path)
             language_summary_path = _write_step_json(
@@ -262,7 +274,10 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     "train_language_field",
                     "success",
                     summary=_small_dict(language_summary),
-                    outputs={"train_summary": str(language_summary_path)},
+                    outputs={
+                        "train_summary": str(language_summary_path),
+                        "command_log": str(logs_dir / "train_language_field_command.json"),
+                    },
                 )
             )
 
@@ -299,6 +314,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     "--overwrite",
                 ],
                 root=root,
+                log_path=logs_dir / "create_annotation_template_command.json",
             )
             annotation_template_result.outputs.update(
                 {"annotation_template": str(run_dir / "annotation_template.json")}
@@ -329,6 +345,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     *(["--dry-run"] if config.dry_run else []),
                 ],
                 root=root,
+                log_path=logs_dir / "generate_demo_assets_command.json",
             )
             demo_result.outputs.update(
                 {
@@ -361,6 +378,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     *(["--dry-run"] if config.dry_run else []),
                 ],
                 root=root,
+                log_path=logs_dir / "evaluate_queries_command.json",
             )
             eval_result.outputs.update(
                 {
@@ -467,10 +485,16 @@ def _reset_run_subdir(path: Path, run_dir: Path) -> None:
     shutil.rmtree(resolved_path)
 
 
-def _run_helper_script(command: list[str], *, root: Path) -> PipelineStep:
-    result = run_command(command, cwd=root, check=False)
+def _run_helper_script(
+    command: list[str],
+    *,
+    root: Path,
+    log_path: str | Path | None = None,
+) -> PipelineStep:
+    result = run_command(command, cwd=root, check=False, log_path=log_path)
     script_name = Path(command[1]).stem if len(command) > 1 else "command"
     status = "success" if result.ok else "failed"
+    outputs = {"command_log": str(log_path)} if log_path else {}
     return PipelineStep(
         name=script_name,
         status=status,
@@ -480,6 +504,7 @@ def _run_helper_script(command: list[str], *, root: Path) -> PipelineStep:
             "stdout_tail": result.stdout[-1000:],
             "stderr_tail": result.stderr[-1000:],
         },
+        outputs=outputs,
     )
 
 
