@@ -242,7 +242,8 @@ python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scen
 
 Use `export_portfolio_pack.py` directly only for low-level pack debugging. The finalizer is
 the preferred portfolio path after annotation edits because it refreshes evaluation,
-reporting, quality checks, submission materials, pack validation, and the final zip.
+reporting, quality checks, submission materials, pack validation, the final zip, and a
+post-archive zip validation report.
 Open `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` first before
 sharing: its `Readiness Summary` section lists failed checks, warning checks, pack status,
 and the next action to take before CV/professor outreach.

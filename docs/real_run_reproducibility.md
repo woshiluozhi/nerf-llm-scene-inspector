@@ -137,7 +137,8 @@ share-safe provenance excerpt and records SHA256/size digests for copied files s
 When `--zip` is used, the archive is self-contained and includes the same
 `portfolio_pack_index.json` with digest metadata.
 The normal finalization path runs validation and re-archives the pack afterward, so the
-shareable zip also includes `portfolio_pack_validation.json`.
+shareable zip also includes `portfolio_pack_validation.json`. It then validates the final
+zip itself and writes `results/portfolio_pack_validation.json` next to the archive.
 `validate_portfolio_pack.py` accepts both zip layouts: files at the archive root, or files
 inside one top-level `portfolio_pack/` directory.
 

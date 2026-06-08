@@ -475,6 +475,8 @@ def _command_specs(
             ]
         )
         if zip_pack:
+            zip_path = Path(f"{pack}.zip")
+            zip_validation_path = zip_path.with_name(f"{zip_path.stem}_validation.json")
             commands.append(
                 _CommandSpec(
                     "final_archive_portfolio_pack",
@@ -486,6 +488,19 @@ def _command_specs(
                         str(pack),
                     ],
                     {"portfolio_pack_zip": str(pack) + ".zip"},
+                    critical=False,
+                )
+            )
+            commands.append(
+                _CommandSpec(
+                    "final_validate_portfolio_zip",
+                    [
+                        py,
+                        "scripts/validate_portfolio_pack.py",
+                        "--pack",
+                        str(zip_path),
+                    ],
+                    {"portfolio_pack_zip_validation": str(zip_validation_path)},
                     critical=False,
                 )
             )

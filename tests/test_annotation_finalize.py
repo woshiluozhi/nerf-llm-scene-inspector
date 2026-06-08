@@ -116,6 +116,10 @@ def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: 
     assert step_names.index("final_export_portfolio_pack") > step_names.index("refresh_reproduction_bundle")
     assert step_names.index("final_validate_portfolio_pack") > step_names.index("final_export_portfolio_pack")
     assert step_names.index("final_archive_portfolio_pack") > step_names.index("final_validate_portfolio_pack")
+    assert step_names.index("final_validate_portfolio_zip") > step_names.index("final_archive_portfolio_pack")
+    zip_validation_step = report.steps[step_names.index("final_validate_portfolio_zip")]
+    assert "portfolio_pack.zip" in zip_validation_step.command
+    assert "portfolio_pack_zip_validation" in zip_validation_step.outputs
 
 
 def test_finalize_zip_pack_contains_final_validation_report(tmp_path: Path) -> None:
@@ -135,6 +139,11 @@ def test_finalize_zip_pack_contains_final_validation_report(tmp_path: Path) -> N
 
     assert report.ok is True, report.errors
     assert (pack_dir / "portfolio_pack_validation.json").exists()
+    zip_validation_path = pack_dir.with_name(f"{pack_dir.name}_validation.json")
+    assert zip_validation_path.exists()
+    zip_validation = json.loads(zip_validation_path.read_text(encoding="utf-8"))
+    assert zip_validation["ok"] is True
+    assert zip_validation["pack_dir"] == "portfolio_pack.zip"
     archive_path = Path(f"{pack_dir}.zip")
     assert archive_path.exists()
     with zipfile.ZipFile(archive_path) as archive:
