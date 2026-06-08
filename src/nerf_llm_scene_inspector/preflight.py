@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
+
+from PIL import Image, UnidentifiedImageError
 
 from nerf_llm_scene_inspector.capture_manifest import validate_capture_manifest
 from nerf_llm_scene_inspector.scene_validation import SceneDataInspection, inspect_processed_scene
@@ -164,6 +168,9 @@ def build_real_run_preflight(
     backend: str = "lerf",
     variant: str = "lerf-lite",
     min_frames: int = 50,
+    min_image_width: int = 640,
+    min_image_height: int = 480,
+    min_video_seconds: float = 5.0,
     max_missing_image_ratio: float = 0.0,
     min_pose_extent: float = 0.05,
     require_gpu: bool = False,
@@ -175,7 +182,17 @@ def build_real_run_preflight(
     normalized_type = input_type.lower()
     checks: list[PreflightCheck] = []
     checks.extend(_backend_checks(backend=backend, variant=variant))
-    checks.extend(_raw_input_checks(input_path, normalized_type, min_frames=min_frames, dry_run=dry_run))
+    checks.extend(
+        _raw_input_checks(
+            input_path,
+            normalized_type,
+            min_frames=min_frames,
+            min_image_width=min_image_width,
+            min_image_height=min_image_height,
+            min_video_seconds=min_video_seconds,
+            dry_run=dry_run,
+        )
+    )
     capture_validation = None
     if capture_manifest_path:
         capture_validation = validate_capture_manifest(
@@ -281,6 +298,8 @@ def _build_targeted_env_report(
             command_requirements.append("ffmpeg")
         for command in command_requirements:
             checks.append(check_command(command, required=True))
+        if input_type == "video":
+            checks.append(check_command("ffprobe", required=False))
         checks.append(check_command("ns-viewer", required=False))
 
         methods = ["nerfacto"]
@@ -348,6 +367,9 @@ def _raw_input_checks(
     input_type: str,
     *,
     min_frames: int,
+    min_image_width: int,
+    min_image_height: int,
+    min_video_seconds: float,
     dry_run: bool,
 ) -> list[PreflightCheck]:
     if not input_path:
@@ -373,9 +395,20 @@ def _raw_input_checks(
             )
         ]
     if input_type == "video":
-        return [_video_input_check(path, dry_run=dry_run)]
+        return _video_input_checks(
+            path,
+            min_frames=min_frames,
+            min_video_seconds=min_video_seconds,
+            dry_run=dry_run,
+        )
     if input_type == "images":
-        return [_image_input_check(path, min_frames=min_frames, dry_run=dry_run)]
+        return _image_input_checks(
+            path,
+            min_frames=min_frames,
+            min_image_width=min_image_width,
+            min_image_height=min_image_height,
+            dry_run=dry_run,
+        )
     return [
         PreflightCheck(
             name="input_type",
@@ -387,70 +420,338 @@ def _raw_input_checks(
     ]
 
 
-def _video_input_check(path: Path, *, dry_run: bool) -> PreflightCheck:
+def _video_input_checks(
+    path: Path,
+    *,
+    min_frames: int,
+    min_video_seconds: float,
+    dry_run: bool,
+) -> list[PreflightCheck]:
     if not path.is_file():
-        return PreflightCheck(
-            name="video_input",
-            status="warn" if dry_run else "fail",
-            category="input",
-            detail=f"Video input is not a file: {path}",
-            recommendation="Pass a video file such as .mp4 or .mov.",
-            artifact=str(path),
-        )
+        return [
+            PreflightCheck(
+                name="video_input",
+                status="warn" if dry_run else "fail",
+                category="input",
+                detail=f"Video input is not a file: {path}",
+                recommendation="Pass a video file such as .mp4 or .mov.",
+                artifact=str(path),
+            )
+        ]
     if path.suffix.lower() not in VIDEO_SUFFIXES:
-        return PreflightCheck(
+        return [
+            PreflightCheck(
+                name="video_input",
+                status="warn",
+                category="input",
+                detail=f"Unexpected video suffix: {path.suffix or '<none>'}",
+                recommendation="Common tested suffixes are .mp4, .mov, .m4v, .avi, and .mkv.",
+                artifact=str(path),
+            )
+        ]
+    if path.stat().st_size <= 0:
+        return [
+            PreflightCheck(
+                name="video_input",
+                status="warn" if dry_run else "fail",
+                category="input",
+                detail="Video file is empty.",
+                recommendation="Use a non-empty phone capture with slow motion and high overlap.",
+                artifact=str(path),
+            )
+        ]
+    return [
+        PreflightCheck(
             name="video_input",
+            status="pass",
+            category="input",
+            detail=f"{path.name}, {path.stat().st_size} bytes",
+            artifact=str(path),
+        ),
+        _video_metadata_check(
+            path,
+            min_frames=min_frames,
+            min_video_seconds=min_video_seconds,
+            dry_run=dry_run,
+        ),
+    ]
+
+
+def _image_input_checks(
+    path: Path,
+    *,
+    min_frames: int,
+    min_image_width: int,
+    min_image_height: int,
+    dry_run: bool,
+) -> list[PreflightCheck]:
+    if not path.is_dir():
+        return [
+            PreflightCheck(
+                name="image_input",
+                status="warn" if dry_run else "fail",
+                category="input",
+                detail=f"Image input is not a directory: {path}",
+                recommendation="Pass a directory containing overlapping scene images.",
+                artifact=str(path),
+            )
+        ]
+    images = sorted(item for item in path.rglob("*") if item.suffix.lower() in IMAGE_SUFFIXES)
+    checks: list[PreflightCheck] = []
+    if len(images) < min_frames:
+        checks.append(
+            PreflightCheck(
+                name="image_count",
+                status="warn" if dry_run else "fail",
+                category="input",
+                detail=f"Found {len(images)} image files; recommended minimum is {min_frames}.",
+                recommendation="Capture more overlapping views before running ns-process-data.",
+                artifact=str(path),
+            )
+        )
+    else:
+        checks.append(
+            PreflightCheck(
+                name="image_count",
+                status="pass",
+                category="input",
+                detail=f"Found {len(images)} image files.",
+                artifact=str(path),
+            )
+        )
+    if not images:
+        return checks
+
+    image_profile = _inspect_image_files(images)
+    bad_images = image_profile["bad_images"]
+    dimensions = image_profile["dimensions"]
+    if bad_images:
+        checks.append(
+            PreflightCheck(
+                name="image_decode",
+                status="warn" if dry_run else "fail",
+                category="input",
+                detail=f"{len(bad_images)} image files could not be decoded.",
+                recommendation="Remove corrupt files or re-export the capture before running COLMAP.",
+                artifact=", ".join(bad_images[:3]),
+            )
+        )
+    else:
+        checks.append(
+            PreflightCheck(
+                name="image_decode",
+                status="pass",
+                category="input",
+                detail=f"Decoded {len(dimensions)} image files.",
+                artifact=str(path),
+            )
+        )
+    if dimensions:
+        checks.append(
+            _image_dimensions_check(
+                dimensions,
+                min_image_width=min_image_width,
+                min_image_height=min_image_height,
+            )
+        )
+    return checks
+
+
+def _video_metadata_check(
+    path: Path,
+    *,
+    min_frames: int,
+    min_video_seconds: float,
+    dry_run: bool,
+) -> PreflightCheck:
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return PreflightCheck(
+            name="video_metadata",
             status="warn",
             category="input",
-            detail=f"Unexpected video suffix: {path.suffix or '<none>'}",
-            recommendation="Common tested suffixes are .mp4, .mov, .m4v, .avi, and .mkv.",
+            detail="ffprobe is unavailable, so video duration, frame rate, and resolution were not checked.",
+            recommendation="Install FFmpeg/ffprobe before relying on a phone video for a real run.",
             artifact=str(path),
         )
-    if path.stat().st_size <= 0:
+    try:
+        proc = subprocess.run(
+            [
+                ffprobe,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height,r_frame_rate,avg_frame_rate,nb_frames,duration:format=duration",
+                "-of",
+                "json",
+                str(path),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
         return PreflightCheck(
-            name="video_input",
+            name="video_metadata",
+            status="warn",
+            category="input",
+            detail=f"ffprobe could not inspect the video: {exc}",
+            recommendation="Verify the video opens locally and rerun preflight with FFmpeg installed.",
+            artifact=str(path),
+        )
+    if proc.returncode != 0:
+        return PreflightCheck(
+            name="video_metadata",
             status="warn" if dry_run else "fail",
             category="input",
-            detail="Video file is empty.",
-            recommendation="Use a non-empty phone capture with slow motion and high overlap.",
+            detail=f"ffprobe failed: {(proc.stderr or proc.stdout).strip()[:200]}",
+            recommendation="Re-export the video as a standard H.264/H.265 .mp4 or use an image sequence.",
             artifact=str(path),
         )
+
+    try:
+        payload = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        return PreflightCheck(
+            name="video_metadata",
+            status="warn",
+            category="input",
+            detail=f"ffprobe returned invalid JSON: {exc}",
+            recommendation="Rerun preflight after updating FFmpeg.",
+            artifact=str(path),
+        )
+    streams = payload.get("streams") or []
+    stream = streams[0] if streams and isinstance(streams[0], dict) else {}
+    fmt = payload.get("format") if isinstance(payload.get("format"), dict) else {}
+    width = _safe_int(stream.get("width"))
+    height = _safe_int(stream.get("height"))
+    duration = _safe_float(stream.get("duration")) or _safe_float(fmt.get("duration"))
+    fps = _parse_rate(stream.get("avg_frame_rate")) or _parse_rate(stream.get("r_frame_rate"))
+    frame_count = _safe_int(stream.get("nb_frames"))
+    if frame_count is None and duration is not None and fps is not None:
+        frame_count = int(duration * fps)
+
+    problems: list[str] = []
+    status: PreflightStatus = "pass"
+    if width is None or height is None:
+        problems.append("missing resolution metadata")
+        status = "warn"
+    if duration is None:
+        problems.append("missing duration metadata")
+        status = "warn"
+    elif duration < min_video_seconds:
+        problems.append(f"duration {duration:.1f}s is shorter than recommended {min_video_seconds:.1f}s")
+        status = "warn"
+    if frame_count is None:
+        problems.append("missing frame-count metadata")
+        status = "warn"
+    elif frame_count < min_frames:
+        problems.append(f"estimated frame count {frame_count} is below recommended {min_frames}")
+        status = "warn" if dry_run else "fail"
+    detail_parts = [
+        f"resolution={width or '?'}x{height or '?'}",
+        f"duration={duration:.2f}s" if duration is not None else "duration=?",
+        f"fps={fps:.2f}" if fps is not None else "fps=?",
+        f"frames={frame_count}" if frame_count is not None else "frames=?",
+    ]
+    if problems:
+        detail_parts.append("issues=" + "; ".join(problems))
     return PreflightCheck(
-        name="video_input",
-        status="pass",
+        name="video_metadata",
+        status=status,
         category="input",
-        detail=f"{path.name}, {path.stat().st_size} bytes",
+        detail=", ".join(detail_parts),
+        recommendation=(
+            ""
+            if status == "pass"
+            else "Use a longer, sharp phone video with slow motion, high overlap, and enough parallax."
+        ),
         artifact=str(path),
     )
 
 
-def _image_input_check(path: Path, *, min_frames: int, dry_run: bool) -> PreflightCheck:
-    if not path.is_dir():
-        return PreflightCheck(
-            name="image_input",
-            status="warn" if dry_run else "fail",
-            category="input",
-            detail=f"Image input is not a directory: {path}",
-            recommendation="Pass a directory containing overlapping scene images.",
-            artifact=str(path),
+def _inspect_image_files(images: list[Path]) -> dict[str, Any]:
+    dimensions: list[tuple[int, int]] = []
+    bad_images: list[str] = []
+    for image_path in images:
+        try:
+            with Image.open(image_path) as image:
+                dimensions.append((int(image.width), int(image.height)))
+                image.verify()
+        except (OSError, UnidentifiedImageError):
+            bad_images.append(str(image_path))
+    return {"dimensions": dimensions, "bad_images": bad_images}
+
+
+def _image_dimensions_check(
+    dimensions: list[tuple[int, int]],
+    *,
+    min_image_width: int,
+    min_image_height: int,
+) -> PreflightCheck:
+    widths = [width for width, _ in dimensions]
+    heights = [height for _, height in dimensions]
+    min_width = min(widths)
+    min_height = min(heights)
+    unique_dims = sorted(set(dimensions))
+    problems: list[str] = []
+    if min_width < min_image_width or min_height < min_image_height:
+        problems.append(
+            f"minimum resolution {min_width}x{min_height} is below recommended "
+            f"{min_image_width}x{min_image_height}"
         )
-    images = [item for item in path.rglob("*") if item.suffix.lower() in IMAGE_SUFFIXES]
-    if len(images) < min_frames:
-        return PreflightCheck(
-            name="image_input",
-            status="warn" if dry_run else "fail",
-            category="input",
-            detail=f"Found {len(images)} image files; recommended minimum is {min_frames}.",
-            recommendation="Capture more overlapping views before running ns-process-data.",
-            artifact=str(path),
-        )
+    if len(unique_dims) > 1:
+        problems.append(f"{len(unique_dims)} different image resolutions found")
     return PreflightCheck(
-        name="image_input",
-        status="pass",
+        name="image_dimensions",
+        status="warn" if problems else "pass",
         category="input",
-        detail=f"Found {len(images)} image files.",
-        artifact=str(path),
+        detail=(
+            f"min={min_width}x{min_height}, unique_resolutions={len(unique_dims)}, "
+            f"checked={len(dimensions)}"
+            + (", issues=" + "; ".join(problems) if problems else "")
+        ),
+        recommendation=(
+            ""
+            if not problems
+            else "Use a consistent high-resolution image export, ideally original phone frames."
+        ),
     )
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value in (None, "", "N/A"):
+            return None
+        return int(float(str(value)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value in (None, "", "N/A"):
+            return None
+        return float(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_rate(value: Any) -> float | None:
+    if value in (None, "", "0/0", "N/A"):
+        return None
+    text = str(value)
+    if "/" in text:
+        numerator, denominator = text.split("/", 1)
+        num = _safe_float(numerator)
+        den = _safe_float(denominator)
+        if num is None or den in (None, 0):
+            return None
+        return num / den
+    return _safe_float(text)
 
 
 def _env_checks(report: EnvReport) -> list[PreflightCheck]:

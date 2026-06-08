@@ -23,6 +23,10 @@ The capture manifest records device, lighting, camera motion, overlap, static-sc
 and privacy review. The first preflight command checks the raw capture and upstream
 environment before data processing. The second command checks the processed Nerfstudio scene
 and capture manifest before training.
+For raw captures, preflight checks image count, image decode failures, minimum resolution,
+resolution consistency, and video metadata when `ffprobe` is available. Treat warnings about
+short videos, too few frames, corrupt images, or low-resolution exports as recapture signals
+before spending GPU time.
 The inspection report checks more than frame count: it reports missing images, invalid
 camera transforms, camera translation extent, approximate camera path length, median camera
 step, duplicate adjacent poses, and a pose coverage score. If pose coverage is low, the

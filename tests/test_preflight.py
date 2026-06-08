@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from nerf_llm_scene_inspector import preflight
 from nerf_llm_scene_inspector.capture_manifest import build_capture_manifest, write_capture_manifest_bundle
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 
@@ -47,6 +48,44 @@ def test_real_run_preflight_ready_with_processed_scene(tmp_path: Path) -> None:
     assert report.fail_count == 0
     assert report.scene_inspection is not None
     assert report.scene_inspection["ready_for_training"] is True
+    assert any(check.name == "image_dimensions" and check.status == "pass" for check in report.checks)
+
+
+def test_real_run_preflight_flags_bad_or_low_resolution_images(tmp_path: Path) -> None:
+    images = tmp_path / "raw_images"
+    _write_images(images, count=2, size=(320, 240))
+    (images / "broken.png").write_bytes(b"not an image")
+
+    report = build_real_run_preflight(
+        input_path=images,
+        input_type="images",
+        scene_name="bad_images",
+        min_frames=2,
+        check_upstream=False,
+    )
+
+    assert report.status == "blocked"
+    assert any(check.name == "image_decode" and check.status == "fail" for check in report.checks)
+    assert any(check.name == "image_dimensions" and check.status == "warn" for check in report.checks)
+
+
+def test_video_preflight_warns_when_ffprobe_is_unavailable(tmp_path: Path, monkeypatch) -> None:
+    video = tmp_path / "capture.mp4"
+    video.write_bytes(b"not a real video, but non-empty")
+    monkeypatch.setattr(preflight.shutil, "which", lambda name: None if name == "ffprobe" else "tool")
+
+    report = build_real_run_preflight(
+        input_path=video,
+        input_type="video",
+        scene_name="video_scene",
+        check_upstream=False,
+        dry_run=True,
+    )
+
+    assert report.status == "needs_attention"
+    metadata = next(check for check in report.checks if check.name == "video_metadata")
+    assert metadata.status == "warn"
+    assert "ffprobe" in metadata.recommendation
 
 
 def test_real_run_preflight_blocks_missing_real_input(tmp_path: Path) -> None:
@@ -86,10 +125,10 @@ def test_real_run_preflight_cli_writes_reports(tmp_path: Path) -> None:
     assert (output / "preflight_report.md").exists()
 
 
-def _write_images(root: Path, *, count: int) -> None:
+def _write_images(root: Path, *, count: int, size: tuple[int, int] = (640, 480)) -> None:
     root.mkdir(parents=True)
     for index in range(count):
-        Image.new("RGB", (32, 32), (index * 40, 20, 30)).save(root / f"image_{index:03d}.png")
+        Image.new("RGB", size, (index * 40, 20, 30)).save(root / f"image_{index:03d}.png")
 
 
 def _write_processed_scene(root: Path, *, frame_count: int) -> None:

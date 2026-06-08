@@ -295,6 +295,12 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations results/annotations_merged.json --results results/query_outputs
 ```
 
+The real-run preflight also inspects raw capture quality before you spend GPU time:
+image directories are checked for count, decode failures, minimum resolution, and consistent
+dimensions; videos are checked for non-empty input and, when `ffprobe` is available, duration,
+frame-rate, estimated frame count, and resolution. Tune the defaults with
+`--min-image-width`, `--min-image-height`, `--min-video-seconds`, and `--min-frames`.
+
 Localization metrics such as `top_k_hit_rate` and `mean_iou_2d` are computed only for
 queries with manual `bbox_2d` annotations. Queries without bbox annotations are retained in
 the qualitative table as `unannotated` or `qualitative_only_no_bbox` instead of being counted

@@ -26,6 +26,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--variant", default="lerf-lite")
     parser.add_argument("--output", default="results/preflight", help="Directory for report files.")
     parser.add_argument("--min-frames", type=int, default=50)
+    parser.add_argument("--min-image-width", type=int, default=640)
+    parser.add_argument("--min-image-height", type=int, default=480)
+    parser.add_argument("--min-video-seconds", type=float, default=5.0)
     parser.add_argument("--max-missing-image-ratio", type=float, default=0.0)
     parser.add_argument("--min-pose-extent", type=float, default=0.05)
     parser.add_argument("--require-gpu", action="store_true", help="Fail if CUDA is unavailable.")
@@ -64,6 +67,9 @@ def main() -> int:
         backend=args.backend,
         variant=args.variant,
         min_frames=args.min_frames,
+        min_image_width=args.min_image_width,
+        min_image_height=args.min_image_height,
+        min_video_seconds=args.min_video_seconds,
         max_missing_image_ratio=args.max_missing_image_ratio,
         min_pose_extent=args.min_pose_extent,
         require_gpu=args.require_gpu,
