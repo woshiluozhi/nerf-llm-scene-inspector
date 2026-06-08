@@ -195,6 +195,19 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(
             [
                 "python",
+                "scripts/analyze_scene_relations.py",
+                "--results",
+                f"{run_dir}/queries",
+                "--output",
+                f"{run_dir}/scene_relations",
+                "--scene-name",
+                root.name,
+                "--dry-run",
+            ]
+        ),
+        _format_command(
+            [
+                "python",
                 "scripts/review_annotations.py",
                 "--annotations",
                 f"{run_dir}/annotation_template.json",
@@ -260,6 +273,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             root / "prompt_sensitivity" / "prompt_sensitivity_report.md",
             "prompt_sensitivity/prompt_sensitivity_report.md",
             "Prompt wording stability report for open-vocabulary query variants.",
+        ),
+        (
+            "scene_relations",
+            root / "scene_relations" / "scene_relations_report.md",
+            "scene_relations/scene_relations_report.md",
+            "Scene-level object relation graph inferred from query boxes or 3D points.",
         ),
         ("evaluation_summary", root / "evaluation" / "eval_summary.json", "evaluation/eval_summary.json", "Quantitative/qualitative metric summary."),
         ("annotation_review", root / "evaluation" / "annotation_review.md", "evaluation/annotation_review.md", "Visual QA report for manual bbox annotations."),

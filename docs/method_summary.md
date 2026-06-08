@@ -16,6 +16,10 @@ CLIP and related vision-language models embed images and text into a shared feat
 
 Robots and embodied agents need persistent scene representations that connect geometry, object semantics, affordances, and language instructions. A language-embedded NeRF is useful as a research substrate because it connects real-world 3D reconstruction with natural-language object search, spatial reasoning, and scene-level question answering.
 
+## Scene Relation Graphs
+
+The project now includes a deterministic relation-analysis layer that converts saved `QueryResult` regions and candidate 3D points into a compact entity-relation graph. When 3D points are available, relations are marked as `3d`; otherwise the report explicitly marks image-space heuristics as `2d_fallback`. This is useful for portfolio evidence and embodied-AI-style questions such as support, containment, proximity, and left/right layout, but it is not presented as a learned physical relation model.
+
 ## How This Project Differs From A Pure Reproduction
 
-This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, capture manifests, a local query planner, deterministic answer synthesis with evidence summaries, spatial-reasoning utilities, visualization generation, annotation QA, prompt-sensitivity diagnostics, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.
+This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, capture manifests, a local query planner, deterministic answer synthesis with evidence summaries, spatial-reasoning utilities, scene-relation graph reports, visualization generation, annotation QA, prompt-sensitivity diagnostics, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.

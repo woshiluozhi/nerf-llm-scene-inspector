@@ -53,6 +53,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Typed JSON artifacts for query results and scene reports.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
+- Scene-relation graph analysis that converts saved query regions/points into entity lists, relation edges, CSV tables, and Markdown reports with explicit `2d_fallback` or `3d` evidence tags.
 - Annotation review artifacts that draw manual `bbox_2d` labels over rendered views for QA before reporting metrics.
 - Prompt-sensitivity analysis that checks whether wording variants retrieve consistent regions, views, and relevancy scores.
 - Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
@@ -91,8 +92,10 @@ flowchart LR
   F --> J[Relevancy renders and QueryResult JSON]
   J --> K[Spatial reasoning and answer synthesis]
   J --> M[Prompt sensitivity analysis]
+  J --> N[Scene relation graph]
   K --> L[Evidence-grounded scene answer, overlays, demo video, evaluation]
   M --> L
+  N --> L
 ```
 
 ## Installation
@@ -189,6 +192,18 @@ The report is a robustness diagnostic for open-vocabulary querying. It summarize
 prompt variants, mean confidence, top-region IoU, and view agreement without claiming a
 benchmark result.
 
+Run scene-relation analysis when you want a compact object-relation graph from the query
+outputs. This is a deterministic heuristic report, not a learned RelationField model:
+
+```bash
+python scripts/run_scene_pipeline.py --dry-run --analyze-relations --queries-file examples/relation_queries.yaml
+python scripts/analyze_scene_relations.py --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/scene_relations --scene-name desk_scene --dry-run
+```
+
+The output includes `scene_relations_summary.json`, `scene_relations_edges.csv`, and
+`scene_relations_report.md`. Relations are marked as `3d` when candidate 3D points are
+available and `2d_fallback` when they come from rendered image-space boxes.
+
 Export the latest run into a shareable portfolio package:
 
 ```bash
@@ -217,6 +232,7 @@ python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method 
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
 python scripts/analyze_prompt_sensitivity.py --suite examples/prompt_sensitivity.yaml --results results/query_outputs --output results/prompt_sensitivity --dry-run
+python scripts/analyze_scene_relations.py --results results/query_outputs --output results/scene_relations --scene-name desk_scene --dry-run
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/validate_annotations.py --annotations examples/annotations_example.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations examples/annotations_example.json --results results/query_outputs --output results/evaluation --allow-warnings
@@ -235,6 +251,7 @@ python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-fram
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
 python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
+python scripts/analyze_scene_relations.py --results results/query_outputs --output results/scene_relations --scene-name desk_scene
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/validate_annotations.py --annotations results/annotations_template.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations results/annotations_template.json --results results/query_outputs --output results/evaluation --allow-warnings
@@ -272,6 +289,7 @@ python scripts/run_scene_pipeline.py \
   --query "objects that can hold water" \
   --query "safe place to put a hot cup" \
   --prompt-suite examples/prompt_sensitivity.yaml \
+  --analyze-relations \
   --annotations examples/annotations_example.json \
   --num-views 3 \
   --min-pose-extent 0.05 \
@@ -313,6 +331,9 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.md`
 - `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_summary.json`
 - `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_report.md`
+- `results/pipeline_runs/<scene>/scene_relations/scene_relations_summary.json`
+- `results/pipeline_runs/<scene>/scene_relations/scene_relations_edges.csv`
+- `results/pipeline_runs/<scene>/scene_relations/scene_relations_report.md`
 - `results/pipeline_runs/<scene>/annotation_template.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/annotation_validation.json`
@@ -360,6 +381,7 @@ directories keep artifacts traceable across repeated runs.
 - `results/demo_assets/demo_montage.gif`
 - `results/evaluation/eval_summary.json`
 - `results/evaluation/eval_table.csv`
+- `results/scene_relations/scene_relations_report.md`
 - `results/evaluation/qualitative_report.md`
 - `docs/project_report.md`
 - `docs/portfolio_result_card.md`
@@ -445,7 +467,7 @@ Conservative one-line version:
 ## Future Work
 
 - Harden the OpenNeRF backend for multiple repository revisions.
-- Add RelationField-style relation prediction for support, containment, and interaction queries.
+- Replace the current heuristic scene-relation graph with learned RelationField-style relation prediction for support, containment, and interaction queries.
 - Connect query results to robotics manipulation policies.
 - Support lifelong semantic scene updates across repeated captures.
 - Add Gaussian splatting acceleration for faster rendering and interaction.

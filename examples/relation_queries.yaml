@@ -1,0 +1,8 @@
+scene_name: desk_scene
+queries:
+  - mug
+  - laptop
+  - desk
+  - table
+  - object supporting the laptop
+  - safe place to put a hot cup

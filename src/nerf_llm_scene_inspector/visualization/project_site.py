@@ -84,6 +84,7 @@ class ProjectPortfolioSite:
                 _capability("3D reconstruction", "Nerfstudio wrappers for data processing and baseline NeRF training."),
                 _capability("Language fields", "LERF-first semantic query path with OpenNeRF as a secondary adapter."),
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
+                _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
                 _capability(
                     "Evidence packaging",
                     "Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.",
@@ -97,7 +98,7 @@ class ProjectPortfolioSite:
                 "          <li><strong>Capture</strong><span>Slow phone video or overlapping images with structured capture metadata.</span></li>",
                 "          <li><strong>Process</strong><span>Run Nerfstudio data preparation and inspect camera pose quality.</span></li>",
                 "          <li><strong>Train</strong><span>Fit a baseline NeRF and a LERF-style language field.</span></li>",
-                "          <li><strong>Query</strong><span>Generate relevancy overlays, annotation QA, metrics, and portfolio artifacts.</span></li>",
+                "          <li><strong>Query</strong><span>Generate relevancy overlays, relation graphs, annotation QA, metrics, and portfolio artifacts.</span></li>",
                 "        </ol>",
                 "      </div>",
                 _code_panel(),

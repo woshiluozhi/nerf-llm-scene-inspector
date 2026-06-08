@@ -25,6 +25,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "train_language_field", "status": "success"},
                 {"name": "query_scene", "status": "success"},
                 {"name": "analyze_prompt_sensitivity", "status": "success"},
+                {"name": "analyze_scene_relations", "status": "success"},
                 {"name": "review_annotations", "status": "success"},
             ],
             "provenance": {"git_commit": "abc123"},
@@ -88,6 +89,19 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         "# Prompt Sensitivity Report\n",
         encoding="utf-8",
     )
+    _write_json(
+        run_dir / "scene_relations" / "scene_relations_summary.json",
+        {"scene_name": "run", "num_entities": 2, "num_relations": 1},
+    )
+    (run_dir / "scene_relations" / "scene_relations_report.md").write_text(
+        "# Scene Relation Report\n",
+        encoding="utf-8",
+    )
+    (run_dir / "scene_relations" / "scene_relations_edges.csv").write_text(
+        "subject_label,relation,object_label\n"
+        "desk,likely_supports,mug\n",
+        encoding="utf-8",
+    )
     _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0, "stdout": "ok"})
     (run_dir / "evaluation" / "eval_table.csv").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "evaluation" / "eval_table.csv").write_text(
@@ -131,6 +145,9 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Annotation Review" in bundle["annotation_review_markdown"]
     assert bundle["prompt_sensitivity"]["stable_group_count"] == 1
     assert "# Prompt Sensitivity Report" in bundle["prompt_sensitivity_markdown"]
+    assert bundle["scene_relations"]["num_relations"] == 1
+    assert "# Scene Relation Report" in bundle["scene_relations_markdown"]
+    assert bundle["scene_relations_table"][0]["relation"] == "likely_supports"
     assert bundle["command_logs"][0]["label"] == "logs/prepare_data_command.json"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"

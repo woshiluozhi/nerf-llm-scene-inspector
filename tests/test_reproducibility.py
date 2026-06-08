@@ -23,6 +23,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert "python scripts/compare_runs.py --root ." in bundle.verification_commands
     assert "python scripts/check_run_quality.py --run-dir run --profile smoke" in bundle.verification_commands
     assert any("python scripts/analyze_prompt_sensitivity.py" in command for command in bundle.verification_commands)
+    assert any("python scripts/analyze_scene_relations.py" in command for command in bundle.verification_commands)
     assert any("python scripts/review_annotations.py" in command for command in bundle.verification_commands)
     assert any(artifact.name == "pipeline_summary" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "capture_manifest" and artifact.exists for artifact in bundle.artifacts)
@@ -33,6 +34,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert any(artifact.name == "run_comparison" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "annotation_review" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "prompt_sensitivity" for artifact in bundle.artifacts)
+    assert any(artifact.name == "scene_relations" and artifact.exists for artifact in bundle.artifacts)
 
 
 def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> None:
@@ -119,6 +121,7 @@ def _write_run(tmp_path: Path) -> Path:
         run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md",
         "# Prompt Sensitivity\n",
     )
+    _write_text(run_dir / "scene_relations" / "scene_relations_report.md", "# Scene Relations\n")
     _write_text(run_dir / "portfolio_result_card.md", "# Card\n")
     _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0})
     _write_text(tmp_path / "run_comparison.md", "# Pipeline Run Comparison\n")

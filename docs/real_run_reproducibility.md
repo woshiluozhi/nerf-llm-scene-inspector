@@ -36,6 +36,7 @@ python scripts/run_scene_pipeline.py \
   --query "objects that can hold water" \
   --query "safe place to put a hot cup" \
   --prompt-suite examples/prompt_sensitivity.yaml \
+  --analyze-relations \
   --annotations examples/annotations_example.json \
   --num-views 3 \
   --min-frames 50 \
@@ -60,6 +61,8 @@ python scripts/run_scene_pipeline.py \
 - `queries/<query>/scene_query_report.md`: human-readable natural-language answer with ranked evidence, support level, limitations, and follow-up checks.
 - `prompt_sensitivity/prompt_sensitivity_report.md`: prompt wording stability diagnostic across grouped query variants.
 - `prompt_sensitivity/prompt_sensitivity_summary.json`: machine-readable confidence, view-agreement, and top-region consistency metrics.
+- `scene_relations/scene_relations_report.md`: deterministic relation graph over query-derived entities, with `3d` or `2d_fallback` evidence tags.
+- `scene_relations/scene_relations_edges.csv`: relation edge table for support/proximity/containment/layout review.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
 - `evaluation/annotation_review.md`: visual QA table for manual bbox annotations.
@@ -170,6 +173,11 @@ python scripts/analyze_prompt_sensitivity.py \
   --suite examples/prompt_sensitivity.yaml \
   --results results/pipeline_runs/desk_scene/queries \
   --output results/pipeline_runs/desk_scene/prompt_sensitivity
+
+python scripts/analyze_scene_relations.py \
+  --results results/pipeline_runs/desk_scene/queries \
+  --output results/pipeline_runs/desk_scene/scene_relations \
+  --scene-name desk_scene
 
 python scripts/audit_run.py \
   --run-dir results/pipeline_runs/desk_scene

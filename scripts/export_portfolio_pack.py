@@ -141,12 +141,37 @@ def _copy_run_materials(
             "run/evaluation/annotation_review_contact_sheet.png",
         ),
         (run_dir / "evaluation" / "qualitative_report.md", "run/evaluation/qualitative_report.md"),
+        (
+            run_dir / "scene_relations" / "scene_relations_summary.json",
+            "run/scene_relations/scene_relations_summary.json",
+        ),
+        (
+            run_dir / "scene_relations" / "scene_relations_edges.csv",
+            "run/scene_relations/scene_relations_edges.csv",
+        ),
+        (
+            run_dir / "scene_relations" / "scene_relations_report.md",
+            "run/scene_relations/scene_relations_report.md",
+        ),
         (run_dir / "demo_assets" / "demo_summary.json", "run/demo_assets/demo_summary.json"),
         (run_dir / "demo_assets" / "query_grid.png", "run/demo_assets/query_grid.png"),
         (run_dir / "demo_assets" / "demo_montage.gif", "run/demo_assets/demo_montage.gif"),
     ]
     for source, relative_destination in run_files:
-        _copy_share_safe_file(source, output / relative_destination, output, copied, missing, run_dir)
+        relation_file = len(source.parts) >= 2 and source.parts[-2] == "scene_relations"
+        target_missing = (
+            optional_missing
+            if relation_file and not _step_succeeded(run_summary, "analyze_scene_relations")
+            else missing
+        )
+        _copy_share_safe_file(
+            source,
+            output / relative_destination,
+            output,
+            copied,
+            target_missing,
+            run_dir,
+        )
     _copy_command_logs(run_dir, output, copied)
     _copy_query_reports(run_dir, output, copied)
     _copy_prompt_sensitivity(run_dir, output, copied)
@@ -389,6 +414,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         artifacts["language_train_summary"] = "run/training/language_train_summary.json"
     if _step_succeeded(summary, "analyze_prompt_sensitivity"):
         artifacts["prompt_sensitivity"] = "run/prompt_sensitivity/"
+    if _step_succeeded(summary, "analyze_scene_relations"):
+        artifacts["scene_relations"] = "run/scene_relations/"
     if _step_succeeded(summary, "compare_runs"):
         artifacts["run_comparison"] = "run_comparison.md"
     return {

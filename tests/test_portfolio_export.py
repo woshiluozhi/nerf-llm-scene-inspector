@@ -40,6 +40,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
             prompt_suite_path=prompt_suite,
             config_path=config_path,
             dry_run=True,
+            analyze_relations=True,
             skip_baseline=True,
             skip_language=True,
         )
@@ -72,6 +73,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["quality_gate"] == "run/quality_gate.md"
     assert index["run_summary"]["artifacts"]["query_reports"] == "run/queries/"
     assert index["run_summary"]["artifacts"]["prompt_sensitivity"] == "run/prompt_sensitivity/"
+    assert index["run_summary"]["artifacts"]["scene_relations"] == "run/scene_relations/"
     assert index["run_summary"]["artifacts"]["run_comparison"] == "run_comparison.md"
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
     assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
@@ -115,6 +117,9 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.md").exists()
     assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
     assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_report.md").exists()
+    assert (output_dir / "run" / "scene_relations" / "scene_relations_summary.json").exists()
+    assert (output_dir / "run" / "scene_relations" / "scene_relations_edges.csv").exists()
+    assert (output_dir / "run" / "scene_relations" / "scene_relations_report.md").exists()
     assert (output_dir / "run" / "project_report.md").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_validation.json").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_review.json").exists()

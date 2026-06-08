@@ -45,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-frames", type=int, default=20)
     parser.add_argument("--min-pose-extent", type=float, default=0.05)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--analyze-relations",
+        action="store_true",
+        help="Create a scene-level relation graph from query outputs.",
+    )
     parser.add_argument("--strict", action="store_true", help="Fail on environment/data readiness issues.")
     parser.add_argument("--skip-prepare", action="store_true")
     parser.add_argument("--skip-baseline", action="store_true")
@@ -84,6 +89,7 @@ def main() -> int:
         min_frames=args.min_frames,
         min_pose_extent=args.min_pose_extent,
         dry_run=args.dry_run,
+        analyze_relations=args.analyze_relations,
         strict=args.strict,
         skip_prepare=args.skip_prepare,
         skip_baseline=args.skip_baseline,

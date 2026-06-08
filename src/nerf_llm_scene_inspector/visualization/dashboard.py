@@ -56,6 +56,9 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "prompt_sensitivity_markdown": _read_text(
             root / "prompt_sensitivity" / "prompt_sensitivity_report.md"
         ),
+        "scene_relations": _read_json(root / "scene_relations" / "scene_relations_summary.json"),
+        "scene_relations_table": _read_csv(root / "scene_relations" / "scene_relations_edges.csv"),
+        "scene_relations_markdown": _read_text(root / "scene_relations" / "scene_relations_report.md"),
         "annotation_template": _read_json(root / "annotation_template.json"),
         "portfolio_card": _read_text(root / "portfolio_result_card.md"),
         "portfolio_page": str(root / "portfolio_page.html") if (root / "portfolio_page.html").exists() else "",
@@ -349,6 +352,17 @@ def _render_evaluation(st: Any, bundle: dict[str, Any]) -> None:
     else:
         st.info("No prompt-sensitivity report found.")
 
+    st.subheader("Scene Relations")
+    if bundle["scene_relations_markdown"]:
+        st.markdown(bundle["scene_relations_markdown"])
+    elif bundle["scene_relations"]:
+        st.json(bundle["scene_relations"])
+    else:
+        st.info("No scene-relation report found. Run the pipeline with --analyze-relations.")
+    if bundle["scene_relations_table"]:
+        with st.expander("Relation Edge Table"):
+            st.table(bundle["scene_relations_table"])
+
     st.subheader("Annotation Template")
     if bundle["annotation_validation"]:
         with st.expander("Annotation Validation"):
@@ -457,6 +471,14 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
             [
                 "prompt_sensitivity/prompt_sensitivity_summary.json",
                 "prompt_sensitivity/prompt_sensitivity_report.md",
+            ]
+        )
+    if _step_succeeded(pipeline_summary, "analyze_scene_relations"):
+        expected.extend(
+            [
+                "scene_relations/scene_relations_summary.json",
+                "scene_relations/scene_relations_edges.csv",
+                "scene_relations/scene_relations_report.md",
             ]
         )
     if _step_succeeded(pipeline_summary, "train_baseline_nerf"):

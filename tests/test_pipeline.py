@@ -112,6 +112,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
             prompt_suite_path=prompt_suite,
             config_path=config_path,
             dry_run=True,
+            analyze_relations=True,
             skip_baseline=True,
             skip_language=True,
         )
@@ -141,6 +142,9 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "evaluation" / "qualitative_report.md").exists()
     assert (run_dir / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
     assert (run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md").exists()
+    assert (run_dir / "scene_relations" / "scene_relations_summary.json").exists()
+    assert (run_dir / "scene_relations" / "scene_relations_edges.csv").exists()
+    assert (run_dir / "scene_relations" / "scene_relations_report.md").exists()
     assert (run_dir / "project_report.md").exists()
     assert (run_dir / "run_audit.json").exists()
     assert (run_dir / "run_audit.md").exists()
@@ -162,6 +166,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "logs" / "evaluate_queries_command.json").exists()
     assert (run_dir / "logs" / "review_annotations_command.json").exists()
     assert (run_dir / "logs" / "analyze_prompt_sensitivity_command.json").exists()
+    assert (run_dir / "logs" / "analyze_scene_relations_command.json").exists()
     eval_step = next(step for step in summary.steps if step.name == "evaluate_queries")
     assert eval_step.outputs["eval_summary"] == str(run_dir / "evaluation" / "eval_summary.json")
     assert eval_step.outputs["annotation_validation"] == str(
@@ -184,6 +189,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     prompt_step = next(step for step in summary.steps if step.name == "analyze_prompt_sensitivity")
     assert prompt_step.outputs["markdown"] == str(
         run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md"
+    )
+    relation_step = next(step for step in summary.steps if step.name == "analyze_scene_relations")
+    assert relation_step.outputs["markdown"] == str(
+        run_dir / "scene_relations" / "scene_relations_report.md"
     )
     capture_step = next(step for step in summary.steps if step.name == "capture_manifest")
     assert capture_step.outputs["manifest_json"] == str(run_dir / "capture_manifest.json")

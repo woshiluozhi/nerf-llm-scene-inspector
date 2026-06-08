@@ -64,6 +64,7 @@ class PipelineConfig:
     min_frames: int = 20
     min_pose_extent: float = 0.05
     dry_run: bool = False
+    analyze_relations: bool = False
     strict: bool = False
     skip_prepare: bool = False
     skip_baseline: bool = False
@@ -139,11 +140,12 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     demo_dir = run_dir / "demo_assets"
     eval_dir = run_dir / "evaluation"
     prompt_sensitivity_dir = run_dir / "prompt_sensitivity"
+    relation_dir = run_dir / "scene_relations"
     training_dir = run_dir / "training"
     logs_dir = run_dir / "logs"
     run_dir.mkdir(parents=True, exist_ok=True)
     if config.clean_run_outputs:
-        for subdir in (query_dir, demo_dir, eval_dir, prompt_sensitivity_dir, logs_dir):
+        for subdir in (query_dir, demo_dir, eval_dir, prompt_sensitivity_dir, relation_dir, logs_dir):
             _reset_run_subdir(subdir, run_dir)
     if config.prompt_suite_path:
         config = replace(
@@ -176,6 +178,10 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "prompt_sensitivity_markdown": str(
             prompt_sensitivity_dir / "prompt_sensitivity_report.md"
         ),
+        "scene_relations": str(relation_dir),
+        "scene_relations_json": str(relation_dir / "scene_relations_summary.json"),
+        "scene_relations_csv": str(relation_dir / "scene_relations_edges.csv"),
+        "scene_relations_markdown": str(relation_dir / "scene_relations_report.md"),
         "annotation_review_json": str(eval_dir / "annotation_review.json"),
         "annotation_review_markdown": str(eval_dir / "annotation_review.md"),
         "annotation_review_contact_sheet": str(eval_dir / "annotation_review_contact_sheet.png"),
@@ -465,6 +471,33 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 }
             )
             steps.append(prompt_result)
+
+        if config.analyze_relations and not config.skip_queries:
+            relation_result = _run_helper_script(
+                [
+                    sys.executable,
+                    str(root / "scripts" / "analyze_scene_relations.py"),
+                    "--results",
+                    str(query_dir),
+                    "--output",
+                    str(relation_dir),
+                    "--scene-name",
+                    config.scene_name,
+                    "--top-k-per-query",
+                    "1",
+                    *(["--dry-run"] if config.dry_run else []),
+                ],
+                root=root,
+                log_path=logs_dir / "analyze_scene_relations_command.json",
+            )
+            relation_result.outputs.update(
+                {
+                    "summary": str(relation_dir / "scene_relations_summary.json"),
+                    "edges": str(relation_dir / "scene_relations_edges.csv"),
+                    "markdown": str(relation_dir / "scene_relations_report.md"),
+                }
+            )
+            steps.append(relation_result)
 
         if config.skip_demo or not model_config_path:
             steps.append(PipelineStep("generate_demo_assets", "skipped"))

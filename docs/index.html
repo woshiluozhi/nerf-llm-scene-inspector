@@ -135,6 +135,7 @@
         <article class="capability"><h3>3D reconstruction</h3><p>Nerfstudio wrappers for data processing and baseline NeRF training.</p></article>
         <article class="capability"><h3>Language fields</h3><p>LERF-first semantic query path with OpenNeRF as a secondary adapter.</p></article>
         <article class="capability"><h3>Query planning</h3><p>Deterministic local planner for object, affordance, material, and relation prompts.</p></article>
+        <article class="capability"><h3>Scene relations</h3><p>Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags.</p></article>
         <article class="capability"><h3>Evidence packaging</h3><p>Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.</p></article>
       </div>
     </section>
@@ -145,7 +146,7 @@
           <li><strong>Capture</strong><span>Slow phone video or overlapping images with structured capture metadata.</span></li>
           <li><strong>Process</strong><span>Run Nerfstudio data preparation and inspect camera pose quality.</span></li>
           <li><strong>Train</strong><span>Fit a baseline NeRF and a LERF-style language field.</span></li>
-          <li><strong>Query</strong><span>Generate relevancy overlays, annotation QA, metrics, and portfolio artifacts.</span></li>
+          <li><strong>Query</strong><span>Generate relevancy overlays, relation graphs, annotation QA, metrics, and portfolio artifacts.</span></li>
         </ol>
       </div>
       <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
