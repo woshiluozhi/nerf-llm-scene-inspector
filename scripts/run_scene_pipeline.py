@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-views", type=int, default=1)
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--min-frames", type=int, default=20)
+    parser.add_argument("--min-pose-extent", type=float, default=0.05)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--strict", action="store_true", help="Fail on environment/data readiness issues.")
     parser.add_argument("--skip-prepare", action="store_true")
@@ -74,6 +75,7 @@ def main() -> int:
         num_views=args.num_views,
         top_k=args.top_k,
         min_frames=args.min_frames,
+        min_pose_extent=args.min_pose_extent,
         dry_run=args.dry_run,
         strict=args.strict,
         skip_prepare=args.skip_prepare,

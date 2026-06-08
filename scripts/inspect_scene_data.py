@@ -20,6 +20,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", default="results/scene_checks", help="Directory for inspection reports.")
     parser.add_argument("--min-frames", type=int, default=20)
     parser.add_argument("--max-missing-image-ratio", type=float, default=0.0)
+    parser.add_argument(
+        "--min-pose-extent",
+        type=float,
+        default=0.05,
+        help="Minimum camera translation extent required across any axis.",
+    )
     parser.add_argument("--allow-warnings", action="store_true", help="Exit 0 even if not training-ready.")
     parser.add_argument("--json", action="store_true", help="Print only the JSON report.")
     return parser
@@ -31,6 +37,7 @@ def main() -> int:
         args.data,
         min_frames=args.min_frames,
         max_missing_image_ratio=args.max_missing_image_ratio,
+        min_pose_extent=args.min_pose_extent,
     )
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)

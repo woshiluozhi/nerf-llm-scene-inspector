@@ -13,8 +13,13 @@
 
 ```bash
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
-python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50
+python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50 --min-pose-extent 0.05
 ```
+
+The inspection report checks more than frame count: it reports missing images, invalid
+camera transforms, camera translation extent, approximate camera path length, median camera
+step, duplicate adjacent poses, and a pose coverage score. If pose coverage is low, the
+camera likely rotated in place or COLMAP recovered near-duplicate poses.
 
 If COLMAP fails, try:
 
@@ -49,6 +54,7 @@ python scripts/run_scene_pipeline.py \
   --query "objects that can hold water" \
   --annotations examples/annotations_example.json \
   --num-views 3 \
+  --min-pose-extent 0.05 \
   --strict
 ```
 

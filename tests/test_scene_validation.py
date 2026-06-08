@@ -23,6 +23,8 @@ def test_inspect_processed_scene_ready(tmp_path: Path) -> None:
     assert report.image_count == 3
     assert report.invalid_transform_count == 0
     assert report.quality_score == 1.0
+    assert report.pose_coverage_score == 1.0
+    assert report.camera_position_extent[0] > 0.05
 
 
 def test_inspect_processed_scene_reports_missing_images_and_bad_pose(tmp_path: Path) -> None:
@@ -38,11 +40,36 @@ def test_inspect_processed_scene_reports_missing_images_and_bad_pose(tmp_path: P
     assert any("missing" in warning.lower() for warning in report.warnings)
 
 
-def _write_transforms(scene: Path, *, frame_count: int, invalid_last: bool = False) -> None:
+def test_inspect_processed_scene_flags_static_camera_poses(tmp_path: Path) -> None:
+    scene = tmp_path / "scene"
+    image_dir = scene / "images"
+    image_dir.mkdir(parents=True)
+    for index in range(3):
+        Image.new("RGB", (32, 32), (index * 30, 20, 40)).save(
+            image_dir / f"frame_{index:05d}.png"
+        )
+    _write_transforms(scene, frame_count=3, static_pose=True)
+
+    report = inspect_processed_scene(scene, min_frames=3)
+
+    assert report.ready_for_training is False
+    assert report.pose_coverage_score == 0.0
+    assert report.duplicate_pose_count == 2
+    assert any("translation extent" in warning for warning in report.warnings)
+
+
+def _write_transforms(
+    scene: Path,
+    *,
+    frame_count: int,
+    invalid_last: bool = False,
+    static_pose: bool = False,
+) -> None:
     frames = []
     for index in range(frame_count):
+        x_position = 0.0 if static_pose else round(index * 0.08, 4)
         matrix = [
-            [1.0, 0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0, x_position],
             [0.0, 1.0, 0.0, 0.0],
             [0.0, 0.0, 1.0, 1.0],
             [0.0, 0.0, 0.0, 1.0],

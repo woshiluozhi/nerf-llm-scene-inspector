@@ -48,6 +48,7 @@ class PipelineConfig:
     num_views: int = 1
     top_k: int = 5
     min_frames: int = 20
+    min_pose_extent: float = 0.05
     dry_run: bool = False
     strict: bool = False
     skip_prepare: bool = False
@@ -177,7 +178,11 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             )
 
         min_frames = 1 if config.dry_run else config.min_frames
-        inspection = inspect_processed_scene(processed_dir, min_frames=min_frames)
+        inspection = inspect_processed_scene(
+            processed_dir,
+            min_frames=min_frames,
+            min_pose_extent=config.min_pose_extent,
+        )
         inspection_json = inspection.to_json(run_dir / "scene_data_inspection.json")
         inspection_md = inspection.to_markdown(run_dir / "scene_data_inspection.md")
         warnings.extend(inspection.warnings)
@@ -188,6 +193,9 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 summary={
                     "ready_for_training": inspection.ready_for_training,
                     "quality_score": inspection.quality_score,
+                    "pose_coverage_score": inspection.pose_coverage_score,
+                    "camera_position_extent": inspection.camera_position_extent,
+                    "camera_path_length": inspection.camera_path_length,
                     "frame_count": inspection.frame_count,
                     "missing_image_count": inspection.missing_image_count,
                 },

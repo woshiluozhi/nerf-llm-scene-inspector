@@ -36,6 +36,13 @@ conda install -c conda-forge ffmpeg colmap
 
 Full training requires an NVIDIA GPU, a CUDA-compatible PyTorch build, and Tiny CUDA NN support. Start with `lerf-lite` on smaller GPUs.
 
+## Low Pose Coverage Or Duplicate Camera Poses
+
+`inspect_scene_data.py` reports camera translation extent, path length, median step, and
+duplicate adjacent poses. If the pose coverage score is low, the capture is usually missing
+parallax. Re-capture the scene by moving around the object or desk from multiple angles and
+heights instead of standing in one place and rotating the phone.
+
 ## Query Rendering Falls Back To Viewer Instructions
 
 Upstream LERF documents prompt entry through the Nerfstudio viewer. This project attempts an internal API render first. If the installed Nerfstudio/LERF versions expose incompatible internals, `query_scene.py` still writes a structured report and an interactive viewer workflow.

@@ -161,7 +161,7 @@ Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
 ```bash
 python scripts/prepare_data.py --input examples --output data/processed/desk_scene --type images --dry-run
-python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 1 --allow-warnings
+python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 1 --min-pose-extent 0.01 --allow-warnings
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene --dry-run
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
@@ -173,7 +173,7 @@ Real mode uses the installed upstream tools:
 
 ```bash
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
-python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50
+python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50 --min-pose-extent 0.05
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
 python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
@@ -194,6 +194,7 @@ python scripts/run_scene_pipeline.py \
   --query "objects that can hold water" \
   --annotations examples/annotations_example.json \
   --num-views 3 \
+  --min-pose-extent 0.05 \
   --strict
 ```
 
@@ -219,6 +220,11 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
 - `results/portfolio_pack/portfolio_pack_index.json`
 - `results/portfolio_pack.zip`
+
+`scene_data_inspection` includes frame counts, missing images, invalid pose counts, camera
+translation extent, approximate path length, duplicate adjacent poses, and a pose coverage
+score. Low pose coverage usually means the camera rotated in place or COLMAP could not recover
+enough parallax for reliable training.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
