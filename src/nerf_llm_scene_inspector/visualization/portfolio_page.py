@@ -24,6 +24,7 @@ class PortfolioPage:
     audit_status: str
     summary: str
     metrics: dict[str, Any] = field(default_factory=dict)
+    sharing_readiness: dict[str, Any] = field(default_factory=dict)
     recommendations: list[str] = field(default_factory=list)
     images: list[dict[str, str]] = field(default_factory=list)
     artifacts: list[dict[str, str]] = field(default_factory=list)
@@ -67,6 +68,10 @@ class PortfolioPage:
                 *_stat_cards(self),
                 "    </section>",
                 '    <section class="grid">',
+                '      <article class="panel">',
+                "        <h2>Sharing Readiness</h2>",
+                _sharing_readiness_panel(self.sharing_readiness),
+                "      </article>",
                 '      <article class="panel">',
                 "        <h2>Top Recommendations</h2>",
                 _recommendation_list(self.recommendations),
@@ -121,6 +126,7 @@ def build_portfolio_page(run_dir: str | Path) -> PortfolioPage:
         audit_status=str(audit.get("status") or "unknown"),
         summary=str(scorecard.get("summary") or _fallback_summary(summary)),
         metrics=_metrics(scorecard, evaluation),
+        sharing_readiness=_sharing_readiness(root),
         recommendations=_recommendations(scorecard),
         images=_images(root),
         artifacts=_artifacts(root),
@@ -148,6 +154,24 @@ def _recommendations(scorecard: dict[str, Any]) -> list[str]:
     if not isinstance(raw, list):
         return ["Review the generated run artifacts before sharing this page."]
     return [str(item) for item in raw[:5]] or ["No scorecard recommendations were recorded."]
+
+
+def _sharing_readiness(root: Path) -> dict[str, Any]:
+    packet = _read_json(root / "submission_packet" / "submission_packet.json")
+    summary = packet.get("readiness_summary")
+    if isinstance(summary, dict) and summary:
+        return dict(summary)
+    if packet:
+        return {
+            "status": "unknown",
+            "readiness_level": packet.get("readiness_level", "unknown"),
+            "failed_check_count": _count_items(packet.get("checklist"), "fail"),
+            "warning_check_count": _count_items(packet.get("checklist"), "warn"),
+            "packet_warning_count": len(packet.get("warnings") or []),
+            "pack_ok": packet.get("pack_ok"),
+            "recommended_next_action": packet.get("share_decision") or "Review the submission checklist.",
+        }
+    return {}
 
 
 def _images(root: Path) -> list[dict[str, str]]:
@@ -246,6 +270,39 @@ def _metrics_table(metrics: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _sharing_readiness_panel(summary: dict[str, Any]) -> str:
+    if not summary:
+        return (
+            "        <p>No submission packet was found. Run "
+            "<code>python scripts/create_submission_packet.py --run-dir &lt;run-dir&gt;</code> "
+            "before external sharing.</p>"
+        )
+    lines = ['        <table class="table">']
+    rows = [
+        ("Status", summary.get("status", "unknown")),
+        ("Readiness", summary.get("readiness_level", "unknown")),
+        ("Failed checks", summary.get("failed_check_count", 0)),
+        ("Warning checks", summary.get("warning_check_count", 0)),
+        ("Packet warnings", summary.get("packet_warning_count", 0)),
+        ("Pack OK", summary.get("pack_ok")),
+    ]
+    for label, value in rows:
+        lines.append(f"          <tr><th>{_escape(label)}</th><td>{_escape(_format_value(value))}</td></tr>")
+    lines.append("        </table>")
+    next_action = summary.get("recommended_next_action")
+    if next_action:
+        lines.append(f'        <p class="next-action">{_escape(next_action)}</p>')
+    blockers = summary.get("top_blockers") if isinstance(summary.get("top_blockers"), list) else []
+    if blockers:
+        lines.append("        <p class=\"section-label\">Top blockers</p>")
+        lines.append(_compact_list(blockers[:3]))
+    warnings = summary.get("top_warnings") if isinstance(summary.get("top_warnings"), list) else []
+    if warnings:
+        lines.append("        <p class=\"section-label\">Top warnings</p>")
+        lines.append(_compact_list(warnings[:3]))
+    return "\n".join(lines)
+
+
 def _image_grid(images: list[dict[str, str]]) -> str:
     if not images:
         return "      <p>No visual artifacts were found.</p>"
@@ -274,6 +331,14 @@ def _artifact_list(artifacts: list[dict[str, str]]) -> str:
         path = _escape(artifact["path"])
         lines.append(f'        <li><a href="{path}">{label}</a></li>')
     lines.append("      </ul>")
+    return "\n".join(lines)
+
+
+def _compact_list(items: list[Any]) -> str:
+    lines = ["        <ul>"]
+    for item in items:
+        lines.append(f"          <li>{_escape(item)}</li>")
+    lines.append("        </ul>")
     return "\n".join(lines)
 
 
@@ -333,6 +398,8 @@ def _style_block() -> str:
     .table { width: 100%; border-collapse: collapse; }
     .table th, .table td { border-top: 1px solid var(--line); padding: 8px 0; text-align: left; vertical-align: top; }
     .table th { color: var(--muted); font-weight: 650; width: 52%; }
+    .next-action { margin: 12px 0 0; padding: 10px 12px; border-left: 4px solid var(--accent); background: var(--accent-soft); }
+    .section-label { margin: 14px 0 6px; color: var(--muted); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; }
     .image-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     figure { margin: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fbfcfe; }
     img { display: block; width: 100%; height: auto; }
@@ -360,6 +427,12 @@ def _format_value(value: Any) -> str:
     if isinstance(value, float):
         return f"{value:.4f}"
     return str(value)
+
+
+def _count_items(raw_items: Any, status: str) -> int:
+    if not isinstance(raw_items, list):
+        return 0
+    return sum(1 for item in raw_items if isinstance(item, dict) and item.get("status") == status)
 
 
 def _read_json(path: Path) -> dict[str, Any]:

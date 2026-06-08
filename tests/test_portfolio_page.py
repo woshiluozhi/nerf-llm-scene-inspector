@@ -23,6 +23,10 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "annotation_workbench/annotation_workbench.html" in html
     assert "research_report.md" in html
     assert "submission_packet/submission_checklist.md" in html
+    assert "Sharing Readiness" in html
+    assert "needs_pack_validation" in html
+    assert "Finalize annotations with --export-pack --zip-pack." in html
+    assert "portfolio_pack" in html
     assert str(tmp_path) not in html
     assert "C:\\Users" not in html
 
@@ -52,6 +56,7 @@ def test_generate_portfolio_page_cli_writes_html(tmp_path: Path) -> None:
     html = output.read_text(encoding="utf-8")
     assert "<!doctype html>" in html
     assert "Evidence score" in html
+    assert "Sharing Readiness" in html
 
 
 def _write_run(tmp_path: Path) -> Path:
@@ -93,6 +98,26 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "scene_data_inspection.md", "# Scene\n")
     _write_text(run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html", "<!doctype html>\n")
     _write_text(run_dir / "research_report.md", "# Research Report\n")
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": "needs_pack_validation",
+            "pack_ok": None,
+            "readiness_summary": {
+                "status": "warn",
+                "readiness_level": "needs_pack_validation",
+                "failed_check_count": 0,
+                "warning_check_count": 1,
+                "packet_warning_count": 0,
+                "failed_checks": [],
+                "warning_checks": ["portfolio_pack"],
+                "top_blockers": [],
+                "top_warnings": ["portfolio_pack: portfolio pack was not validated"],
+                "pack_ok": None,
+                "recommended_next_action": "Finalize annotations with --export-pack --zip-pack.",
+            },
+        },
+    )
     _write_text(run_dir / "submission_packet" / "submission_checklist.md", "# Submission\n")
     _write_text(run_dir / "portfolio_result_card.md", "# Card\n")
     return run_dir

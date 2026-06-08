@@ -65,7 +65,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Multi-run comparison reports that rank repeated captures/training attempts and identify the strongest real-run portfolio candidate.
 - Experiment-matrix runner for small ablations across backends, variants, query sets, prompt-sensitivity suites, and relation-analysis settings.
 - Static project-level portfolio site under `docs/index.html` for GitHub Pages or local review.
-- Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
+- Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, sharing readiness, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
 - Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
 - Submission packets that turn a validated run into a claim-calibrated CV/professor-outreach checklist with allowed claims, claims to avoid, and next actions.

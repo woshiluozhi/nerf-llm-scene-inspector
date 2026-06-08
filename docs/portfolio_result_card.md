@@ -97,6 +97,10 @@ python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scen
 - Evaluation summary: `results/evaluation/eval_summary.json`
 - Qualitative report: `results/evaluation/qualitative_report.md`
 
+`portfolio_page.html` surfaces the same sharing-readiness summary from the submission
+packet, so a reviewer can see the current send/no-send status and next action without
+opening the raw JSON first.
+
 ## Limitations
 
 - This is not a new NeRF architecture or state-of-the-art segmentation model.
