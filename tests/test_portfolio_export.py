@@ -3,6 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from nerf_llm_scene_inspector.evaluation.portfolio_validation import validate_portfolio_pack
 from nerf_llm_scene_inspector.pipeline import PipelineConfig, run_scene_pipeline
 
 
@@ -52,6 +53,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     index = json.loads((output_dir / "portfolio_pack_index.json").read_text(encoding="utf-8"))
     assert index["missing"] == []
+    assert "baseline_train_summary" not in index["run_summary"]["artifacts"]
+    assert "language_train_summary" not in index["run_summary"]["artifacts"]
     assert index["run_summary"]["scene_name"] == "export_scene"
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
@@ -74,3 +77,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "evaluation" / "annotation_validation.json").exists()
     assert (output_dir / "run" / "evaluation" / "eval_summary.json").exists()
     assert (output_dir / "run" / "demo_assets" / "query_grid.png").exists()
+    validation = validate_portfolio_pack(output_dir)
+    assert validation.path_leaks == []
+    assert validation.ok is True, validation.to_dict()
+    assert validation.artifact_issues == []

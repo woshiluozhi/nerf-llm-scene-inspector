@@ -55,6 +55,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
+- Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
 
 ## Not Claimed
@@ -159,7 +160,12 @@ Export the latest run into a shareable portfolio package:
 
 ```bash
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 ```
+
+The validation step verifies that required project/run artifacts exist, indexed artifact paths
+resolve inside the pack, and text/JSON files do not leak user-home, temporary, or CI workspace
+directories.
 
 Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
@@ -258,6 +264,7 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/project_report.md`
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
 - `results/portfolio_pack/portfolio_pack_index.json`
+- `results/portfolio_pack/portfolio_pack_validation.json`
 - `results/portfolio_pack.zip`
 
 `scene_data_inspection` includes frame counts, missing images, invalid pose counts, camera
@@ -319,8 +326,10 @@ python scripts/evaluate_queries.py --help
 python scripts/audit_run.py --help
 python scripts/index_runs.py --help
 python scripts/export_portfolio_pack.py --help
+python scripts/validate_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 ```
 
 If `ruff` is installed:

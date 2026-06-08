@@ -52,6 +52,7 @@ jobs:
           python scripts/audit_run.py --help
           python scripts/index_runs.py --help
           python scripts/export_portfolio_pack.py --help
+          python scripts/validate_portfolio_pack.py --help
           python scripts/run_scene_pipeline.py --help
           python scripts/run_dry_run_demo.py --help
 
@@ -63,3 +64,6 @@ jobs:
 
       - name: Export run-scoped portfolio pack
         run: python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+
+      - name: Validate portfolio pack
+        run: python scripts/validate_portfolio_pack.py --pack results/portfolio_pack

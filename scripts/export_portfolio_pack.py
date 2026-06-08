@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+TEXT_SUFFIXES = {".cff", ".csv", ".json", ".md", ".txt", ".yaml", ".yml"}
+TEXT_NAMES = {"LICENSE", "README", "README.md"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,9 +89,9 @@ def _copy_project_materials(
         (ROOT / "results" / "evaluation" / "eval_summary.json", "project/results/evaluation/eval_summary.json"),
     ]
     for source, relative_destination in required_project_files:
-        _copy_file(source, output / relative_destination, output, copied, missing)
+        _copy_share_safe_file(source, output / relative_destination, output, copied, missing, ROOT)
     for source, relative_destination in optional_project_files:
-        _copy_file(source, output / relative_destination, output, copied, optional_missing)
+        _copy_share_safe_file(source, output / relative_destination, output, copied, optional_missing, ROOT)
 
 
 def _copy_run_materials(
@@ -121,7 +123,7 @@ def _copy_run_materials(
         (run_dir / "demo_assets" / "demo_montage.gif", "run/demo_assets/demo_montage.gif"),
     ]
     for source, relative_destination in run_files:
-        _copy_file(source, output / relative_destination, output, copied, missing)
+        _copy_share_safe_file(source, output / relative_destination, output, copied, missing, run_dir)
     _copy_command_logs(run_dir, output, copied)
     _copy_file(
         run_dir / "training" / "baseline_train_summary.json",
@@ -158,7 +160,7 @@ def _copy_run_index(
         (runs_root / "run_index.json", "run_index.json"),
         (runs_root / "run_index.md", "run_index.md"),
     ):
-        _copy_file(source, output / relative_destination, output, copied, optional_missing)
+        _copy_share_safe_file(source, output / relative_destination, output, copied, optional_missing, runs_root)
 
 
 def _copy_file(
@@ -179,6 +181,46 @@ def _copy_file(
         )
     else:
         missing.append(_display_source_path(source))
+
+
+def _copy_share_safe_file(
+    source: Path,
+    destination: Path,
+    pack_root: Path,
+    copied: list[dict[str, str]],
+    missing: list[str],
+    sanitizer_root: Path,
+) -> None:
+    if not source.exists():
+        missing.append(_display_source_path(source))
+        return
+    payload = _load_json_if_exists(source) if source.suffix.lower() == ".json" else None
+    if payload is None:
+        if _is_text_like(source):
+            try:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                sanitized_text = _sanitize_text_for_portfolio(source.read_text(encoding="utf-8"), sanitizer_root)
+                destination.write_text(sanitized_text, encoding="utf-8")
+                copied.append(
+                    {
+                        "source": _display_source_path(source),
+                        "destination": _relative_display_path(destination, pack_root),
+                    }
+                )
+                return
+            except UnicodeDecodeError:
+                pass
+        _copy_file(source, destination, pack_root, copied, missing)
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    sanitized = _sanitize_for_portfolio(payload, sanitizer_root)
+    destination.write_text(json.dumps(sanitized, indent=2), encoding="utf-8")
+    copied.append(
+        {
+            "source": _display_source_path(source),
+            "destination": _relative_display_path(destination, pack_root),
+        }
+    )
 
 
 def _copy_command_logs(
@@ -237,8 +279,12 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return None
+
+
+def _is_text_like(path: Path) -> bool:
+    return path.suffix.lower() in TEXT_SUFFIXES or path.name in TEXT_NAMES
 
 
 def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -251,8 +297,6 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "command_logs": "run/logs/",
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",
-        "baseline_train_summary": "run/training/baseline_train_summary.json",
-        "language_train_summary": "run/training/language_train_summary.json",
         "query_plan": "run/queries.yaml",
         "annotation_template": "run/annotation_template.json",
         "project_report": "run/project_report.md",
@@ -262,6 +306,10 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "demo_grid": "run/demo_assets/query_grid.png",
         "demo_montage": "run/demo_assets/demo_montage.gif",
     }
+    if _step_succeeded(summary, "train_baseline_nerf"):
+        artifacts["baseline_train_summary"] = "run/training/baseline_train_summary.json"
+    if _step_succeeded(summary, "train_language_field"):
+        artifacts["language_train_summary"] = "run/training/language_train_summary.json"
     return {
         "scene_name": summary.get("scene_name"),
         "success": summary.get("success"),
@@ -319,6 +367,17 @@ def _sanitize_text_for_portfolio(text: str, run_dir: Path) -> str:
     sanitized = re.sub(r"'~[\\/][^']*?python(?:\.exe)?'", "python", sanitized, flags=re.IGNORECASE)
     sanitized = re.sub(r'"~[\\/][^"]*?python(?:\.exe)?"', "python", sanitized, flags=re.IGNORECASE)
     sanitized = re.sub(r"~[\\/]\S*?python(?:\.exe)?", "python", sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r"/tmp/pytest-[^\s\"'`<>|]+", "<pytest-tmp>", sanitized)
+    sanitized = re.sub(r"/home/runner/work/[^\s\"'`<>|]+", ".", sanitized)
+    sanitized = re.sub(
+        r"/opt/hostedtoolcache/Python/[^\s\"'`<>|]*?/bin/python(?:\d(?:\.\d+)?)?",
+        "python",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+    sanitized = re.sub(r"/tmp/[^\s\"'`<>|]+", "<tmp-path>", sanitized)
+    sanitized = re.sub(r"/home/runner/[^\s\"'`<>|]+", "<ci-home-path>", sanitized)
+    sanitized = re.sub(r"/opt/hostedtoolcache/[^\s\"'`<>|]+", "<ci-toolcache-path>", sanitized)
     return sanitized
 
 
@@ -334,7 +393,9 @@ def _sensitive_path_replacements(run_dir: Path) -> list[tuple[str, str]]:
     for path, label in candidates:
         path_texts = {str(path), path.as_posix()}
         for path_text in path_texts:
-            replacements[path_text] = label
+            replacements.setdefault(path_text, label)
+            if "\\" in path_text:
+                replacements.setdefault(path_text.replace("\\", "\\\\"), label)
     return sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True)
 
 
