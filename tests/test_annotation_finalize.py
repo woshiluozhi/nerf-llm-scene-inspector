@@ -37,6 +37,7 @@ def test_finalize_workbench_annotations_refreshes_run_artifacts(tmp_path: Path) 
     step_names = [step.name for step in report.steps]
     assert step_names[:3] == ["merge_annotation_workbench", "evaluate_queries", "review_annotations"]
     assert "create_run_result_card" in step_names
+    assert "create_run_readiness" in step_names
     assert (run_dir / "logs" / "finalize_merge_annotation_workbench_command.json").exists()
     merge_report = json.loads((run_dir / "annotation_merge_report.json").read_text(encoding="utf-8"))
     assert merge_report["validation"]["ok"] is True
@@ -114,6 +115,7 @@ def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: 
     assert report.steps[step_names.index("check_run_quality")].command.endswith("--no-require-pack")
     assert "--pack" in report.steps[step_names.index("refresh_quality_gate_with_pack")].command
     assert step_names.index("final_export_portfolio_pack") > step_names.index("refresh_reproduction_bundle")
+    assert step_names.index("create_run_readiness") < step_names.index("final_export_portfolio_pack")
     assert step_names.index("final_validate_portfolio_pack") > step_names.index("final_export_portfolio_pack")
     assert step_names.index("final_archive_portfolio_pack") > step_names.index("final_validate_portfolio_pack")
     assert step_names.index("final_validate_portfolio_zip") > step_names.index("final_archive_portfolio_pack")
@@ -150,6 +152,8 @@ def test_finalize_zip_pack_contains_final_validation_report(tmp_path: Path) -> N
         names = set(archive.namelist())
         assert "portfolio_pack_index.json" in names
         assert "portfolio_pack_validation.json" in names
+        assert "run/run_readiness.json" in names
+        assert "run/run_readiness.md" in names
         assert "run/submission_packet/submission_packet.json" in names
         validation = json.loads(archive.read("portfolio_pack_validation.json").decode("utf-8"))
     assert validation["ok"] is True

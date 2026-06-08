@@ -30,6 +30,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "review_annotations", "status": "success"},
                 {"name": "generate_research_report", "status": "success"},
                 {"name": "create_real_run_plan", "status": "success"},
+                {"name": "create_run_readiness", "status": "success"},
                 {"name": "audit_claims", "status": "success"},
                 {"name": "create_run_result_card", "status": "success"},
                 {"name": "create_submission_packet", "status": "success"},
@@ -67,6 +68,15 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"profile": "smoke", "status": "warn", "passed": True, "fail_count": 0, "warn_count": 3},
     )
     (run_dir / "quality_gate.md").write_text("# Run Quality Gate\n", encoding="utf-8")
+    _write_json(
+        run_dir / "run_readiness.json",
+        {
+            "readiness_level": "dry_run_needs_real_run",
+            "ready_to_start_real_run": False,
+            "ready_for_external_review": False,
+        },
+    )
+    (run_dir / "run_readiness.md").write_text("# Run Readiness Gate\n", encoding="utf-8")
     _write_json(
         run_dir / "claim_audit.json",
         {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0},
@@ -202,6 +212,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Evidence Scorecard" in bundle["evidence_scorecard_markdown"]
     assert bundle["quality_gate"]["profile"] == "smoke"
     assert "# Run Quality Gate" in bundle["quality_gate_markdown"]
+    assert bundle["run_readiness"]["readiness_level"] == "dry_run_needs_real_run"
+    assert "# Run Readiness Gate" in bundle["run_readiness_markdown"]
     assert bundle["claim_audit"]["status"] == "pass"
     assert "# Claim Audit" in bundle["claim_audit_markdown"]
     assert bundle["run_result_card"]["result_status"] == "shareable_smoke_demo"

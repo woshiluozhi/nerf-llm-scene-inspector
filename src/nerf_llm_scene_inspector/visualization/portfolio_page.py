@@ -201,6 +201,7 @@ def _artifacts(root: Path) -> list[dict[str, str]]:
         "Preflight report": "preflight_report.md",
         "Evidence scorecard": "evidence_scorecard.md",
         "Quality gate": "quality_gate.md",
+        "Run readiness gate": "run_readiness.md",
         "Run result card": "run_result_card.md",
         "Run audit": "run_audit.md",
         "Recommendations": "run_recommendations.md",

@@ -11,6 +11,7 @@ python scripts/check_env.py --check-upstream --require-gpu --verbose
 python scripts/create_capture_manifest.py --input path/to/video.mp4 --type video --scene-name desk_scene --capture-device "phone model" --lighting "bright diffuse indoor" --camera-motion "slow orbit" --static-scene --high-overlap --privacy-reviewed --output results/capture_manifest
 python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --input path/to/video.mp4 --type video
+python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene
 ```
 
 Record the upstream versions that matter for interpretation:
@@ -75,6 +76,7 @@ python scripts/run_scene_pipeline.py \
 - `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
 - `evidence_scorecard.md`: conservative multi-criterion scorecard for whether the run is strong enough to share, including capture/privacy metadata readiness.
 - `quality_gate.md`: pass/warn/fail gate for smoke, real-run, or final portfolio sharing profiles.
+- `run_readiness.md`: consolidated gate for `ready_to_start_real_run` and `ready_for_external_review` decisions.
 - `claim_audit.md`: scan of README/docs/run-facing text for unsupported SOTA, novelty, production, benchmark, or robotics-policy claims.
 - `run_result_card.md`: concise reviewer-facing takeaway, evidence snapshot, limitations, and safe sharing language for the run.
 - `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
@@ -97,6 +99,11 @@ pack validation state, and the recommended next action. The same information is 
 `submission_packet/submission_packet.json` under `readiness_summary` for automation. Pack
 references in this packet use share-safe artifact names such as `portfolio_pack.zip` instead
 of machine-specific absolute paths.
+Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,
+dry-run/real-run mode, capture metadata, preflight status, GPU/upstream environment checks,
+language training, quality gates, claim audit, submission packet, and portfolio pack
+validation into two explicit booleans: `ready_to_start_real_run` and
+`ready_for_external_review`.
 
 You can inspect these files in one place with the Streamlit dashboard:
 
@@ -152,6 +159,7 @@ python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scen
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack
+python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 ```
 
 Use `export_portfolio_pack.py` directly only when debugging packaging internals. For normal

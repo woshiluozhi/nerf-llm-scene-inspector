@@ -27,6 +27,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Submission packet generation for claim-calibrated CV, portfolio, and professor-outreach sharing.
 - Run result-card generation that summarizes one run into a concise takeaway, evidence snapshot, safe blurb, limitations, and next actions.
 - Real-run action-plan generation that lists capture, CUDA/LERF training, annotation review, quality-gate, pack validation, and sharing commands.
+- Run-readiness gate generation that consolidates real-run launch and external-review decisions.
 - Claim-audit generation that checks external-facing text for unsupported SOTA, novelty, production, benchmark, or robotics-policy claims.
 - Static project-level portfolio site for GitHub Pages or local review.
 - Static HTML portfolio page with evidence score, metrics, visual artifacts, and artifact links.
@@ -67,6 +68,7 @@ python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_sc
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
+python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
 
@@ -85,6 +87,7 @@ python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scen
 - Run result card: `results/pipeline_runs/desk_scene/run_result_card.md`
 - Research report: `results/pipeline_runs/desk_scene/research_report.md`
 - Real-run action plan: `results/pipeline_runs/desk_scene/real_run_plan/real_run_plan.md`
+- Run readiness gate: `results/pipeline_runs/desk_scene/run_readiness.md`
 - Submission checklist: `results/pipeline_runs/desk_scene/submission_packet/submission_checklist.md`
 - Static portfolio page: `results/pipeline_runs/desk_scene/portfolio_page.html`
 - Annotation review: `results/pipeline_runs/desk_scene/evaluation/annotation_review.md`

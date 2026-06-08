@@ -245,6 +245,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/evidence_scorecard.md",
         "run/quality_gate.json",
         "run/quality_gate.md",
+        "run/run_readiness.json",
+        "run/run_readiness.md",
         "run/claim_audit.json",
         "run/claim_audit.md",
         "run/run_result_card.json",
@@ -316,6 +318,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "preflight_report": "run/preflight_report.md",
                 "evidence_scorecard": "run/evidence_scorecard.md",
                 "quality_gate": "run/quality_gate.md",
+                "run_readiness": "run/run_readiness.md",
                 "claim_audit": "run/claim_audit.md",
                 "run_result_card": "run/run_result_card.md",
                 "portfolio_page": "run/portfolio_page.html",
@@ -376,6 +379,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"evidence_level": "dry_run_demo_ready", "dry_run": True, "score": 82})
     if relative_path.endswith("quality_gate.json"):
         return json.dumps({"profile": "smoke", "status": "pass", "passed": True})
+    if relative_path.endswith("run_readiness.json"):
+        return json.dumps({"readiness_level": "shareable_smoke_demo", "fail_count": 0})
     if relative_path.endswith("claim_audit.json"):
         return json.dumps({"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     if relative_path.endswith("run_result_card.json"):

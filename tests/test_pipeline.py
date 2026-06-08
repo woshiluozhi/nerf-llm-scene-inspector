@@ -36,6 +36,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.md").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_readiness.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_readiness.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.md").exists()
     assert (
@@ -146,6 +148,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "evidence_scorecard.md").exists()
     assert (run_dir / "quality_gate.json").exists()
     assert (run_dir / "quality_gate.md").exists()
+    assert (run_dir / "run_readiness.json").exists()
+    assert (run_dir / "run_readiness.md").exists()
     assert (run_dir / "claim_audit.json").exists()
     assert (run_dir / "claim_audit.md").exists()
     assert (run_dir / "run_result_card.json").exists()
@@ -273,6 +277,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
     assert any(artifact["name"] == "real_run_plan" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
+    assert any(artifact["name"] == "run_readiness" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "claim_audit" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "annotation_workbench" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "run_result_card" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
@@ -297,6 +302,11 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert plan_payload["current_mode"] == "dry-run smoke demo"
     assert any(command["name"] == "finalize_annotations" for command in plan_payload["commands"])
     assert any("scripts/finalize_annotations.py" in command["command"] for command in plan_payload["commands"])
+    readiness_step = next(step for step in summary.steps if step.name == "create_run_readiness")
+    assert readiness_step.outputs["markdown"] == str(run_dir / "run_readiness.md")
+    readiness_payload = json.loads((run_dir / "run_readiness.json").read_text(encoding="utf-8"))
+    assert readiness_payload["readiness_level"] == "dry_run_needs_real_run"
+    assert readiness_payload["ready_to_start_real_run"] is False
     claim_step = next(step for step in summary.steps if step.name == "audit_claims")
     assert claim_step.outputs["markdown"] == str(run_dir / "claim_audit.md")
     claim_payload = json.loads((run_dir / "claim_audit.json").read_text(encoding="utf-8"))

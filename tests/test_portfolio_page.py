@@ -19,6 +19,7 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "dry_run_demo_ready" in html
     assert "demo_assets/query_grid.png" in html
     assert "quality_gate.md" in html
+    assert "run_readiness.md" in html
     assert "run_result_card.md" in html
     assert "annotation_workbench/annotation_workbench.html" in html
     assert "research_report.md" in html
@@ -92,6 +93,7 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "preflight_report.md", "# Preflight\n")
     _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "quality_gate.md", "# Quality Gate\n")
+    _write_text(run_dir / "run_readiness.md", "# Run Readiness Gate\n")
     _write_text(run_dir / "run_result_card.md", "# Run Result Card\n")
     _write_text(run_dir / "run_audit.md", "# Audit\n")
     _write_text(run_dir / "run_recommendations.md", "# Recommendations\n")

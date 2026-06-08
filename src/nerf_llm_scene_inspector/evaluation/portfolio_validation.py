@@ -45,6 +45,8 @@ RUN_REQUIRED_FILES = [
     "run/evidence_scorecard.md",
     "run/quality_gate.json",
     "run/quality_gate.md",
+    "run/run_readiness.json",
+    "run/run_readiness.md",
     "run/claim_audit.json",
     "run/claim_audit.md",
     "run/run_result_card.json",

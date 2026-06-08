@@ -184,6 +184,7 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_submission_packet.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_real_run_plan.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/create_run_readiness.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/audit_claims.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/compare_runs.py", "--root", runs_root]),
         _format_command(
@@ -286,6 +287,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             root / "real_run_plan" / "real_run_plan.md",
             "real_run_plan/real_run_plan.md",
             "Action plan for upgrading smoke evidence into a real CUDA/Nerfstudio/LERF run.",
+        ),
+        (
+            "run_readiness",
+            root / "run_readiness.md",
+            "run_readiness.md",
+            "Run-level readiness gate for real-run and external-review decisions.",
         ),
         ("research_report", root / "research_report.md", "research_report.md", "Paper-style report summarizing method, evidence, limitations, and next steps."),
         (

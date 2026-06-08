@@ -35,6 +35,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "evidence_scorecard_markdown": _read_text(root / "evidence_scorecard.md"),
         "quality_gate": _read_json(root / "quality_gate.json"),
         "quality_gate_markdown": _read_text(root / "quality_gate.md"),
+        "run_readiness": _read_json(root / "run_readiness.json"),
+        "run_readiness_markdown": _read_text(root / "run_readiness.md"),
         "claim_audit": _read_json(root / "claim_audit.json"),
         "claim_audit_markdown": _read_text(root / "claim_audit.md"),
         "run_result_card": _read_json(root / "run_result_card.json"),
@@ -316,6 +318,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["quality_gate_markdown"])
             else:
                 st.json(gate)
+    if bundle["run_readiness"]:
+        readiness_gate = bundle["run_readiness"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Run Readiness", str(readiness_gate.get("readiness_level", "unknown")))
+        col_b.metric("Start Real Run", str(readiness_gate.get("ready_to_start_real_run")))
+        col_c.metric("External Review", str(readiness_gate.get("ready_for_external_review")))
+        with st.expander("Run Readiness Gate", expanded=readiness_gate.get("readiness_level") == "blocked"):
+            if bundle["run_readiness_markdown"]:
+                st.markdown(bundle["run_readiness_markdown"])
+            else:
+                st.json(readiness_gate)
     if bundle["claim_audit"]:
         audit = bundle["claim_audit"]
         col_a, col_b, col_c = st.columns(3)
@@ -560,6 +573,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "preflight_report.json",
         "evidence_scorecard.json",
         "quality_gate.json",
+        "run_readiness.json",
         "claim_audit.json",
         "run_result_card.json",
         "run_audit.json",
@@ -608,6 +622,8 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("research_report.md")
     if _step_succeeded(pipeline_summary, "create_real_run_plan"):
         expected.append("real_run_plan/real_run_plan.md")
+    if _step_succeeded(pipeline_summary, "create_run_readiness"):
+        expected.append("run_readiness.md")
     if _step_succeeded(pipeline_summary, "audit_claims"):
         expected.append("claim_audit.md")
     if _step_succeeded(pipeline_summary, "create_run_result_card"):

@@ -62,6 +62,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Evidence scorecards that rate a run's portfolio-readiness across pipeline integrity, capture metadata, environment, scene quality, query outputs, annotations, and presentation artifacts without claiming model performance superiority.
+- Run readiness gates that summarize whether the run is ready to start real GPU training and whether the evidence is ready for external review.
 - Multi-run comparison reports that rank repeated captures/training attempts and identify the strongest real-run portfolio candidate.
 - Experiment-matrix runner for small ablations across backends, variants, query sets, prompt-sensitivity suites, and relation-analysis settings.
 - Static project-level portfolio site under `docs/index.html` for GitHub Pages or local review.
@@ -180,6 +181,7 @@ python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/des
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene
+python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene
 python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
@@ -237,6 +239,7 @@ python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scen
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
+python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
 
@@ -247,6 +250,11 @@ post-archive zip validation report.
 Open `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` first before
 sharing: its `Readiness Summary` section lists failed checks, warning checks, pack status,
 and the next action to take before CV/professor outreach.
+Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
+time or send the run externally. It consolidates pipeline success, evidence mode, capture,
+preflight, environment, language training, quality gate, claim audit, submission packet, and
+portfolio pack validation into `ready_to_start_real_run` and `ready_for_external_review`
+decisions.
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, copied-file SHA256/size digests still match, and text/JSON files do
@@ -419,6 +427,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/evidence_scorecard.md`
 - `results/pipeline_runs/<scene>/quality_gate.json`
 - `results/pipeline_runs/<scene>/quality_gate.md`
+- `results/pipeline_runs/<scene>/run_readiness.json`
+- `results/pipeline_runs/<scene>/run_readiness.md`
 - `results/pipeline_runs/<scene>/claim_audit.json`
 - `results/pipeline_runs/<scene>/claim_audit.md`
 - `results/pipeline_runs/<scene>/run_result_card.json`
@@ -534,6 +544,7 @@ python scripts/generate_research_report.py --help
 python scripts/create_run_result_card.py --help
 python scripts/create_submission_packet.py --help
 python scripts/create_real_run_plan.py --help
+python scripts/create_run_readiness.py --help
 python scripts/audit_claims.py --help
 python scripts/index_runs.py --help
 python scripts/compare_runs.py --help

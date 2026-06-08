@@ -412,6 +412,21 @@ def _command_specs(
                 critical=False,
             ),
             _CommandSpec(
+                "create_run_readiness",
+                [
+                    py,
+                    "scripts/create_run_readiness.py",
+                    "--run-dir",
+                    str(run_root),
+                    *(["--pack", str(pack)] if use_pack else []),
+                ],
+                {
+                    "run_readiness": str(run_root / "run_readiness.json"),
+                    "run_readiness_markdown": str(run_root / "run_readiness.md"),
+                },
+                critical=False,
+            ),
+            _CommandSpec(
                 "create_run_result_card",
                 [py, "scripts/create_run_result_card.py", "--run-dir", str(run_root)],
                 {"run_result_card": str(run_root / "run_result_card.json"), "run_result_card_markdown": str(run_root / "run_result_card.md")},

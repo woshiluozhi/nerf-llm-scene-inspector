@@ -25,6 +25,7 @@ from nerf_llm_scene_inspector.evaluation.run_result_card import write_run_result
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
 from nerf_llm_scene_inspector.evaluation.research_report import write_research_report
 from nerf_llm_scene_inspector.evaluation.real_run_plan import write_real_run_plan
+from nerf_llm_scene_inspector.evaluation.run_readiness import write_run_readiness
 from nerf_llm_scene_inspector.evaluation.submission_packet import write_submission_packet
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
@@ -225,6 +226,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_recommendations_markdown": str(run_dir / "run_recommendations.md"),
         "quality_gate_json": str(run_dir / "quality_gate.json"),
         "quality_gate_markdown": str(run_dir / "quality_gate.md"),
+        "run_readiness_json": str(run_dir / "run_readiness.json"),
+        "run_readiness_markdown": str(run_dir / "run_readiness.md"),
         "claim_audit_json": str(run_dir / "claim_audit.json"),
         "claim_audit_markdown": str(run_dir / "claim_audit.md"),
         "run_result_card_json": str(run_dir / "run_result_card.json"),
@@ -944,6 +947,24 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     claim_audit = write_claim_audit(root=root, run_dir=run_dir)
     if claim_audit.status == "fail":
         summary.success = False
+    readiness = write_run_readiness(run_dir)
+    steps.append(
+        PipelineStep(
+            "create_run_readiness",
+            "success" if readiness.fail_count == 0 else "warning",
+            summary={
+                "readiness_level": readiness.readiness_level,
+                "ready_to_start_real_run": readiness.ready_to_start_real_run,
+                "ready_for_external_review": readiness.ready_for_external_review,
+                "fail_count": readiness.fail_count,
+                "warn_count": readiness.warn_count,
+            },
+            outputs={
+                "json": str(run_dir / "run_readiness.json"),
+                "markdown": str(run_dir / "run_readiness.md"),
+            },
+        )
+    )
     summary.to_json(summary_path)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction.to_json(run_dir / "reproduction_manifest.json")

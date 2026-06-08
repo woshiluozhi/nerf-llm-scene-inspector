@@ -65,6 +65,7 @@ jobs:
           python scripts/create_run_result_card.py --help
           python scripts/create_submission_packet.py --help
           python scripts/create_real_run_plan.py --help
+          python scripts/create_run_readiness.py --help
           python scripts/audit_claims.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help

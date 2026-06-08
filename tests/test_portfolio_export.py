@@ -93,6 +93,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["preflight_report"] == "run/preflight_report.md"
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
     assert index["run_summary"]["artifacts"]["quality_gate"] == "run/quality_gate.md"
+    assert index["run_summary"]["artifacts"]["run_readiness"] == "run/run_readiness.md"
     assert index["run_summary"]["artifacts"]["claim_audit"] == "run/claim_audit.md"
     assert index["run_summary"]["artifacts"]["run_result_card"] == "run/run_result_card.md"
     assert index["run_summary"]["artifacts"]["query_reports"] == "run/queries/"
@@ -121,6 +122,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert "CPU dry-run smoke demo" in pack_readme
     assert "project/docs/index.html" in pack_readme
     assert "run/portfolio_page.html" in pack_readme
+    assert "run/run_readiness.md" in pack_readme
     assert "professor_review_checklist.md" in pack_readme
     assert "state-of-the-art benchmark performance" in pack_readme
     assert str(tmp_path) not in pack_readme
@@ -155,6 +157,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "evidence_scorecard.md").exists()
     assert (output_dir / "run" / "quality_gate.json").exists()
     assert (output_dir / "run" / "quality_gate.md").exists()
+    assert (output_dir / "run" / "run_readiness.json").exists()
+    assert (output_dir / "run" / "run_readiness.md").exists()
     assert (output_dir / "run" / "claim_audit.json").exists()
     assert (output_dir / "run" / "claim_audit.md").exists()
     assert (output_dir / "run" / "run_result_card.json").exists()
