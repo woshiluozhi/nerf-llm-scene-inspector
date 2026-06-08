@@ -23,14 +23,17 @@ The project now includes a deterministic relation-analysis layer that converts s
 ## Query Planning And Execution
 
 Natural-language tasks are first converted into structured query plans with primary,
-supporting, negative, and relation-hypothesis fields. The CLI and Python query engine share
-the same backend-call expansion helper so a task produces the same concrete text queries
-whether it is run from `query_scene.py` or imported as `SemanticQueryEngine`. By default,
-primary and supporting prompts are executed, negative prompts are kept for disambiguation,
-and all answers explicitly report the evidence level, limitations, and recommended follow-up
-checks. When negative prompts are explicitly executed, their results are tagged in provenance
-and excluded from positive answer evidence so disambiguation artifacts do not become claimed
-detections.
+supporting, negative, relation-hypothesis, intent-tag, and relation-anchor fields. Simple
+object searches such as `locate the laptop` stay targeted, while relation tasks such as
+`object next to the mug` record the anchor object, candidate type, expected relation, and
+evidence frame before backend rendering. The CLI and Python query engine share the same
+backend-call expansion helper so a task produces the same concrete text queries whether it
+is run from `query_scene.py` or imported as `SemanticQueryEngine`. By default, primary,
+supporting, and relation-anchor prompts are executed, negative prompts are kept for
+disambiguation, and all answers explicitly report the evidence level, limitations, and
+recommended follow-up checks. When negative prompts are explicitly executed, their results
+are tagged in provenance and excluded from positive answer evidence so disambiguation
+artifacts do not become claimed detections.
 
 ## Experiment Matrices
 
@@ -64,4 +67,4 @@ Before sharing a run externally, `claim_audit.md` scans README/docs, run reports
 
 ## How This Project Differs From A Pure Reproduction
 
-This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, capture manifests, a local query planner, deterministic answer synthesis with evidence summaries, spatial-reasoning utilities, scene-relation graph reports, experiment-matrix summaries, OpenNeRF secondary-backend dry-run/fallback support, research-report generation, real-run action planning, failure diagnostics, claim auditing, submission-packet generation, visualization generation, annotation QA, prompt-sensitivity diagnostics, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.
+This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, capture manifests, a local query planner with intent tags and relation anchors, deterministic answer synthesis with evidence summaries, spatial-reasoning utilities, scene-relation graph reports, experiment-matrix summaries, OpenNeRF secondary-backend dry-run/fallback support, research-report generation, real-run action planning, failure diagnostics, claim auditing, submission-packet generation, visualization generation, annotation QA, prompt-sensitivity diagnostics, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.

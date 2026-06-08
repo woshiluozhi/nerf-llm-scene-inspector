@@ -10,8 +10,8 @@ a trained semantic field and an NVIDIA GPU environment.
 ## Architecture
 
 - Nerfstudio data processing and baseline NeRF training wrappers.
-- LERF primary backend with OpenNeRF secondary adapter, including multi-view dry-run artifacts and viewer-repair fallback.
-- Deterministic local query planner for object, affordance, material, and relation prompts.
+- LERF primary backend with OpenNeRF secondary adapter, multi-view dry-run, and viewer repair fallback.
+- Deterministic local query planner for object, affordance, material, and relation prompts, with intent tags and relation-anchor provenance.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
 - Annotation review contact sheets for checking manual `bbox_2d` labels before reporting metrics.
 - Offline annotation workbench for drawing bbox labels from query render artifacts and exporting filled JSON.
@@ -118,7 +118,7 @@ opening the raw JSON first.
 ## CV Bullets
 
 - Built a reproducible open-vocabulary 3D scene inspection system using Nerfstudio-style reconstruction and LERF-style language-field querying.
-- Implemented deterministic query planning, semantic relevancy artifacts, spatial/evaluation utilities, and CPU-only dry-run demos.
+- Implemented deterministic query planning with intent tags and relation anchors, semantic relevancy artifacts, spatial/evaluation utilities, and CPU-only dry-run demos.
 
 ## Cold-Email Paragraph
 

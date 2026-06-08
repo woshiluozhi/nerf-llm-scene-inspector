@@ -88,7 +88,10 @@ def test_evaluate_queries_counts_only_bbox_annotated_rows(tmp_path: Path) -> Non
     rows = list(csv.DictReader((output_dir / "eval_table.csv").open(encoding="utf-8")))
     status_by_query = {row["query"]: row["evaluation_status"] for row in rows}
     assert status_by_query == {"container": "unannotated", "mug": "evaluated"}
-    assert "unannotated" in report_path.read_text(encoding="utf-8")
+    report = report_path.read_text(encoding="utf-8")
+    assert "unannotated" in report
+    assert "## Scene Relation Analysis" in report
+    assert "## Submission Packet" in report
 
 
 def _write_result(path: Path, query: str, region: BoundingRegion) -> None:

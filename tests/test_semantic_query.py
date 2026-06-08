@@ -119,6 +119,36 @@ def test_planned_backend_calls_tolerate_string_calls() -> None:
     ]
 
 
+def test_planned_backend_calls_preserve_planner_metadata() -> None:
+    plan = QueryPlan(
+        task="object next to the mug",
+        primary_visual_queries=["mug"],
+        recommended_backend_calls=[
+            {
+                "backend": "fake",
+                "query": "mug",
+                "purpose": "relation_anchor",
+                "top_k": 5,
+                "relation": "near relation",
+                "candidate_query": "nearby object",
+            }
+        ],
+    )
+
+    calls = planned_backend_calls(plan, task=plan.task)
+
+    assert calls[0].to_dict() == {
+        "query": "mug",
+        "backend": "fake",
+        "purpose": "relation_anchor",
+        "metadata": {
+            "top_k": 5,
+            "relation": "near relation",
+            "candidate_query": "nearby object",
+        },
+    }
+
+
 def test_semantic_query_engine_can_include_negative_queries(tmp_path: Path) -> None:
     backend = FakeBackend()
     engine = SemanticQueryEngine(
@@ -191,3 +221,36 @@ def test_scene_query_report_marks_query_purpose_in_markdown(tmp_path: Path) -> N
     assert "`screen` via `fake` purpose=`negative`, top_k=5" in markdown
     assert "`screen` via `fake` (purpose=`negative`, planned_backend=`fake`)" in markdown
     assert "excluded from positive answer evidence" in markdown
+
+
+def test_semantic_query_engine_persists_relation_call_metadata(tmp_path: Path) -> None:
+    class RelationPlanner:
+        planner_name = "relation"
+
+        def plan(self, task: str) -> QueryPlan:
+            return QueryPlan(
+                task=task,
+                primary_visual_queries=["mug"],
+                relation_hypotheses=["near relation"],
+                recommended_backend_calls=[
+                    {
+                        "backend": "fake",
+                        "query": "mug",
+                        "purpose": "relation_anchor",
+                        "relation": "near relation",
+                        "candidate_query": "nearby object",
+                    }
+                ],
+                planner_name=self.planner_name,
+            )
+
+    backend = FakeBackend()
+    engine = SemanticQueryEngine(backend=backend, planner=RelationPlanner(), scene_name="desk_scene")
+
+    report = engine.run_task("object next to the mug", tmp_path)
+
+    call = report.query_results[0].provenance["planner_backend_call"]
+    assert call["purpose"] == "relation_anchor"
+    assert call["metadata"]["relation"] == "near relation"
+    persisted = json.loads((tmp_path / "mug" / "query_result.json").read_text(encoding="utf-8"))
+    assert persisted["provenance"]["planner_backend_call"]["metadata"]["candidate_query"] == "nearby object"

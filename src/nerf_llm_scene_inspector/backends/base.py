@@ -360,7 +360,14 @@ def _planned_call_line(raw_call: Any) -> str:
         purpose = str(raw_call.get("purpose") or "primary")
         top_k = raw_call.get("top_k")
         top_k_text = f", top_k={top_k}" if top_k is not None else ""
-        return f"`{query}` via `{backend}` purpose=`{purpose}`{top_k_text}"
+        relation = raw_call.get("relation")
+        relation_text = f", relation={relation}" if relation else ""
+        candidate = raw_call.get("candidate_query")
+        candidate_text = f", candidate={candidate}" if candidate else ""
+        return (
+            f"`{query}` via `{backend}` purpose=`{purpose}`"
+            f"{top_k_text}{relation_text}{candidate_text}"
+        )
     return f"`{raw_call}` via `lerf` purpose=`primary`"
 
 

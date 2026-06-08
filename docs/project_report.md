@@ -14,25 +14,30 @@ inspection artifacts under `results/pipeline_runs/<scene>/`.
 
 ## Query Results
 
-| Query | Target | Top-k Hit | Best IoU | Confidence | Warnings |
-| --- | --- | --- | --- | --- | --- |
-| coffee |  | False | 0.000 | 0.8862745098039215 |  |
-| container |  | False | 0.000 | 0.8862745098039215 |  |
-| laptop | open laptop on the desk | False | 0.194 | 0.8862745098039215 |  |
-| metallic tools |  | False | 0.000 | 0.8862745098039215 |  |
-| mug | white mug on the desk | False | 0.179 | 0.8862745098039215 |  |
-| objects that can hold water |  | False | 0.000 | 0.8862745098039215 |  |
-| safe place to put a hot cup |  | False | 0.000 | 0.8862745098039215 |  |
+| Query | Target | Status | Top-k Hit | Best IoU | Confidence | Warnings |
+| --- | --- | --- | --- | --- | --- | --- |
+| coffee |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| container |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| laptop | open laptop on the desk | evaluated | False | 0.194 | 0.8862745098039215 |  |
+| metallic tools |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| mug | white mug on the desk | evaluated | False | 0.179 | 0.8862745098039215 |  |
+| objects that can hold water |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
+| safe place to put a hot cup |  | unannotated | n/a | n/a | 0.8862745098039215 |  |
 
 ## Evaluation Summary
 
 | Metric | Value |
 | --- | --- |
 | top_k_hit_rate | 0.0 |
-| mean_iou_2d | 0.053268581137313094 |
+| mean_iou_2d | 0.18644003398059583 |
 | semantic_success_rate | 0.0 |
 | average_relevancy_score | 0.8862745098039215 |
-| num_evaluated_queries | 7 |
+| num_evaluated_queries | 2 |
+| num_result_queries | 7 |
+| num_unique_result_queries | 7 |
+| num_annotated_queries | 2 |
+| num_bbox_annotated_queries | 2 |
+| num_qualitative_only_queries | 5 |
 
 ## Scene Relation Analysis
 
@@ -46,49 +51,51 @@ predictions.
 ## Experiment Matrix
 
 For small ablations, run `scripts/run_experiment_matrix.py` with
-`examples/experiment_matrix.yaml`. The matrix report summarizes each configured pipeline run
-with evidence score, prompt stability, relation-edge count, localization metrics, failure
-diagnostics, readiness status, candidate status, blocking reasons, and links to run-scoped
-artifacts. This is intended for reproducible comparison across variants and for selecting the
-strongest portfolio run, not as a benchmark claim.
+`examples/experiment_matrix.yaml`. The matrix report summarizes each configured pipeline
+run with evidence score, prompt stability, relation-edge count, localization metrics,
+failure diagnostics, readiness status, candidate status, blocking reasons, and links to
+run-scoped artifacts. This is intended for reproducible comparison across variants and
+for selecting the strongest portfolio run, not as a benchmark claim.
 
 ## Annotation Workbench
 
 Run `scripts/create_annotation_workbench.py --annotations results/pipeline_runs/<scene>/annotation_template.json
 --results results/pipeline_runs/<scene>/queries --output results/pipeline_runs/<scene>/evaluation/annotation_workbench`
-to generate an offline HTML bbox-labeling workspace. The workbench copies query render images,
-preloads candidate boxes, and exports filled annotation JSON for validation, visual review,
-and evaluation. For run-scoped work, prefer the finalizer instead of manually chaining merge,
-validation, review, evaluation, quality gates, pack export, and submission updates.
+to generate an offline HTML bbox-labeling workspace. The workbench copies query render
+images, preloads candidate boxes, and exports filled annotation JSON for validation, visual
+review, and evaluation. For run-scoped work, prefer the finalizer instead of manually
+chaining merge, validation, review, evaluation, quality gates, pack export, and submission
+updates.
 For a run-scoped refresh, use `scripts/finalize_annotations.py --run-dir
 results/pipeline_runs/<scene> --filled path/to/annotations_filled.json --profile real-run
---export-pack --zip-pack` to merge labels and regenerate evaluation, QA, scorecards, reports,
-result cards, portfolio pages, reproduction bundles, pack validation, and submission materials.
+--export-pack --zip-pack` to merge labels and regenerate evaluation, QA, scorecards,
+reports, result cards, portfolio pages, reproduction bundles, pack validation, and
+submission materials.
 
 ## Research Report
 
 Run `scripts/generate_research_report.py --run-dir results/pipeline_runs/<scene>` after a
-pipeline run to generate `research_report.md` and `research_report.json`. The report combines
-the evidence scorecard, evaluation metrics, prompt-sensitivity diagnostics, scene-relation
-analysis, reproducibility artifacts, limitations, and next steps into a paper-style project
-summary suitable for portfolio review.
+pipeline run to generate `research_report.md` and `research_report.json`. The report
+combines the evidence scorecard, evaluation metrics, prompt-sensitivity diagnostics,
+scene-relation analysis, reproducibility artifacts, limitations, and next steps into a
+paper-style project summary suitable for portfolio review.
 
 ## Run Result Card
 
 Run `scripts/create_run_result_card.py --run-dir results/pipeline_runs/<scene>` to generate
-`run_result_card.md` and `run_result_card.json`. This one-page card gives a reviewer-facing
-takeaway, shareable blurb, evidence snapshot, metrics, limitations, checks, and next actions
-without claiming more than the run artifacts support.
+`run_result_card.md` and `run_result_card.json`. This one-page card gives a
+reviewer-facing takeaway, shareable blurb, evidence snapshot, metrics, limitations,
+checks, and next actions without claiming more than the run artifacts support.
 
 ## Submission Packet
 
 Run `scripts/create_submission_packet.py --run-dir results/pipeline_runs/<scene> --pack
-results/portfolio_pack` after validating a portfolio pack. The output records share readiness,
-allowed claims, claims to avoid, recommended links, and next actions for CV or professor-outreach
-use. The JSON includes a `readiness_summary` block and the Markdown checklist includes a
-`Readiness Summary` section that surfaces failed checks, warning checks, pack status, and the
-single next action to take before sharing. Dry-run packets explicitly mark the run as
-smoke-demo evidence only.
+results/portfolio_pack` after validating a portfolio pack. The output records share
+readiness, allowed claims, claims to avoid, recommended links, and next actions for CV or
+professor-outreach use. The JSON includes a `readiness_summary` block and the Markdown
+checklist includes a `Readiness Summary` section that surfaces failed checks, warning
+checks, pack status, and the single next action to take before sharing. Dry-run packets
+explicitly mark the run as smoke-demo evidence only.
 
 ## Real-Run Action Plan
 
@@ -108,4 +115,6 @@ claims and verifies required disclaimers.
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.
 - Dry-run results are synthetic and only validate the evaluation pipeline.
+- Missing annotations for queries: objects that can hold water, safe place to put a hot cup, metallic tools
+- 2 annotations reference views not found in query results.
 - Review `scene_data_inspection.md` before interpreting real trained outputs.

@@ -20,6 +20,8 @@ class QueryPlan:
     planner_name: str = "local_rules"
     rationale: list[str] = field(default_factory=list)
     confidence: float | None = None
+    intent_tags: list[str] = field(default_factory=list)
+    relation_anchors: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:

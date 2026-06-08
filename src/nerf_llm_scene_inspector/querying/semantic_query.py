@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +22,17 @@ class PlannedBackendCall:
     query: str
     backend: str = "lerf"
     purpose: str = "primary"
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, str]:
-        return {"query": self.query, "backend": self.backend, "purpose": self.purpose}
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "query": self.query,
+            "backend": self.backend,
+            "purpose": self.purpose,
+        }
+        if self.metadata:
+            payload["metadata"] = dict(self.metadata)
+        return payload
 
 
 class SemanticQueryEngine:
@@ -138,6 +147,11 @@ def _coerce_planned_call(raw_call: Any) -> PlannedBackendCall | None:
         query=query,
         backend=str(raw_call.get("backend") or "lerf"),
         purpose=str(raw_call.get("purpose") or "primary"),
+        metadata={
+            str(key): value
+            for key, value in raw_call.items()
+            if key not in {"query", "backend", "purpose"}
+        },
     )
 
 

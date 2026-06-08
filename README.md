@@ -42,7 +42,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - **Neural radiance fields:** Nerfstudio wrappers handle posed data preparation and baseline NeRF training.
 - **Vision-language feature distillation:** LERF-style backends expose CLIP/VLM-aligned relevancy outputs for text prompts.
 - **Open-vocabulary 3D localization:** Queries are not limited to a fixed class set; the system records rendered relevancy artifacts and approximate regions.
-- **LLM-style query planning:** A deterministic local planner expands natural-language tasks into object, material, affordance, and relation prompts without requiring an API.
+- **LLM-style query planning:** A deterministic local planner expands natural-language tasks into object, material, affordance, and relation prompts, records intent tags and relation anchors, and does not require an API.
 - **Embodied AI relevance:** The project explores how persistent scene representations can connect geometry, language, objects, affordances, and physical context.
 
 ## Implemented Now
@@ -52,7 +52,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Manual viewer-output import and scene-query report repair for recovering structured evidence after interactive LERF fallback.
 - OpenNeRF secondary adapter with multi-view dry-run artifacts, strict mode, viewer fallback, and manual repair workflow.
 - Typed JSON artifacts for query results and scene reports.
-- Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
+- Deterministic query planner covering targeted object search, affordances, materials, spatial relations, scene-level semantic expansion, intent tags, and relation-anchor metadata.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Scene-relation graph analysis that converts saved query regions/points into entity lists, relation edges, CSV tables, and Markdown reports with explicit `2d_fallback` or `3d` evidence tags.
 - Annotation templates, an offline bbox annotation workbench, merge/finalize tooling for filled workbench exports, and review artifacts for QA before reporting metrics.
