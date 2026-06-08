@@ -53,6 +53,8 @@ jobs:
           python scripts/generate_demo_assets.py --help
           python scripts/generate_portfolio_page.py --help
           python scripts/generate_project_site.py --help
+          python scripts/analyze_prompt_sensitivity.py --help
+          python scripts/analyze_scene_relations.py --help
           python scripts/evaluate_queries.py --help
           python scripts/audit_run.py --help
           python scripts/recommend_next_steps.py --help
@@ -61,6 +63,7 @@ jobs:
           python scripts/create_reproduction_bundle.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help
+          python scripts/run_experiment_matrix.py --help
           python scripts/export_portfolio_pack.py --help
           python scripts/validate_portfolio_pack.py --help
           python scripts/run_scene_pipeline.py --help

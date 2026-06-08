@@ -85,6 +85,7 @@ class ProjectPortfolioSite:
                 _capability("Language fields", "LERF-first semantic query path with OpenNeRF as a secondary adapter."),
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
                 _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
+                _capability("Experiment matrix", "Ablation-style JSON, CSV, and Markdown summaries across variants and query sets."),
                 _capability(
                     "Evidence packaging",
                     "Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.",

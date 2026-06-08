@@ -1,4 +1,4 @@
-.PHONY: install test lint check demo-dry-run pipeline-dry-run portfolio-pack clean-generated
+.PHONY: install test lint check demo-dry-run pipeline-dry-run experiment-matrix portfolio-pack clean-generated
 
 PYTHON ?= python
 
@@ -19,8 +19,11 @@ check:
 	$(PYTHON) scripts/train_language_field.py --help
 	$(PYTHON) scripts/query_scene.py --help
 	$(PYTHON) scripts/generate_demo_assets.py --help
+	$(PYTHON) scripts/analyze_prompt_sensitivity.py --help
+	$(PYTHON) scripts/analyze_scene_relations.py --help
 	$(PYTHON) scripts/evaluate_queries.py --help
 	$(PYTHON) scripts/compare_runs.py --help
+	$(PYTHON) scripts/run_experiment_matrix.py --help
 	$(PYTHON) scripts/run_scene_pipeline.py --help
 	$(PYTHON) scripts/run_dry_run_demo.py --help
 	$(PYTHON) -m pytest
@@ -30,6 +33,9 @@ demo-dry-run:
 
 pipeline-dry-run:
 	$(PYTHON) scripts/run_scene_pipeline.py --dry-run --query mug
+
+experiment-matrix:
+	$(PYTHON) scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 
 portfolio-pack:
 	$(PYTHON) scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip

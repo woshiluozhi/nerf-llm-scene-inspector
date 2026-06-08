@@ -132,6 +132,18 @@ python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
+For a small ablation-style table across variants or query sets, run:
+
+```bash
+python scripts/run_experiment_matrix.py \
+  --config examples/experiment_matrix.yaml \
+  --output results/experiment_matrix/real_scene_matrix \
+  --real-run
+```
+
+Use `--collect-only` after manual reruns or copied-in pipeline directories to refresh the
+matrix summary without launching training again.
+
 Share `results/portfolio_pack.zip` together with the GitHub repository link when sending a
 portfolio or cold-email artifact. Do not claim benchmark superiority from a dry-run or a
 single qualitative scene; report it as a reproducible research-engineering demo unless you

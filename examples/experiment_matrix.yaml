@@ -1,0 +1,32 @@
+matrix_name: dry_run_semantic_backend_matrix
+output_dir: results/experiment_matrix/dry_run_semantic_backend_matrix
+base:
+  input: examples
+  type: images
+  annotations: examples/annotations_example.json
+  prompt_suite: examples/prompt_sensitivity.yaml
+  dry_run: true
+  analyze_relations: true
+  num_views: 1
+  top_k: 5
+experiments:
+  - name: lerf_lite_affordance_queries
+    scene_name: matrix_lerf_lite
+    backend: lerf
+    variant: lerf-lite
+    queries:
+      - mug
+      - objects that can hold water
+      - safe place to put a hot cup
+  - name: lerf_big_relation_queries
+    scene_name: matrix_lerf_big
+    backend: lerf
+    variant: lerf-big
+    queries_file: examples/relation_queries.yaml
+  - name: opennerf_adapter_smoke
+    scene_name: matrix_opennerf
+    backend: opennerf
+    variant: opennerf
+    queries:
+      - mug
+      - laptop

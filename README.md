@@ -63,6 +63,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Evidence scorecards that rate a run's portfolio-readiness across pipeline integrity, capture metadata, environment, scene quality, query outputs, annotations, and presentation artifacts without claiming model performance superiority.
 - Multi-run comparison reports that rank repeated captures/training attempts and identify the strongest real-run portfolio candidate.
+- Experiment-matrix runner for small ablations across backends, variants, query sets, prompt-sensitivity suites, and relation-analysis settings.
 - Static project-level portfolio site under `docs/index.html` for GitHub Pages or local review.
 - Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
@@ -93,6 +94,7 @@ flowchart LR
   J --> K[Spatial reasoning and answer synthesis]
   J --> M[Prompt sensitivity analysis]
   J --> N[Scene relation graph]
+  L --> O[Experiment matrix and ablation table]
   K --> L[Evidence-grounded scene answer, overlays, demo video, evaluation]
   M --> L
   N --> L
@@ -204,6 +206,19 @@ The output includes `scene_relations_summary.json`, `scene_relations_edges.csv`,
 `scene_relations_report.md`. Relations are marked as `3d` when candidate 3D points are
 available and `2d_fallback` when they come from rendered image-space boxes.
 
+Run a small experiment matrix when you want an ablation-style table across backends,
+language-field variants, query sets, prompt robustness, and relation-analysis settings:
+
+```bash
+python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
+python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --collect-only
+```
+
+This writes `experiment_matrix_summary.json`, `experiment_matrix_table.csv`, and
+`experiment_matrix_report.md` under `results/experiment_matrix/<matrix_name>/`. In real
+mode, use the same config shape but remove `dry_run: true` and run on a CUDA machine with
+Nerfstudio/LERF installed.
+
 Export the latest run into a shareable portfolio package:
 
 ```bash
@@ -233,6 +248,7 @@ python scripts/train_language_field.py --data data/processed/desk_scene --backen
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
 python scripts/analyze_prompt_sensitivity.py --suite examples/prompt_sensitivity.yaml --results results/query_outputs --output results/prompt_sensitivity --dry-run
 python scripts/analyze_scene_relations.py --results results/query_outputs --output results/scene_relations --scene-name desk_scene --dry-run
+python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/validate_annotations.py --annotations examples/annotations_example.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations examples/annotations_example.json --results results/query_outputs --output results/evaluation --allow-warnings
@@ -357,6 +373,9 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/run_index.md`
 - `results/pipeline_runs/run_comparison.json`
 - `results/pipeline_runs/run_comparison.md`
+- `results/experiment_matrix/<matrix_name>/experiment_matrix_summary.json`
+- `results/experiment_matrix/<matrix_name>/experiment_matrix_table.csv`
+- `results/experiment_matrix/<matrix_name>/experiment_matrix_report.md`
 - `docs/index.html`
 - `results/pipeline_runs/<scene>/logs/*.json`
 - `results/pipeline_runs/<scene>/project_report.md`
@@ -430,6 +449,8 @@ python scripts/review_annotations.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/generate_portfolio_page.py --help
 python scripts/generate_project_site.py --help
+python scripts/analyze_prompt_sensitivity.py --help
+python scripts/analyze_scene_relations.py --help
 python scripts/evaluate_queries.py --help
 python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help
@@ -437,6 +458,7 @@ python scripts/create_evidence_scorecard.py --help
 python scripts/create_reproduction_bundle.py --help
 python scripts/index_runs.py --help
 python scripts/compare_runs.py --help
+python scripts/run_experiment_matrix.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/validate_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help

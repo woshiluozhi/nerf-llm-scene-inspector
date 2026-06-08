@@ -19,6 +19,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
 - Multi-run comparison report for ranking repeated captures or training attempts before selecting a portfolio candidate.
+- Experiment-matrix runner for small backend/query/variant ablations with CSV and Markdown summaries.
 - Static project-level portfolio site for GitHub Pages or local review.
 - Static HTML portfolio page with evidence score, metrics, visual artifacts, and artifact links.
 
@@ -46,6 +47,7 @@ python -m pip install -e ".[dev,video]"
 python scripts/run_dry_run_demo.py
 python scripts/run_scene_pipeline.py --dry-run
 python scripts/compare_runs.py --root results/pipeline_runs
+python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 ```
@@ -64,7 +66,9 @@ python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_sce
 - Static portfolio page: `results/pipeline_runs/desk_scene/portfolio_page.html`
 - Annotation review: `results/pipeline_runs/desk_scene/evaluation/annotation_review.md`
 - Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`
+- Scene relations: `results/pipeline_runs/desk_scene/scene_relations/scene_relations_report.md`
 - Run-scoped evaluation: `results/pipeline_runs/desk_scene/evaluation/eval_summary.json`
+- Experiment matrix: `results/experiment_matrix/dry_run_semantic_backend_matrix/experiment_matrix_report.md`
 - Portfolio pack: `results/portfolio_pack.zip`
 - Evaluation summary: `results/evaluation/eval_summary.json`
 - Qualitative report: `results/evaluation/qualitative_report.md`

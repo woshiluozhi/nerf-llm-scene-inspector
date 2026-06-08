@@ -43,6 +43,14 @@ entities, relation edges such as `near`, `left_of`, `likely_supports`, and
 rendered boxes. These relations are qualitative evidence, not learned physical-relation
 predictions.
 
+## Experiment Matrix
+
+For small ablations, run `scripts/run_experiment_matrix.py` with
+`examples/experiment_matrix.yaml`. The matrix report summarizes each configured pipeline run
+with evidence score, prompt stability, relation-edge count, localization metrics, and links
+to run-scoped artifacts. This is intended for reproducible comparison across variants, not as
+a benchmark claim.
+
 ## Notes
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.
