@@ -18,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", required=True, help="Processed Nerfstudio data directory.")
     parser.add_argument("--backend", choices=["lerf", "opennerf"], default="lerf")
-    parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big"], default="lerf-lite")
+    parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big", "opennerf"], default="lerf-lite")
     parser.add_argument("--max-num-iterations", type=int, default=None)
     parser.add_argument("--output", required=True, help="Training output directory.")
     parser.add_argument("--log-path", help="Optional training command log JSON path.")

@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scene-name", default="desk_scene")
     parser.add_argument("--type", choices=["video", "images"], default="images")
     parser.add_argument("--backend", choices=["lerf", "opennerf"], default="lerf")
-    parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big"], default="lerf-lite")
+    parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big", "opennerf"], default="lerf-lite")
     parser.add_argument("--baseline-method", default="nerfacto")
     parser.add_argument("--query", action="append", help="Query to run. Can be repeated.")
     parser.add_argument("--queries-file", help="YAML file with queries and/or tasks.")

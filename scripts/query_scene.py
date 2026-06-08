@@ -78,7 +78,12 @@ def main() -> int:
             strict_backend=args.strict_backend,
         )
         if args.backend == "lerf"
-        else OpenNeRFBackend(dry_run=args.dry_run)
+        else OpenNeRFBackend(
+            dry_run=args.dry_run,
+            num_views=args.num_views,
+            save_manual_template=args.save_manual_template,
+            strict_backend=args.strict_backend,
+        )
     )
     try:
         backend.load(args.config)

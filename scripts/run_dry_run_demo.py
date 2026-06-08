@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Natural-language query to run after mock training.",
     )
     parser.add_argument("--backend", choices=["lerf", "opennerf"], default="lerf")
-    parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big"], default="lerf-lite")
+    parser.add_argument("--variant", choices=["lerf", "lerf-lite", "lerf-big", "opennerf"], default="lerf-lite")
     return parser
 
 

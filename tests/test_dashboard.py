@@ -2,12 +2,14 @@ import json
 from pathlib import Path
 
 from nerf_llm_scene_inspector.visualization.dashboard import (
+    build_dashboard_backend,
     collect_command_logs,
     collect_query_reports,
     collect_run_images,
     load_run_bundle,
     submission_readiness_summary,
 )
+from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 
 
 def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
@@ -268,6 +270,22 @@ def test_dashboard_collectors_tolerate_missing_run(tmp_path: Path) -> None:
     bundle = load_run_bundle(missing_run)
     assert "pipeline_summary.json" in bundle["missing"]
     assert bundle["submission_readiness"] == {}
+
+
+def test_dashboard_builds_configured_opennerf_backend() -> None:
+    backend = build_dashboard_backend(
+        "opennerf",
+        dry_run=True,
+        num_views=3,
+        save_manual_template=True,
+        strict_backend=True,
+    )
+
+    assert isinstance(backend, OpenNeRFBackend)
+    assert backend.dry_run is True
+    assert backend.num_views == 3
+    assert backend.save_manual_template is True
+    assert backend.strict_backend is True
 
 
 def test_submission_readiness_summary_supports_legacy_packets() -> None:

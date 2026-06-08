@@ -207,6 +207,9 @@ def main() -> None:
     config_path = st.sidebar.text_input("Config path", value="runs/language_desk_scene/config.yml")
     backend_name = st.sidebar.selectbox("Backend", options=["lerf", "opennerf"])
     dry_run = st.sidebar.checkbox("Dry query run", value=True)
+    num_views = int(st.sidebar.number_input("Query views", min_value=1, max_value=32, value=1, step=1))
+    save_manual_template = st.sidebar.checkbox("Save manual query template", value=False)
+    strict_backend = st.sidebar.checkbox("Strict backend rendering", value=False)
 
     bundle = load_run_bundle(run_dir)
     tabs = st.tabs(["Run Review", "Artifacts", "Evaluation", "Query Runner"])
@@ -217,7 +220,15 @@ def main() -> None:
     with tabs[2]:
         _render_evaluation(st, bundle)
     with tabs[3]:
-        _render_query_runner(st, config_path, backend_name, dry_run)
+        _render_query_runner(
+            st,
+            config_path,
+            backend_name,
+            dry_run,
+            num_views,
+            save_manual_template,
+            strict_backend,
+        )
 
 
 def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
@@ -524,7 +535,42 @@ def _render_evaluation(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(body)
 
 
-def _render_query_runner(st: Any, config_path: str, backend_name: str, dry_run: bool) -> None:
+def build_dashboard_backend(
+    backend_name: str,
+    *,
+    dry_run: bool,
+    num_views: int,
+    save_manual_template: bool,
+    strict_backend: bool,
+) -> LERFBackend | OpenNeRFBackend:
+    """Construct the semantic backend used by the interactive dashboard runner."""
+
+    if backend_name == "lerf":
+        return LERFBackend(
+            dry_run=dry_run,
+            num_views=num_views,
+            save_manual_template=save_manual_template,
+            strict_backend=strict_backend,
+        )
+    if backend_name == "opennerf":
+        return OpenNeRFBackend(
+            dry_run=dry_run,
+            num_views=num_views,
+            save_manual_template=save_manual_template,
+            strict_backend=strict_backend,
+        )
+    raise ValueError(f"Unsupported backend: {backend_name}")
+
+
+def _render_query_runner(
+    st: Any,
+    config_path: str,
+    backend_name: str,
+    dry_run: bool,
+    num_views: int,
+    save_manual_template: bool,
+    strict_backend: bool,
+) -> None:
     query = st.text_input("Text query", value="mug")
     output_dir = st.text_input("Output directory", value="results/dashboard_query")
 
@@ -534,7 +580,13 @@ def _render_query_runner(st: Any, config_path: str, backend_name: str, dry_run: 
     st.json(plan.to_dict())
 
     if st.button("Run query"):
-        backend = LERFBackend(dry_run=dry_run) if backend_name == "lerf" else OpenNeRFBackend(dry_run=dry_run)
+        backend = build_dashboard_backend(
+            backend_name,
+            dry_run=dry_run,
+            num_views=num_views,
+            save_manual_template=save_manual_template,
+            strict_backend=strict_backend,
+        )
         backend.load(config_path)
         result = backend.query_text(query, output_dir, top_k=5)
         st.subheader("QueryResult JSON")

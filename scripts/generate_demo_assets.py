@@ -46,7 +46,7 @@ def main() -> int:
     backend = (
         LERFBackend(dry_run=args.dry_run, num_views=args.num_views)
         if args.backend == "lerf"
-        else OpenNeRFBackend(dry_run=args.dry_run)
+        else OpenNeRFBackend(dry_run=args.dry_run, num_views=args.num_views)
     )
     try:
         backend.load(args.config)
@@ -164,7 +164,7 @@ def _write_portfolio_result_card(
         "## Architecture",
         "",
         "- Nerfstudio data processing and baseline NeRF training wrappers.",
-        "- LERF primary backend with OpenNeRF secondary adapter.",
+        "- LERF primary backend with OpenNeRF secondary adapter, multi-view dry-run, and viewer repair fallback.",
         "- Deterministic local query planner for object, affordance, material, and relation prompts.",
         "- Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.",
         "- Prompt-sensitivity diagnostics and scene-relation graph reports.",

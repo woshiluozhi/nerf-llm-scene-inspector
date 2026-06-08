@@ -103,6 +103,47 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert "git_available" in summary.provenance
 
 
+def test_run_scene_pipeline_opennerf_dry_run_uses_multiview_backend(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("method_name: opennerf\n", encoding="utf-8")
+
+    summary = run_scene_pipeline(
+        PipelineConfig(
+            input_path=tmp_path,
+            scene_name="opennerf_scene",
+            data_type="images",
+            backend="opennerf",
+            queries=["mug"],
+            data_root=tmp_path / "data",
+            runs_root=tmp_path / "runs",
+            output_root=tmp_path / "pipeline_runs",
+            config_path=config_path,
+            num_views=2,
+            dry_run=True,
+            skip_baseline=True,
+            skip_language=True,
+            skip_demo=True,
+            skip_eval=True,
+        )
+    )
+
+    assert summary.success is True
+    report = json.loads(
+        (
+            tmp_path
+            / "pipeline_runs"
+            / "opennerf_scene"
+            / "queries"
+            / "mug"
+            / "scene_query_report.json"
+        ).read_text(encoding="utf-8")
+    )
+    result = report["query_results"][0]
+    assert result["backend_name"] == "opennerf"
+    assert result["provenance"]["num_views"] == 2
+    assert len([view for view in result["rendered_images"] if view["kind"] == "relevancy"]) == 2
+
+
 def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")

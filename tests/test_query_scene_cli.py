@@ -115,3 +115,37 @@ def test_query_scene_cli_records_negative_query_purpose_without_positive_evidenc
         "Negative/disambiguation query results" in item
         for item in report["answer_summary"]["limitations"]
     )
+
+
+def test_query_scene_cli_opennerf_dry_run_uses_num_views(tmp_path: Path) -> None:
+    output = tmp_path / "query"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "query_scene.py"),
+            "--config",
+            str(tmp_path / "config.yml"),
+            "--backend",
+            "opennerf",
+            "--query",
+            "mug",
+            "--output",
+            str(output),
+            "--scene-name",
+            "desk_scene",
+            "--dry-run",
+            "--num-views",
+            "2",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    report = json.loads((output / "scene_query_report.json").read_text(encoding="utf-8"))
+    rendered = report["query_results"][0]["rendered_images"]
+    assert len([item for item in rendered if item["kind"] == "relevancy"]) == 2
+    assert report["query_results"][0]["provenance"]["num_views"] == 2

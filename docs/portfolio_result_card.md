@@ -10,7 +10,7 @@ a trained semantic field and an NVIDIA GPU environment.
 ## Architecture
 
 - Nerfstudio data processing and baseline NeRF training wrappers.
-- LERF primary backend with OpenNeRF secondary adapter.
+- LERF primary backend with OpenNeRF secondary adapter, including multi-view dry-run artifacts and viewer-repair fallback.
 - Deterministic local query planner for object, affordance, material, and relation prompts.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
 - Annotation review contact sheets for checking manual `bbox_2d` labels before reporting metrics.

@@ -50,7 +50,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - CPU-safe CLI wrappers for data preparation, baseline training, language-field training, querying, demo generation, evaluation, and environment checks.
 - LERF primary backend with dry-run multi-view artifacts, best-effort internal rendering, strict mode, and manual viewer fallback templates.
 - Manual viewer-output import and scene-query report repair for recovering structured evidence after interactive LERF fallback.
-- Optional OpenNeRF adapter scaffold.
+- OpenNeRF secondary adapter with multi-view dry-run artifacts, strict mode, viewer fallback, and manual repair workflow.
 - Typed JSON artifacts for query results and scene reports.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
@@ -603,11 +603,11 @@ Conservative one-line version:
 - Dry-run artifacts are synthetic and only verify pipeline behavior.
 - 3D point localization is approximate unless the backend exposes sampled 3D positions.
 - Spatial reasoning is heuristic and reports when it falls back to 2D image-space evidence.
-- OpenNeRF support is secondary and may require adapter updates for a specific checkout.
+- OpenNeRF support is secondary; dry-run and viewer-repair flows are implemented, while automated real-mode rendering may require checkout-specific hooks.
 
 ## Future Work
 
-- Harden the OpenNeRF backend for multiple repository revisions.
+- Add checkout-specific OpenNeRF automated render hooks for multiple repository revisions.
 - Replace the current heuristic scene-relation graph with learned RelationField-style relation prediction for support, containment, and interaction queries.
 - Connect query results to robotics manipulation policies.
 - Support lifelong semantic scene updates across repeated captures.

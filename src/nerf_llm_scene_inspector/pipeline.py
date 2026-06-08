@@ -1018,7 +1018,7 @@ def _run_queries(
     backend = (
         LERFBackend(dry_run=config.dry_run, num_views=config.num_views)
         if config.backend == "lerf"
-        else OpenNeRFBackend(dry_run=config.dry_run)
+        else OpenNeRFBackend(dry_run=config.dry_run, num_views=config.num_views)
     )
     backend.load(config_path)
     engine = SemanticQueryEngine(
