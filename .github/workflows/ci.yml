@@ -51,4 +51,4 @@ jobs:
         run: python scripts/run_dry_run_demo.py
 
       - name: Run practical pipeline dry-run
-        run: python scripts/run_scene_pipeline.py --dry-run --skip-demo --skip-eval
+        run: python scripts/run_scene_pipeline.py --dry-run --query mug

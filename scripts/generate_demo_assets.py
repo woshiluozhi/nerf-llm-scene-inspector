@@ -26,6 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--backend", choices=["lerf", "opennerf"], default="lerf")
     parser.add_argument("--queries", default="examples/queries_demo.yaml")
     parser.add_argument("--output", default="results/demo_assets")
+    parser.add_argument("--report-output", default="docs/project_report.md")
+    parser.add_argument("--portfolio-card-output", default="docs/portfolio_result_card.md")
     parser.add_argument("--num-views", type=int, default=1)
     parser.add_argument("--dry-run", action="store_true")
     return parser
@@ -70,7 +72,7 @@ def main() -> int:
             for result in results
         ]
         write_project_report(
-            ROOT / "docs" / "project_report.md",
+            args.report_output,
             title="NeRF-LLM Scene Inspector Report",
             scene_name=scene_name,
             backend=args.backend,
@@ -82,7 +84,7 @@ def main() -> int:
             ],
         )
         _write_portfolio_result_card(
-            ROOT / "docs" / "portfolio_result_card.md",
+            Path(args.portfolio_card_output),
             scene_name=scene_name,
             backend=args.backend,
             num_queries=len(results),
@@ -174,6 +176,7 @@ def _write_portfolio_result_card(
         f"- Demo queries generated: `{num_queries}`",
         "- CPU-only dry-run demo with mock RGB/relevancy/overlay outputs.",
         "- Real-mode wrappers for Nerfstudio/LERF commands when upstream tools are installed.",
+        "- Run-scoped pipeline artifacts avoid stale query/evaluation results across reruns.",
         "",
         "## Dry-Run vs Real GPU Mode",
         "",
@@ -195,6 +198,7 @@ def _write_portfolio_result_card(
         f"- Demo montage: `{video_path}`" if video_path else "- Demo montage: not generated",
         "- Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`",
         "- Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`",
+        "- Run-scoped evaluation: `results/pipeline_runs/desk_scene/evaluation/eval_summary.json`",
         "- Evaluation summary: `results/evaluation/eval_summary.json`",
         "- Qualitative report: `results/evaluation/qualitative_report.md`",
         "",

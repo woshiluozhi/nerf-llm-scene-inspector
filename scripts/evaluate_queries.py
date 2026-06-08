@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--annotations", required=True, help="Annotation JSON file.")
     parser.add_argument("--results", required=True, help="Directory containing query_result.json files.")
     parser.add_argument("--output", default="results/evaluation", help="Evaluation output directory.")
+    parser.add_argument("--report-output", default="docs/project_report.md")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--dry-run", action="store_true", help="Create synthetic predictions from annotations.")
     return parser
@@ -65,7 +66,7 @@ def main() -> int:
         _write_csv(table_path, rows)
         _write_qualitative_report(qualitative_path, annotations.scene_name, rows, metrics)
         write_project_report(
-            ROOT / "docs" / "project_report.md",
+            args.report_output,
             title="NeRF-LLM Scene Inspector Report",
             scene_name=annotations.scene_name,
             backend="lerf/opennerf",

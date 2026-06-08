@@ -32,8 +32,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", help="Existing trained config.yml, useful with --skip-language.")
     parser.add_argument("--data-root", default="data/processed")
     parser.add_argument("--runs-root", default="runs")
-    parser.add_argument("--results-root", default="results")
     parser.add_argument("--output-root", default="results/pipeline_runs")
+    parser.add_argument("--annotations", default="examples/annotations_example.json")
     parser.add_argument("--max-num-iterations", type=int)
     parser.add_argument("--num-views", type=int, default=1)
     parser.add_argument("--top-k", type=int, default=5)
@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-queries", action="store_true")
     parser.add_argument("--skip-demo", action="store_true")
     parser.add_argument("--skip-eval", action="store_true")
+    parser.add_argument(
+        "--no-clean-run",
+        action="store_true",
+        help="Keep existing query/demo/evaluation files under the pipeline run directory.",
+    )
     return parser
 
 
@@ -62,8 +67,8 @@ def main() -> int:
         queries=queries,
         data_root=args.data_root,
         runs_root=args.runs_root,
-        results_root=args.results_root,
         output_root=args.output_root,
+        annotations_path=args.annotations,
         config_path=args.config,
         max_num_iterations=args.max_num_iterations,
         num_views=args.num_views,
@@ -77,6 +82,7 @@ def main() -> int:
         skip_queries=args.skip_queries,
         skip_demo=args.skip_demo,
         skip_eval=args.skip_eval,
+        clean_run_outputs=not args.no_clean_run,
     )
     summary = run_scene_pipeline(config)
     print(json.dumps(summary.to_dict(), indent=2))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -40,8 +41,8 @@ class PipelineConfig:
     queries: list[str] = field(default_factory=lambda: list(DEFAULT_PIPELINE_QUERIES))
     data_root: str | Path = "data/processed"
     runs_root: str | Path = "runs"
-    results_root: str | Path = "results"
     output_root: str | Path = "results/pipeline_runs"
+    annotations_path: str | Path = "examples/annotations_example.json"
     config_path: str | Path | None = None
     max_num_iterations: int | None = None
     num_views: int = 1
@@ -55,6 +56,7 @@ class PipelineConfig:
     skip_queries: bool = False
     skip_demo: bool = False
     skip_eval: bool = False
+    clean_run_outputs: bool = True
 
 
 @dataclass
@@ -115,7 +117,13 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     language_dir = Path(config.runs_root) / f"language_{config.scene_name}"
     run_dir = Path(config.output_root) / config.scene_name
     query_dir = run_dir / "queries"
+    demo_dir = run_dir / "demo_assets"
+    eval_dir = run_dir / "evaluation"
     run_dir.mkdir(parents=True, exist_ok=True)
+    if config.clean_run_outputs:
+        for subdir in (query_dir, demo_dir, eval_dir):
+            _reset_run_subdir(subdir, run_dir)
+    run_queries_path = _write_run_queries_file(run_dir, config.scene_name, config.queries)
 
     steps: list[PipelineStep] = []
     warnings: list[str] = []
@@ -125,6 +133,11 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "language_run": str(language_dir),
         "pipeline_run": str(run_dir),
         "queries": str(query_dir),
+        "demo_assets": str(demo_dir),
+        "evaluation": str(eval_dir),
+        "run_queries": str(run_queries_path),
+        "project_report": str(run_dir / "project_report.md"),
+        "portfolio_card": str(run_dir / "portfolio_result_card.md"),
     }
 
     try:
@@ -248,30 +261,59 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     model_config_path,
                     "--backend",
                     config.backend,
+                    "--queries",
+                    str(run_queries_path),
+                    "--output",
+                    str(demo_dir),
+                    "--report-output",
+                    str(run_dir / "project_report.md"),
+                    "--portfolio-card-output",
+                    str(run_dir / "portfolio_result_card.md"),
                     "--num-views",
                     str(config.num_views),
                     *(["--dry-run"] if config.dry_run else []),
                 ],
                 root=root,
             )
+            demo_result.outputs.update(
+                {
+                    "demo_summary": str(demo_dir / "demo_summary.json"),
+                    "query_grid": str(demo_dir / "query_grid.png"),
+                    "demo_montage": str(demo_dir / "demo_montage.gif"),
+                    "portfolio_card": str(run_dir / "portfolio_result_card.md"),
+                }
+            )
             steps.append(demo_result)
 
         if config.skip_eval:
             steps.append(PipelineStep("evaluate_queries", "skipped"))
         else:
+            eval_results_dir = query_dir if query_dir.exists() else demo_dir
             eval_result = _run_helper_script(
                 [
                     sys.executable,
                     str(root / "scripts" / "evaluate_queries.py"),
                     "--queries",
-                    str(root / "examples" / "queries_demo.yaml"),
+                    str(run_queries_path),
                     "--annotations",
-                    str(root / "examples" / "annotations_example.json"),
+                    str(config.annotations_path),
                     "--results",
-                    str(Path(config.results_root) / "demo_assets"),
+                    str(eval_results_dir),
+                    "--output",
+                    str(eval_dir),
+                    "--report-output",
+                    str(run_dir / "project_report.md"),
                     *(["--dry-run"] if config.dry_run else []),
                 ],
                 root=root,
+            )
+            eval_result.outputs.update(
+                {
+                    "eval_summary": str(eval_dir / "eval_summary.json"),
+                    "eval_table": str(eval_dir / "eval_table.csv"),
+                    "qualitative_report": str(eval_dir / "qualitative_report.md"),
+                    "project_report": str(run_dir / "project_report.md"),
+                }
             )
             steps.append(eval_result)
     except Exception as exc:
@@ -313,6 +355,28 @@ def _run_queries(
         report_path = report.to_json(task_dir / "scene_query_report.json")
         outputs[slugify(query)] = str(report_path)
     return outputs
+
+
+def _write_run_queries_file(run_dir: Path, scene_name: str, queries: list[str]) -> Path:
+    path = run_dir / "queries.yaml"
+    lines = [f"scene_name: {json.dumps(scene_name)}", "queries:"]
+    lines.extend(f"  - {json.dumps(query)}" for query in queries)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def _reset_run_subdir(path: Path, run_dir: Path) -> None:
+    if not path.exists():
+        return
+    resolved_path = path.resolve()
+    resolved_run_dir = run_dir.resolve()
+    try:
+        resolved_path.relative_to(resolved_run_dir)
+    except ValueError:
+        raise RuntimeError(f"Refusing to clean path outside pipeline run directory: {resolved_path}")
+    if resolved_path == resolved_run_dir:
+        raise RuntimeError(f"Refusing to clean the pipeline run root directly: {resolved_path}")
+    shutil.rmtree(resolved_path)
 
 
 def _run_helper_script(command: list[str], *, root: Path) -> PipelineStep:

@@ -22,6 +22,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Demo queries generated: `5`
 - CPU-only dry-run demo with mock RGB/relevancy/overlay outputs.
 - Real-mode wrappers for Nerfstudio/LERF commands when upstream tools are installed.
+- Run-scoped pipeline artifacts avoid stale query/evaluation results across reruns.
 
 ## Dry-Run vs Real GPU Mode
 
@@ -43,6 +44,7 @@ python scripts/run_scene_pipeline.py --dry-run
 - Demo montage: `results\demo_assets\demo_montage.gif`
 - Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`
 - Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`
+- Run-scoped evaluation: `results/pipeline_runs/desk_scene/evaluation/eval_summary.json`
 - Evaluation summary: `results/evaluation/eval_summary.json`
 - Qualitative report: `results/evaluation/qualitative_report.md`
 

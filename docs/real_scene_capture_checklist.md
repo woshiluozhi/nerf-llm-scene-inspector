@@ -47,12 +47,15 @@ python scripts/run_scene_pipeline.py \
   --variant lerf-lite \
   --query "mug" \
   --query "objects that can hold water" \
+  --annotations examples/annotations_example.json \
   --num-views 3 \
   --strict
 ```
 
 Review `results/pipeline_runs/desk_scene/pipeline_summary.json` and
 `results/pipeline_runs/desk_scene/scene_data_inspection.md` before using the results in a portfolio report.
+The pipeline cleans the current run's `queries/`, `demo_assets/`, and `evaluation/` folders by default so
+reruns do not accidentally evaluate stale artifacts. Use `--no-clean-run` only when preserving prior files is intentional.
 
 ## LERF Prompt Examples
 

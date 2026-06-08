@@ -146,6 +146,10 @@ python scripts/run_scene_pipeline.py --dry-run
 ```
 
 This writes a reproducible pipeline record to `results/pipeline_runs/desk_scene/pipeline_summary.json`.
+Each pipeline run writes run-scoped query, demo, evaluation, and report artifacts under
+`results/pipeline_runs/<scene>/`. Existing run-scoped query/demo/evaluation folders are
+cleaned by default to avoid stale results; pass `--no-clean-run` only when you intentionally
+want to preserve prior files.
 
 Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
@@ -182,6 +186,7 @@ python scripts/run_scene_pipeline.py \
   --variant lerf-lite \
   --query "mug" \
   --query "objects that can hold water" \
+  --annotations examples/annotations_example.json \
   --num-views 3 \
   --strict
 ```
@@ -201,6 +206,11 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/pipeline_summary.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.md`
+- `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
+- `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
+- `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
+- `results/pipeline_runs/<scene>/project_report.md`
+- `results/pipeline_runs/<scene>/portfolio_result_card.md`
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
@@ -231,7 +241,7 @@ The tests do not require GPU, Nerfstudio, LERF, or trained checkpoints:
 pytest
 python scripts/check_env.py --json
 python scripts/run_dry_run_demo.py
-python scripts/run_scene_pipeline.py --dry-run --skip-demo --skip-eval
+python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/prepare_data.py --help
 python scripts/inspect_scene_data.py --help
 python scripts/train_baseline_nerf.py --help

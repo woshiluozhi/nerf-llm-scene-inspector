@@ -28,7 +28,7 @@ demo-dry-run:
 	$(PYTHON) scripts/run_dry_run_demo.py
 
 pipeline-dry-run:
-	$(PYTHON) scripts/run_scene_pipeline.py --dry-run --skip-demo --skip-eval
+	$(PYTHON) scripts/run_scene_pipeline.py --dry-run --query mug
 
 clean-generated:
 	rm -rf data runs outputs viewer_logs wandb
