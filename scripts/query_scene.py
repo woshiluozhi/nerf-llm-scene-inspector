@@ -95,7 +95,10 @@ def main() -> int:
         for call in calls:
             query = call.query
             query_dir = output / slugify(query)
-            results.append(backend.query_text(query, str(query_dir), top_k=args.top_k))
+            result = backend.query_text(query, str(query_dir), top_k=args.top_k)
+            result.provenance["planner_backend_call"] = call.to_dict()
+            result.to_json(query_dir / "query_result.json")
+            results.append(result)
         aggregate = aggregate_multi_query_results(results)
         answer = synthesize_scene_answer(
             task=args.query,

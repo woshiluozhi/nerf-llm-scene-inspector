@@ -63,13 +63,14 @@ def synthesize_scene_answer(
 ) -> SceneAnswer:
     """Create an evidence-grounded natural-language answer from query results."""
 
-    evidence = _collect_evidence(results, top_k=top_k)
+    positive_results = _positive_results(results)
+    evidence = _collect_evidence(positive_results, top_k=top_k)
     labels = _unique_labels(evidence)
     answer = _format_answer(plan, labels)
-    support_level = _support_level(results)
-    confidence = _confidence(evidence, results, plan)
+    support_level = _support_level(positive_results)
+    confidence = _confidence(evidence, positive_results, plan)
     limitations = _limitations(results, support_level)
-    followups = _followups(task, plan, results, evidence)
+    followups = _followups(task, plan, positive_results, evidence)
     if evidence:
         answer = (
             f"{answer} Strongest evidence is based on {len(evidence)} ranked "
@@ -85,6 +86,10 @@ def synthesize_scene_answer(
         limitations=limitations,
         recommended_followups=followups,
     )
+
+
+def _positive_results(results: list[QueryResult]) -> list[QueryResult]:
+    return [result for result in results if _query_purpose(result) != "negative"]
 
 
 def _collect_evidence(results: list[QueryResult], *, top_k: int) -> list[SceneAnswerEvidence]:
@@ -221,6 +226,13 @@ def _support_level(results: list[QueryResult]) -> str:
     return "query_only"
 
 
+def _query_purpose(result: QueryResult) -> str:
+    call = result.provenance.get("planner_backend_call")
+    if isinstance(call, dict):
+        return str(call.get("purpose") or "primary")
+    return str(result.provenance.get("planner_purpose") or "primary")
+
+
 def _has_world_region(regions: list[BoundingRegion]) -> bool:
     return any(region.coordinate_frame == "world" for region in regions)
 
@@ -244,6 +256,10 @@ def _confidence(
 
 def _limitations(results: list[QueryResult], support_level: str) -> list[str]:
     limitations: list[str] = []
+    if any(_query_purpose(result) == "negative" for result in results):
+        limitations.append(
+            "Negative/disambiguation query results were run for review but excluded from positive answer evidence."
+        )
     if support_level in {"2d_relevancy_fallback", "rendered_relevancy_only", "query_only"}:
         limitations.append(
             "Metric 3D localization was not available; spatial claims should be treated as image-space or qualitative evidence."

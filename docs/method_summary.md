@@ -28,7 +28,9 @@ the same backend-call expansion helper so a task produces the same concrete text
 whether it is run from `query_scene.py` or imported as `SemanticQueryEngine`. By default,
 primary and supporting prompts are executed, negative prompts are kept for disambiguation,
 and all answers explicitly report the evidence level, limitations, and recommended follow-up
-checks.
+checks. When negative prompts are explicitly executed, their results are tagged in provenance
+and excluded from positive answer evidence so disambiguation artifacts do not become claimed
+detections.
 
 ## Experiment Matrices
 

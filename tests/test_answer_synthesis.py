@@ -90,3 +90,37 @@ def test_synthesize_scene_answer_uses_candidate_3d_points() -> None:
     assert answer.evidence[0].evidence_type == "3d_point"
     assert answer.evidence[0].point_3d == (0.1, 0.2, 0.3)
     assert answer.evidence[0].notes == "Back-projected heatmap centroid."
+
+
+def test_synthesize_scene_answer_excludes_negative_query_evidence() -> None:
+    plan = {
+        "final_answer_template": "Likely relevant scene regions are {items}.",
+        "negative_visual_queries": ["screen"],
+    }
+    positive = QueryResult(
+        query="cup",
+        backend_name="lerf",
+        config_path="config.yml",
+        bounding_regions=[BoundingRegion(label="cup", score=0.7)],
+        confidence=0.7,
+        provenance={"planner_backend_call": {"query": "cup", "purpose": "primary"}},
+    )
+    negative = QueryResult(
+        query="screen",
+        backend_name="lerf",
+        config_path="config.yml",
+        bounding_regions=[BoundingRegion(label="screen", score=0.99)],
+        confidence=0.99,
+        provenance={"planner_backend_call": {"query": "screen", "purpose": "negative"}},
+    )
+
+    answer = synthesize_scene_answer(
+        task="Find something that can hold water, not a screen",
+        plan=plan,
+        results=[negative, positive],
+    )
+
+    assert [item.label for item in answer.evidence] == ["cup"]
+    assert "screen" not in answer.answer
+    assert answer.confidence == 0.7
+    assert any("Negative/disambiguation query results" in item for item in answer.limitations)

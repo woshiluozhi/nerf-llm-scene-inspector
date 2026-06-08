@@ -61,7 +61,10 @@ class SemanticQueryEngine:
         for call in calls:
             query = call.query
             query_output = result_dir / _unique_query_slug(query, used_slugs)
-            results.append(self.backend.query_text(query, str(query_output), top_k=self.top_k))
+            result = self.backend.query_text(query, str(query_output), top_k=self.top_k)
+            result.provenance["planner_backend_call"] = call.to_dict()
+            result.to_json(query_output / "query_result.json")
+            results.append(result)
 
         aggregate = aggregate_multi_query_results(results)
         answer = synthesize_scene_answer(

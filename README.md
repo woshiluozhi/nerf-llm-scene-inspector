@@ -454,7 +454,8 @@ directories keep artifacts traceable across repeated runs.
 For high-level tasks, `query_scene.py` runs the planner's primary and supporting backend
 calls by default; use `--max-queries` to cap prompt expansion, `--exact-query` to disable
 expansion, and `--include-negative-queries` when you explicitly want disambiguation prompts
-included in backend execution.
+included in backend execution. Negative query results are tagged in provenance and excluded
+from positive answer evidence.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.

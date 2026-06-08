@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from nerf_llm_scene_inspector.backends.base import BoundingRegion, QueryResult, RenderedView, SemanticFieldBackend
@@ -131,6 +132,15 @@ def test_semantic_query_engine_can_include_negative_queries(tmp_path: Path) -> N
 
     assert backend.queries == ["mug", "cup", "screen"]
     assert len(report.query_results) == 3
+    assert report.query_results[-1].provenance["planner_backend_call"]["purpose"] == "negative"
+    persisted = json.loads((tmp_path / "screen" / "query_result.json").read_text(encoding="utf-8"))
+    assert persisted["provenance"]["planner_backend_call"]["purpose"] == "negative"
+    evidence_labels = [item["label"] for item in report.answer_summary["evidence"]]
+    assert "screen" not in evidence_labels
+    assert any(
+        "Negative/disambiguation query results" in item
+        for item in report.answer_summary["limitations"]
+    )
 
 
 def test_semantic_query_engine_exact_query_bypasses_planner_expansion(tmp_path: Path) -> None:
