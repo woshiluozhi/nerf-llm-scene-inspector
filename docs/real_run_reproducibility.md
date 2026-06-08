@@ -10,6 +10,7 @@ git status --short
 python scripts/check_env.py --check-upstream --require-gpu --verbose
 python scripts/create_capture_manifest.py --input path/to/video.mp4 --type video --scene-name desk_scene --capture-device "phone model" --lighting "bright diffuse indoor" --camera-motion "slow orbit" --static-scene --high-overlap --privacy-reviewed --output results/capture_manifest
 python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
+python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --input path/to/video.mp4 --type video
 ```
 
 Record the upstream versions that matter for interpretation:
@@ -79,6 +80,8 @@ python scripts/run_scene_pipeline.py \
 - `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
 - `reproduce_run.sh`: shell recipe that installs local dependencies, runs checks, replays the pipeline, and verifies the pack.
+- `real_run_plan/real_run_plan.md`: concrete action plan for upgrading a dry-run or partially reviewed run into real CUDA/Nerfstudio/LERF evidence.
+- `real_run_plan/real_run_plan.json`: machine-readable version of the same plan, including blocker/warning counts and command phases.
 - `demo_assets/query_grid.png`: compact qualitative query visualization.
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
@@ -219,6 +222,12 @@ python scripts/generate_portfolio_page.py \
 
 python scripts/create_reproduction_bundle.py \
   --run-dir results/pipeline_runs/desk_scene
+
+python scripts/create_real_run_plan.py \
+  --run-dir results/pipeline_runs/desk_scene \
+  --input path/to/video.mp4 \
+  --type video \
+  --submission-packet results/submission_packet/submission_packet.json
 
 python scripts/generate_research_report.py \
   --run-dir results/pipeline_runs/desk_scene

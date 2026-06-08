@@ -46,6 +46,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "reproduction_manifest.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "research_report.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "research_report.md").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "real_run_plan" / "real_run_plan.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "real_run_plan" / "real_run_plan.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "logs" / "prepare_data_command.json").exists()
     assert (
         tmp_path
@@ -158,6 +160,11 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "reproduce_run.sh").exists()
     assert (run_dir / "research_report.json").exists()
     assert (run_dir / "research_report.md").exists()
+    assert (run_dir / "real_run_plan" / "real_run_plan.json").exists()
+    assert (run_dir / "real_run_plan" / "real_run_plan.md").exists()
+    assert "real_run_plan/real_run_plan.md" in (run_dir / "portfolio_page.html").read_text(
+        encoding="utf-8"
+    )
     assert (run_dir / "submission_packet" / "submission_packet.json").exists()
     assert (run_dir / "submission_packet" / "submission_checklist.md").exists()
     assert (run_dir / "submission_packet" / "cv_project_entry.md").exists()
@@ -168,6 +175,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
+    assert run_index["entries"][0]["artifacts"]["real_run_plan"] == "real_run_plan/real_run_plan.md"
     run_comparison = json.loads(
         (tmp_path / "pipeline_runs" / "run_comparison.json").read_text(encoding="utf-8")
     )
@@ -233,6 +241,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_step.outputs["manifest"] == str(run_dir / "reproduction_manifest.json")
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
+    assert any(artifact["name"] == "real_run_plan" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     research_step = next(step for step in summary.steps if step.name == "generate_research_report")
     assert research_step.outputs["markdown"] == str(run_dir / "research_report.md")
     submission_step = next(step for step in summary.steps if step.name == "create_submission_packet")
@@ -243,6 +252,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
         (run_dir / "submission_packet" / "submission_packet.json").read_text(encoding="utf-8")
     )
     assert submission_payload["readiness_level"] == "needs_pack_validation"
+    plan_step = next(step for step in summary.steps if step.name == "create_real_run_plan")
+    assert plan_step.outputs["markdown"] == str(run_dir / "real_run_plan" / "real_run_plan.md")
+    plan_payload = json.loads((run_dir / "real_run_plan" / "real_run_plan.json").read_text(encoding="utf-8"))
+    assert plan_payload["current_mode"] == "dry-run smoke demo"
     comparison_step = next(step for step in summary.steps if step.name == "compare_runs")
     assert comparison_step.outputs["json"] == str(tmp_path / "pipeline_runs" / "run_comparison.json")
 

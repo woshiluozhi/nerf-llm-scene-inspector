@@ -22,6 +22,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Experiment-matrix runner for small backend/query/variant ablations with CSV and Markdown summaries.
 - Paper-style research report generation from run artifacts, metrics, limitations, and next steps.
 - Submission packet generation for claim-calibrated CV, portfolio, and professor-outreach sharing.
+- Real-run action-plan generation that lists capture, CUDA/LERF training, annotation review, quality-gate, pack validation, and sharing commands.
 - Static project-level portfolio site for GitHub Pages or local review.
 - Static HTML portfolio page with evidence score, metrics, visual artifacts, and artifact links.
 
@@ -36,6 +37,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Shareable preflight, audit, recommendation, and reproduction artifacts for portfolio review.
 - Research report artifacts summarize evidence, limitations, and next steps in a paper-style format.
 - Submission checklist records allowed claims, claims to avoid, pack validation status, and next actions.
+- Real-run plan records the exact next commands needed to turn smoke evidence into a real captured-scene run.
 - Run evidence scorecard summarizes capture readiness, query artifacts, overlays, annotation coverage, evaluation metrics, and reproducibility files.
 
 ## Dry-Run vs Real GPU Mode
@@ -56,6 +58,7 @@ python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
+python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/submission_packet/submission_packet.json
 ```
 
 ## Outputs
@@ -70,6 +73,7 @@ python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
 - Evidence scorecard: `results/pipeline_runs/desk_scene/evidence_scorecard.md`
 - Research report: `results/pipeline_runs/desk_scene/research_report.md`
+- Real-run action plan: `results/pipeline_runs/desk_scene/real_run_plan/real_run_plan.md`
 - Submission checklist: `results/pipeline_runs/desk_scene/submission_packet/submission_checklist.md`
 - Static portfolio page: `results/pipeline_runs/desk_scene/portfolio_page.html`
 - Annotation review: `results/pipeline_runs/desk_scene/evaluation/annotation_review.md`

@@ -221,6 +221,7 @@ def _artifacts(root: Path, matrix_summary_path: str | Path | None) -> dict[str, 
         "quality_gate": "quality_gate.md",
         "portfolio_page": "portfolio_page.html",
         "reproduction_report": "reproduction_report.md",
+        "real_run_plan": "real_run_plan/real_run_plan.md",
         "submission_checklist": "submission_packet/submission_checklist.md",
         "portfolio_pack": "../../portfolio_pack.zip",
     }

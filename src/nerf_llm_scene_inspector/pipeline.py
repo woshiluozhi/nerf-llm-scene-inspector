@@ -22,6 +22,7 @@ from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
 from nerf_llm_scene_inspector.evaluation.research_report import write_research_report
+from nerf_llm_scene_inspector.evaluation.real_run_plan import write_real_run_plan
 from nerf_llm_scene_inspector.evaluation.submission_packet import write_submission_packet
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
@@ -143,11 +144,20 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     eval_dir = run_dir / "evaluation"
     prompt_sensitivity_dir = run_dir / "prompt_sensitivity"
     relation_dir = run_dir / "scene_relations"
+    real_run_plan_dir = run_dir / "real_run_plan"
     training_dir = run_dir / "training"
     logs_dir = run_dir / "logs"
     run_dir.mkdir(parents=True, exist_ok=True)
     if config.clean_run_outputs:
-        for subdir in (query_dir, demo_dir, eval_dir, prompt_sensitivity_dir, relation_dir, logs_dir):
+        for subdir in (
+            query_dir,
+            demo_dir,
+            eval_dir,
+            prompt_sensitivity_dir,
+            relation_dir,
+            real_run_plan_dir,
+            logs_dir,
+        ):
             _reset_run_subdir(subdir, run_dir)
     if config.prompt_suite_path:
         config = replace(
@@ -184,6 +194,9 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "scene_relations_json": str(relation_dir / "scene_relations_summary.json"),
         "scene_relations_csv": str(relation_dir / "scene_relations_edges.csv"),
         "scene_relations_markdown": str(relation_dir / "scene_relations_report.md"),
+        "real_run_plan": str(real_run_plan_dir),
+        "real_run_plan_json": str(real_run_plan_dir / "real_run_plan.json"),
+        "real_run_plan_markdown": str(real_run_plan_dir / "real_run_plan.md"),
         "annotation_review_json": str(eval_dir / "annotation_review.json"),
         "annotation_review_markdown": str(eval_dir / "annotation_review.md"),
         "annotation_review_contact_sheet": str(eval_dir / "annotation_review_contact_sheet.png"),
@@ -791,6 +804,45 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
+    real_run_plan = write_real_run_plan(
+        run_dir,
+        output_dir=real_run_plan_dir,
+        input_path=config.input_path,
+        input_type=config.data_type,
+        processed_data=processed_dir,
+        backend=config.backend,
+        variant=config.variant,
+        queries_path=run_queries_path,
+        output_root=config.output_root,
+    )
+    steps.append(
+        PipelineStep(
+            "create_real_run_plan",
+            "warning" if real_run_plan.blocker_count else "success",
+            summary={
+                "current_mode": real_run_plan.current_mode,
+                "readiness_level": real_run_plan.readiness_level,
+                "blocker_count": real_run_plan.blocker_count,
+                "warning_count": real_run_plan.warning_count,
+                "command_count": len(real_run_plan.commands),
+            },
+            outputs={
+                "json": str(real_run_plan_dir / "real_run_plan.json"),
+                "markdown": str(real_run_plan_dir / "real_run_plan.md"),
+            },
+        )
+    )
+    summary.to_json(summary_path)
+    reproduction = build_reproduction_bundle(run_dir)
+    reproduction.to_json(run_dir / "reproduction_manifest.json")
+    reproduction.to_markdown(run_dir / "reproduction_report.md")
+    reproduction.to_shell_script(run_dir / "reproduce_run.sh")
+    refreshed_index = index_pipeline_runs(runs_root)
+    refreshed_index.to_json(runs_root / "run_index.json")
+    refreshed_index.to_markdown(runs_root / "run_index.md")
+    refreshed_comparison = compare_pipeline_runs(runs_root)
+    refreshed_comparison.to_json(runs_root / "run_comparison.json")
+    refreshed_comparison.to_markdown(runs_root / "run_comparison.md")
     write_research_report(run_dir)
     build_portfolio_page(run_dir).write_html(run_dir / "portfolio_page.html")
     summary.to_json(summary_path)

@@ -188,6 +188,7 @@ def _artifacts(root: Path) -> list[dict[str, str]]:
         "Scene relation report": "scene_relations/scene_relations_report.md",
         "Scene relation edges": "scene_relations/scene_relations_edges.csv",
         "Reproduction report": "reproduction_report.md",
+        "Real-run action plan": "real_run_plan/real_run_plan.md",
         "Research report": "research_report.md",
         "Submission checklist": "submission_packet/submission_checklist.md",
         "Reproduction script": "reproduce_run.sh",

@@ -115,6 +115,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/run_recommendations.md",
         "run/research_report.json",
         "run/research_report.md",
+        "run/real_run_plan/real_run_plan.json",
+        "run/real_run_plan/real_run_plan.md",
         "run/submission_packet/submission_packet.json",
         "run/submission_packet/submission_checklist.md",
         "run/submission_packet/cv_project_entry.md",
@@ -175,6 +177,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "run_audit": "run/run_audit.md",
                 "run_recommendations": "run/run_recommendations.md",
                 "research_report": "run/research_report.md",
+                "real_run_plan": "run/real_run_plan/real_run_plan.md",
                 "submission_checklist": "run/submission_packet/submission_checklist.md",
                 "reproduction_report": "run/reproduction_report.md",
                 "reproduce_script": "run/reproduce_run.sh",
@@ -201,6 +204,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"readiness_level": "ready_for_portfolio", "recommendations": []})
     if relative_path.endswith("research_report.json"):
         return json.dumps({"scene_name": "desk_scene", "title": "NeRF-LLM Scene Inspector Research Report"})
+    if relative_path.endswith("real_run_plan.json"):
+        return json.dumps({"scene_name": "desk_scene", "current_mode": "dry-run smoke demo"})
     if relative_path.endswith("submission_packet.json"):
         return json.dumps({"scene_name": "desk_scene", "readiness_level": "shareable_smoke_demo"})
     if relative_path.endswith("reproduction_manifest.json"):

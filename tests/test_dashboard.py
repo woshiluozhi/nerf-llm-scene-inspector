@@ -28,6 +28,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "analyze_scene_relations", "status": "success"},
                 {"name": "review_annotations", "status": "success"},
                 {"name": "generate_research_report", "status": "success"},
+                {"name": "create_real_run_plan", "status": "success"},
                 {"name": "create_submission_packet", "status": "success"},
             ],
             "provenance": {"git_commit": "abc123"},
@@ -77,6 +78,14 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     (run_dir / "reproduction_report.md").write_text("# Reproduction Report\n", encoding="utf-8")
     _write_json(run_dir / "research_report.json", {"scene_name": "run", "title": "Research"})
     (run_dir / "research_report.md").write_text("# Research Report\n", encoding="utf-8")
+    _write_json(
+        run_dir / "real_run_plan" / "real_run_plan.json",
+        {"scene_name": "run", "current_mode": "dry-run smoke demo"},
+    )
+    (run_dir / "real_run_plan" / "real_run_plan.md").write_text(
+        "# Real-Run Action Plan\n",
+        encoding="utf-8",
+    )
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
         {"readiness_level": "shareable_smoke_demo"},
@@ -159,6 +168,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Reproduction Report" in bundle["reproduction_report"]
     assert bundle["research_report"]["scene_name"] == "run"
     assert "# Research Report" in bundle["research_report_markdown"]
+    assert bundle["real_run_plan"]["scene_name"] == "run"
+    assert "# Real-Run Action Plan" in bundle["real_run_plan_markdown"]
     assert bundle["submission_packet"]["readiness_level"] == "shareable_smoke_demo"
     assert "# Submission Checklist" in bundle["submission_checklist"]
     assert bundle["annotation_validation"]["ok"] is True

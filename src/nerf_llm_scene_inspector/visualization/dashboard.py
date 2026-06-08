@@ -39,6 +39,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
         "reproduction_manifest": _read_json(root / "reproduction_manifest.json"),
         "reproduction_report": _read_text(root / "reproduction_report.md"),
+        "real_run_plan": _read_json(root / "real_run_plan" / "real_run_plan.json"),
+        "real_run_plan_markdown": _read_text(root / "real_run_plan" / "real_run_plan.md"),
         "research_report": _read_json(root / "research_report.json"),
         "research_report_markdown": _read_text(root / "research_report.md"),
         "submission_packet": _read_json(root / "submission_packet" / "submission_packet.json"),
@@ -285,6 +287,12 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["reproduction_report"])
             else:
                 st.json(bundle["reproduction_manifest"])
+    if bundle["real_run_plan_markdown"]:
+        with st.expander("Real-Run Action Plan", expanded=False):
+            st.markdown(bundle["real_run_plan_markdown"])
+    elif bundle["real_run_plan"]:
+        with st.expander("Real-Run Action Plan", expanded=False):
+            st.json(bundle["real_run_plan"])
     if bundle["research_report_markdown"]:
         with st.expander("Research Report", expanded=False):
             st.markdown(bundle["research_report_markdown"])
@@ -476,6 +484,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "run_audit.json",
         "run_recommendations.json",
         "reproduction_manifest.json",
+        "real_run_plan/real_run_plan.json",
         "research_report.json",
         "submission_packet/submission_packet.json",
         "environment_report.json",
@@ -513,6 +522,8 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("training/language_train_summary.json")
     if _step_succeeded(pipeline_summary, "generate_research_report"):
         expected.append("research_report.md")
+    if _step_succeeded(pipeline_summary, "create_real_run_plan"):
+        expected.append("real_run_plan/real_run_plan.md")
     if _step_succeeded(pipeline_summary, "create_submission_packet"):
         expected.extend(
             [

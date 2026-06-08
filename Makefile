@@ -26,6 +26,7 @@ check:
 	$(PYTHON) scripts/run_experiment_matrix.py --help
 	$(PYTHON) scripts/generate_research_report.py --help
 	$(PYTHON) scripts/create_submission_packet.py --help
+	$(PYTHON) scripts/create_real_run_plan.py --help
 	$(PYTHON) scripts/run_scene_pipeline.py --help
 	$(PYTHON) scripts/run_dry_run_demo.py --help
 	$(PYTHON) -m pytest
@@ -43,6 +44,7 @@ portfolio-pack:
 	$(PYTHON) scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 	$(PYTHON) scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 	$(PYTHON) scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
+	$(PYTHON) scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/submission_packet/submission_packet.json
 
 clean-generated:
 	rm -rf data runs outputs viewer_logs wandb

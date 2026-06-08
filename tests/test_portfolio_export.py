@@ -78,6 +78,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
     assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
     assert index["run_summary"]["artifacts"]["research_report"] == "run/research_report.md"
+    assert index["run_summary"]["artifacts"]["real_run_plan"] == "run/real_run_plan/real_run_plan.md"
     assert index["run_summary"]["artifacts"]["submission_checklist"] == (
         "run/submission_packet/submission_checklist.md"
     )
@@ -118,6 +119,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "reproduce_run.sh").exists()
     assert (output_dir / "run" / "research_report.json").exists()
     assert (output_dir / "run" / "research_report.md").exists()
+    assert (output_dir / "run" / "real_run_plan" / "real_run_plan.json").exists()
+    assert (output_dir / "run" / "real_run_plan" / "real_run_plan.md").exists()
     assert (output_dir / "run" / "submission_packet" / "submission_packet.json").exists()
     assert (output_dir / "run" / "submission_packet" / "submission_checklist.md").exists()
     assert (output_dir / "run" / "submission_packet" / "cv_project_entry.md").exists()

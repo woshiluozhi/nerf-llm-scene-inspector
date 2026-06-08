@@ -66,6 +66,13 @@ results/portfolio_pack` after validating a portfolio pack. The output records sh
 allowed claims, claims to avoid, recommended links, and next actions for CV or professor-outreach
 use. Dry-run packets explicitly mark the run as smoke-demo evidence only.
 
+## Real-Run Action Plan
+
+Run `scripts/create_real_run_plan.py --run-dir results/pipeline_runs/<scene> --input
+path/to/video.mp4 --type video` to generate a concrete command playbook for moving from
+dry-run smoke evidence to a real CUDA/Nerfstudio/LERF scene run. The plan is an execution
+checklist, not a claim that the real run has already succeeded.
+
 ## Notes
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.

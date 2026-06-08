@@ -46,6 +46,8 @@ RUN_REQUIRED_FILES = [
     "run/run_recommendations.md",
     "run/research_report.json",
     "run/research_report.md",
+    "run/real_run_plan/real_run_plan.json",
+    "run/real_run_plan/real_run_plan.md",
     "run/submission_packet/submission_packet.json",
     "run/submission_packet/submission_checklist.md",
     "run/submission_packet/cv_project_entry.md",

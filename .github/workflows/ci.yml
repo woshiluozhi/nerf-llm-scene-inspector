@@ -63,6 +63,7 @@ jobs:
           python scripts/create_reproduction_bundle.py --help
           python scripts/generate_research_report.py --help
           python scripts/create_submission_packet.py --help
+          python scripts/create_real_run_plan.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help
           python scripts/run_experiment_matrix.py --help
@@ -91,3 +92,6 @@ jobs:
 
       - name: Create submission packet
         run: python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
+
+      - name: Create real-run action plan
+        run: python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input examples --type images --submission-packet results/submission_packet/submission_packet.json --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
