@@ -63,6 +63,7 @@ python scripts/run_scene_pipeline.py \
 - `run_audit.md`: run-level health summary for environment, data, query, annotation, and evaluation readiness.
 - `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
 - `evidence_scorecard.md`: conservative multi-criterion scorecard for whether the run is strong enough to share, including capture/privacy metadata readiness.
+- `quality_gate.md`: pass/warn/fail gate for smoke, real-run, or final portfolio sharing profiles.
 - `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
 - `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
@@ -80,7 +81,8 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 
 Set the dashboard's pipeline run directory to `results/pipeline_runs/desk_scene`.
 The run review tab includes the multi-run comparison summary so repeated captures or
-training attempts can be ranked before choosing a portfolio candidate.
+training attempts can be ranked before choosing a portfolio candidate. It also shows the
+run quality gate so failed or warning-level criteria are visible without opening raw JSON.
 
 If automated LERF query rendering falls back to the interactive viewer, save the viewer
 outputs and convert them back into the standard query schema before annotation/evaluation:
@@ -111,6 +113,8 @@ share-safe provenance excerpt.
 
 ```bash
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack
 ```
 
 Refresh the multi-run index after manual edits or copied-in run folders:

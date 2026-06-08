@@ -57,6 +57,7 @@ jobs:
           python scripts/audit_run.py --help
           python scripts/recommend_next_steps.py --help
           python scripts/create_evidence_scorecard.py --help
+          python scripts/check_run_quality.py --help
           python scripts/create_reproduction_bundle.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help
@@ -70,6 +71,9 @@ jobs:
 
       - name: Run practical pipeline dry-run
         run: python scripts/run_scene_pipeline.py --dry-run --query mug
+
+      - name: Check run quality gate
+        run: python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 
       - name: Generate project site
         run: python scripts/generate_project_site.py --output results/project_site/index.html --run-index results/pipeline_runs/run_index.json

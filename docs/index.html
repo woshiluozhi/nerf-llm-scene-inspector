@@ -135,7 +135,7 @@
         <article class="capability"><h3>3D reconstruction</h3><p>Nerfstudio wrappers for data processing and baseline NeRF training.</p></article>
         <article class="capability"><h3>Language fields</h3><p>LERF-first semantic query path with OpenNeRF as a secondary adapter.</p></article>
         <article class="capability"><h3>Query planning</h3><p>Deterministic local planner for object, affordance, material, and relation prompts.</p></article>
-        <article class="capability"><h3>Evidence packaging</h3><p>Capture/privacy gates, annotation QA, reports, audits, scorecards, and share-safe packs.</p></article>
+        <article class="capability"><h3>Evidence packaging</h3><p>Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.</p></article>
       </div>
     </section>
     <section class="band split">
@@ -150,6 +150,7 @@
       </div>
       <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/compare_runs.py --root results/pipeline_runs
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></pre>
@@ -200,7 +201,7 @@ python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></
         <li><a href="real_scene_capture_checklist.md">Real-scene capture checklist</a></li>
       </ul>
     </section>
-    <footer>Generated at 2026-06-08T14:47:54+00:00 from ..</footer>
+    <footer>Generated at 2026-06-08T15:11:00+00:00 from ..</footer>
   </main>
 </body>
 </html>

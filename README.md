@@ -159,9 +159,10 @@ python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
-python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/index_runs.py --root results/pipeline_runs
 python scripts/compare_runs.py --root results/pipeline_runs
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
+python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
@@ -178,11 +179,19 @@ Export the latest run into a shareable portfolio package:
 ```bash
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
 ```
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, and text/JSON files do not leak user-home, temporary, or CI workspace
 directories.
+The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
+while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
+evidence and a validated shareable pack:
+
+```bash
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack
+```
 
 Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
@@ -225,8 +234,8 @@ CSV keeps all rows while summary metrics use the best row per unique query.
 
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
-artifacts, query reports, annotation templates, evaluation metrics, and the multi-run
-comparison report used to choose a portfolio candidate. Install it with:
+artifacts, query reports, annotation templates, evaluation metrics, the run quality gate, and
+the multi-run comparison report used to choose a portfolio candidate. Install it with:
 
 ```bash
 python -m pip install -e ".[dashboard]"
@@ -245,10 +254,12 @@ python scripts/run_scene_pipeline.py \
   --variant lerf-lite \
   --query "mug" \
   --query "objects that can hold water" \
+  --query "safe place to put a hot cup" \
   --annotations examples/annotations_example.json \
   --num-views 3 \
   --min-pose-extent 0.05 \
   --strict
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile real-run
 ```
 
 Launch the Nerfstudio viewer for a trained run:
@@ -295,6 +306,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/run_recommendations.md`
 - `results/pipeline_runs/<scene>/evidence_scorecard.json`
 - `results/pipeline_runs/<scene>/evidence_scorecard.md`
+- `results/pipeline_runs/<scene>/quality_gate.json`
+- `results/pipeline_runs/<scene>/quality_gate.md`
 - `results/pipeline_runs/<scene>/portfolio_page.html`
 - `results/pipeline_runs/<scene>/reproduction_manifest.json`
 - `results/pipeline_runs/<scene>/reproduction_report.md`

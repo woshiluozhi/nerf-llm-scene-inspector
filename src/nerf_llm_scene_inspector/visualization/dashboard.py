@@ -31,6 +31,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "preflight_markdown": _read_text(root / "preflight_report.md"),
         "evidence_scorecard": _read_json(root / "evidence_scorecard.json"),
         "evidence_scorecard_markdown": _read_text(root / "evidence_scorecard.md"),
+        "quality_gate": _read_json(root / "quality_gate.json"),
+        "quality_gate_markdown": _read_text(root / "quality_gate.md"),
         "run_audit": _read_json(root / "run_audit.json"),
         "run_recommendations": _read_json(root / "run_recommendations.json"),
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
@@ -238,6 +240,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["evidence_scorecard_markdown"])
             else:
                 st.json(scorecard)
+    if bundle["quality_gate"]:
+        gate = bundle["quality_gate"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Quality Gate", str(gate.get("status", "unknown")))
+        col_b.metric("Gate Profile", str(gate.get("profile", "unknown")))
+        col_c.metric("Gate Findings", f"{gate.get('fail_count', 0)} fail / {gate.get('warn_count', 0)} warn")
+        with st.expander("Quality Gate", expanded=gate.get("status") == "fail"):
+            if bundle["quality_gate_markdown"]:
+                st.markdown(bundle["quality_gate_markdown"])
+            else:
+                st.json(gate)
     if bundle["portfolio_page"]:
         st.markdown(f"[Open static portfolio page]({bundle['portfolio_page']})")
 
@@ -390,6 +403,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "capture_manifest_validation.json",
         "preflight_report.json",
         "evidence_scorecard.json",
+        "quality_gate.json",
         "run_audit.json",
         "run_recommendations.json",
         "reproduction_manifest.json",

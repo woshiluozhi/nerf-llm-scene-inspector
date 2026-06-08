@@ -34,6 +34,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.md").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "portfolio_page.html").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.json").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
@@ -105,6 +107,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "preflight_report.md").exists()
     assert (run_dir / "evidence_scorecard.json").exists()
     assert (run_dir / "evidence_scorecard.md").exists()
+    assert (run_dir / "quality_gate.json").exists()
+    assert (run_dir / "quality_gate.md").exists()
     assert (run_dir / "portfolio_page.html").exists()
     assert (run_dir / "annotation_template.json").exists()
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
@@ -160,6 +164,11 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert scorecard_step.outputs["json"] == str(run_dir / "evidence_scorecard.json")
     scorecard_payload = json.loads((run_dir / "evidence_scorecard.json").read_text(encoding="utf-8"))
     assert scorecard_payload["evidence_level"] == "dry_run_demo_ready"
+    quality_step = next(step for step in summary.steps if step.name == "quality_gate")
+    assert quality_step.outputs["json"] == str(run_dir / "quality_gate.json")
+    quality_payload = json.loads((run_dir / "quality_gate.json").read_text(encoding="utf-8"))
+    assert quality_payload["profile"] == "smoke"
+    assert quality_payload["passed"] is True
     page_step = next(step for step in summary.steps if step.name == "generate_portfolio_page")
     assert page_step.outputs["html"] == str(run_dir / "portfolio_page.html")
     reproduction_step = next(step for step in summary.steps if step.name == "create_reproduction_bundle")

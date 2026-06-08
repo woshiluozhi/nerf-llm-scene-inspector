@@ -179,6 +179,7 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(["python", "scripts/create_evidence_scorecard.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/compare_runs.py", "--root", runs_root]),
+        _format_command(["python", "scripts/check_run_quality.py", "--run-dir", run_dir, "--profile", "smoke"]),
         _format_command(
             [
                 "python",
@@ -233,6 +234,7 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         ("run_audit", root / "run_audit.md", "run_audit.md", "Run health audit."),
         ("recommendations", root / "run_recommendations.md", "run_recommendations.md", "Actionable next steps."),
         ("evidence_scorecard", root / "evidence_scorecard.md", "evidence_scorecard.md", "Portfolio evidence quality scorecard."),
+        ("quality_gate", root / "quality_gate.md", "quality_gate.md", "Pass/warn/fail run quality gate report."),
         ("portfolio_page", root / "portfolio_page.html", "portfolio_page.html", "Static HTML page for sharing run evidence."),
         (
             "run_comparison",

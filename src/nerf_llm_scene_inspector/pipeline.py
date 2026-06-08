@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.capture_manifest import copy_or_create_capture_manifest
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
+from nerf_llm_scene_inspector.evaluation.quality_gate import check_run_quality
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
@@ -176,6 +177,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_audit_markdown": str(run_dir / "run_audit.md"),
         "run_recommendations_json": str(run_dir / "run_recommendations.json"),
         "run_recommendations_markdown": str(run_dir / "run_recommendations.md"),
+        "quality_gate_json": str(run_dir / "quality_gate.json"),
+        "quality_gate_markdown": str(run_dir / "quality_gate.md"),
         "reproduction_manifest": str(run_dir / "reproduction_manifest.json"),
         "reproduction_report": str(run_dir / "reproduction_report.md"),
         "reproduce_script": str(run_dir / "reproduce_run.sh"),
@@ -589,6 +592,24 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 "top_recommendations": scorecard.top_recommendations[:3],
             },
             outputs={"json": str(scorecard_json), "markdown": str(scorecard_md)},
+        )
+    )
+    summary.to_json(summary_path)
+    quality_gate = check_run_quality(run_dir, profile="smoke")
+    quality_gate_json = quality_gate.to_json(run_dir / "quality_gate.json")
+    quality_gate_md = quality_gate.to_markdown(run_dir / "quality_gate.md")
+    steps.append(
+        PipelineStep(
+            "quality_gate",
+            "success" if quality_gate.passed else "warning",
+            summary={
+                "profile": quality_gate.profile,
+                "status": quality_gate.status,
+                "passed": quality_gate.passed,
+                "fail_count": quality_gate.fail_count,
+                "warn_count": quality_gate.warn_count,
+            },
+            outputs={"json": str(quality_gate_json), "markdown": str(quality_gate_md)},
         )
     )
     summary.to_json(summary_path)

@@ -86,7 +86,7 @@ class ProjectPortfolioSite:
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
                 _capability(
                     "Evidence packaging",
-                    "Capture/privacy gates, annotation QA, reports, audits, scorecards, and share-safe packs.",
+                    "Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.",
                 ),
                 "      </div>",
                 "    </section>",
@@ -318,6 +318,7 @@ def _capability(title: str, description: str) -> str:
 def _code_panel() -> str:
     return """      <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/compare_runs.py --root results/pipeline_runs
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></pre>"""

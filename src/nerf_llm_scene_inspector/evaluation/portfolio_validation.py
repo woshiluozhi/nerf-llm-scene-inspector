@@ -38,6 +38,8 @@ RUN_REQUIRED_FILES = [
     "run/preflight_report.md",
     "run/evidence_scorecard.json",
     "run/evidence_scorecard.md",
+    "run/quality_gate.json",
+    "run/quality_gate.md",
     "run/run_audit.json",
     "run/run_audit.md",
     "run/run_recommendations.json",
@@ -151,6 +153,7 @@ def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
         _check_run_audit(pack_path, warnings, errors)
         _check_capture_manifest(pack_path, warnings, errors)
         _check_evidence_scorecard(pack_path, warnings, errors)
+        _check_quality_gate(pack_path, warnings, errors)
         _check_annotation_validation(pack_path, warnings, errors)
     else:
         warnings.append("No run/ directory found; pack includes project materials but no run-scoped evidence.")
@@ -325,6 +328,19 @@ def _check_evidence_scorecard(pack_path: Path, warnings: list[str], errors: list
         warnings.append(f"evidence_scorecard.json has unrecognized level: {level}")
     if scorecard.get("dry_run") is True and level == "portfolio_ready_real_run":
         errors.append("Dry-run scorecard cannot be portfolio_ready_real_run.")
+
+
+def _check_quality_gate(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    gate = _read_json(pack_path / "run" / "quality_gate.json", errors)
+    if not isinstance(gate, dict):
+        return
+    status = str(gate.get("status") or "")
+    if gate.get("passed") is False or status == "fail":
+        errors.append("quality_gate.json reports a failed run quality gate.")
+    elif status == "warn":
+        warnings.append("quality_gate.json status is warn; inspect criteria before sharing.")
+    elif status and status != "pass":
+        warnings.append(f"quality_gate.json has unrecognized status: {status}")
 
 
 def _check_annotation_validation(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
