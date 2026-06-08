@@ -46,3 +46,23 @@ heights instead of standing in one place and rotating the phone.
 ## Query Rendering Falls Back To Viewer Instructions
 
 Upstream LERF documents prompt entry through the Nerfstudio viewer. This project attempts an internal API render first. If the installed Nerfstudio/LERF versions expose incompatible internals, `query_scene.py` still writes a structured report and an interactive viewer workflow.
+
+Use the viewer fallback as a recoverable path:
+
+```bash
+ns-viewer --load-config path/to/config.yml
+```
+
+Enter the text prompt, save images named like `view_0000_rgb.png`,
+`view_0000_relevancy.png`, and optionally `view_0000_overlay.png`, then import them:
+
+```bash
+python scripts/import_viewer_outputs.py \
+  --query "mug" \
+  --config path/to/config.yml \
+  --input results/manual_viewer/mug \
+  --output results/query_outputs/mug
+```
+
+The importer writes `query_result.json`, estimates image-space boxes from relevancy maps,
+and can be used by `create_annotation_template.py` and `evaluate_queries.py`.

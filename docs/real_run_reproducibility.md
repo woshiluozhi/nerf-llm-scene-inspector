@@ -64,6 +64,17 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 
 Set the dashboard's pipeline run directory to `results/pipeline_runs/desk_scene`.
 
+If automated LERF query rendering falls back to the interactive viewer, save the viewer
+outputs and convert them back into the standard query schema before annotation/evaluation:
+
+```bash
+python scripts/import_viewer_outputs.py \
+  --query "mug" \
+  --config runs/language_desk_scene/config.yml \
+  --input results/manual_viewer/mug \
+  --output results/pipeline_runs/desk_scene/queries/mug
+```
+
 ## Provenance Fields
 
 Each pipeline run stores a `provenance` block with:

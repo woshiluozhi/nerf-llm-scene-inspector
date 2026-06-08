@@ -227,6 +227,13 @@ ns-viewer --load-config path/to/config.yml
 ```
 
 For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composited_0`.
+If automated LERF rendering falls back to the viewer workflow, save images with names such
+as `view_0000_rgb.png`, `view_0000_relevancy.png`, and `view_0000_overlay.png`, then import
+them back into the standard query schema:
+
+```bash
+python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.yml --input results/manual_viewer/mug --output results/query_outputs/mug
+```
 
 ## Expected Outputs
 
@@ -285,7 +292,7 @@ in `portfolio_pack_index.json` and sanitizes machine-specific paths in the packa
 
 ## LERF Query Rendering
 
-Upstream LERF stores positive prompts on the image encoder through `set_positives(...)` and renders `relevancy_0`/`composited_0` outputs in evaluation. This project attempts to load a trained config through Nerfstudio/LERF internals, set the prompt programmatically, and save the rendered outputs. If installed versions expose incompatible internal APIs, the CLI falls back to a structured query report and viewer workflow.
+Upstream LERF stores positive prompts on the image encoder through `set_positives(...)` and renders `relevancy_0`/`composited_0` outputs in evaluation. This project attempts to load a trained config through Nerfstudio/LERF internals, set the prompt programmatically, and save the rendered outputs. If installed versions expose incompatible internal APIs, the CLI falls back to a structured query report and viewer workflow. The `import_viewer_outputs.py` helper converts manually saved viewer images into `query_result.json`, extracts image-space boxes from relevancy maps, and keeps evaluation/reporting usable.
 
 ## Testing
 
@@ -301,6 +308,7 @@ python scripts/inspect_scene_data.py --help
 python scripts/train_baseline_nerf.py --help
 python scripts/train_language_field.py --help
 python scripts/query_scene.py --help
+python scripts/import_viewer_outputs.py --help
 python scripts/create_annotation_template.py --help
 python scripts/validate_annotations.py --help
 python scripts/generate_demo_assets.py --help
