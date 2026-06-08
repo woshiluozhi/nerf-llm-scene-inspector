@@ -120,6 +120,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/scene_data_inspection.json",
         "run/scene_data_inspection.md",
         "run/queries.yaml",
+        "run/queries/mug/scene_query_report.json",
+        "run/queries/mug/scene_query_report.md",
         "run/annotation_template.json",
         "run/project_report.md",
         "run/portfolio_result_card.md",
@@ -169,6 +171,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "reproduction_report": "run/reproduction_report.md",
                 "reproduce_script": "run/reproduce_run.sh",
                 "command_logs": "run/logs/",
+                "query_reports": "run/queries/",
                 "evaluation_summary": "run/evaluation/eval_summary.json",
                 "annotation_validation": "run/evaluation/annotation_validation.json",
                 "annotation_review": "run/evaluation/annotation_review.md",
@@ -202,4 +205,6 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"ok": True, "warnings": []})
     if relative_path.endswith("pipeline_summary.json"):
         return json.dumps({"success": True, "scene_name": "desk_scene"})
+    if relative_path.endswith("scene_query_report.json"):
+        return json.dumps({"scene_name": "desk_scene", "answer": "Likely relevant scene regions are mug."})
     return f"placeholder for {relative_path}\n"

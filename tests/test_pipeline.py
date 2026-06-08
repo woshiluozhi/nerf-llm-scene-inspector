@@ -53,6 +53,14 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
         / "mug"
         / "scene_query_report.json"
     ).exists()
+    assert (
+        tmp_path
+        / "pipeline_runs"
+        / "unit_scene"
+        / "queries"
+        / "mug"
+        / "scene_query_report.md"
+    ).exists()
     report_payload = json.loads(
         (
             tmp_path
@@ -64,6 +72,7 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
         ).read_text(encoding="utf-8")
     )
     assert report_payload["scene_name"] == "unit_scene"
+    assert report_payload["answer_summary"]["support_level"]
     preflight_step = next(step for step in summary.steps if step.name == "preflight_real_run")
     assert preflight_step.outputs["json"] == str(
         tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.json"
@@ -152,6 +161,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     )
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
+    query_step = next(step for step in summary.steps if step.name == "query_scene")
+    assert query_step.outputs["mug_markdown"] == str(run_dir / "queries" / "mug" / "scene_query_report.md")
     capture_step = next(step for step in summary.steps if step.name == "capture_manifest")
     assert capture_step.outputs["manifest_json"] == str(run_dir / "capture_manifest.json")
     audit_step = next(step for step in summary.steps if step.name == "audit_run")

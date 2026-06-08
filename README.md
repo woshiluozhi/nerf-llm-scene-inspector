@@ -88,8 +88,8 @@ flowchart LR
   H --> I[Text queries and relation hypotheses]
   I --> F
   F --> J[Relevancy renders and QueryResult JSON]
-  J --> K[Spatial reasoning and aggregation]
-  K --> L[Overlay images, demo video, report, evaluation]
+  J --> K[Spatial reasoning and answer synthesis]
+  K --> L[Evidence-grounded scene answer, overlays, demo video, evaluation]
 ```
 
 ## Installation
@@ -293,6 +293,7 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/training/baseline_train_summary.json`
 - `results/pipeline_runs/<scene>/training/language_train_summary.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
+- `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.md`
 - `results/pipeline_runs/<scene>/annotation_template.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/annotation_validation.json`
@@ -328,8 +329,11 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 translation extent, approximate path length, duplicate adjacent poses, and a pose coverage
 score. Low pose coverage usually means the camera rotated in place or COLMAP could not recover
 enough parallax for reliable training.
-Each `scene_query_report.json` stores the originating scene name and uses stable slugged query
-directories so query artifacts remain traceable across repeated runs.
+Each `scene_query_report.json` stores the originating scene name, planner output, backend
+query results, synthesized `answer_summary`, support level, limitations, and follow-up
+recommendations. The paired `scene_query_report.md` is the human-readable version for
+reviewing natural-language answers alongside evidence and warnings. Stable slugged query
+directories keep artifacts traceable across repeated runs.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.

@@ -55,7 +55,8 @@ python scripts/run_scene_pipeline.py \
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
 - `training/baseline_train_summary.json`: baseline Nerfstudio command, status, final config, and viewer command.
 - `training/language_train_summary.json`: LERF/OpenNeRF command, status, final config, and viewer command.
-- `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
+- `queries/<query>/scene_query_report.json`: query plan, backend outputs, synthesized answer summary, warnings, and provenance.
+- `queries/<query>/scene_query_report.md`: human-readable natural-language answer with ranked evidence, support level, limitations, and follow-up checks.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
 - `evaluation/annotation_review.md`: visual QA table for manual bbox annotations.

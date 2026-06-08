@@ -695,7 +695,9 @@ def _run_queries(
         task_dir = output_dir / slugify(query)
         report = engine.run_task(query, task_dir)
         report_path = report.to_json(task_dir / "scene_query_report.json")
+        report_md_path = report.to_markdown(task_dir / "scene_query_report.md")
         outputs[slugify(query)] = str(report_path)
+        outputs[f"{slugify(query)}_markdown"] = str(report_md_path)
     return outputs
 
 

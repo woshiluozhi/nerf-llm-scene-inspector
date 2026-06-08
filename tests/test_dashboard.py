@@ -89,8 +89,9 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     (run_dir / "demo_assets" / "query_grid.png").write_bytes(b"placeholder")
     _write_json(
         run_dir / "queries" / "mug" / "scene_query_report.json",
-        {"task": "mug", "query_results": []},
+        {"task": "mug", "answer": "Likely relevant scene regions are mug.", "query_results": []},
     )
+    (run_dir / "queries" / "mug" / "scene_query_report.md").write_text("# Scene Query Report\n", encoding="utf-8")
 
     bundle = load_run_bundle(run_dir)
 
@@ -122,6 +123,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["command_logs"][0]["label"] == "logs/prepare_data_command.json"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"
+    assert "# Scene Query Report" in bundle["query_reports"][0]["markdown"]
     assert bundle["missing"] == []
 
 

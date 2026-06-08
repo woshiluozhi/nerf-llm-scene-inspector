@@ -10,6 +10,7 @@ from typing import Any
 from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
+from nerf_llm_scene_inspector.querying.answer_synthesis import synthesize_scene_answer
 
 
 def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
@@ -106,7 +107,14 @@ def collect_query_reports(run_dir: str | Path) -> list[dict[str, Any]]:
     for path in sorted((root / "queries").rglob("scene_query_report.json")):
         payload = _read_json(path)
         if payload:
-            reports.append({"path": str(path), "kind": "scene_query_report", "payload": payload})
+            reports.append(
+                {
+                    "path": str(path),
+                    "kind": "scene_query_report",
+                    "payload": payload,
+                    "markdown": _read_text(path.with_suffix(".md")),
+                }
+            )
     for path in sorted((root / "queries").rglob("query_result.json")):
         payload = _read_json(path)
         if payload:
@@ -313,6 +321,8 @@ def _render_artifacts(st: Any, bundle: dict[str, Any]) -> None:
         st.info("No query report JSON files found.")
     for report in reports[:20]:
         with st.expander(f"{report['kind']}: {_relative_label(report['path'], bundle['run_dir'])}"):
+            if report.get("markdown"):
+                st.markdown(report["markdown"])
             st.json(report["payload"])
 
 
@@ -367,13 +377,20 @@ def _render_query_runner(st: Any, config_path: str, backend_name: str, dry_run: 
         for view in result.rendered_images:
             if Path(view.path).exists() and view.kind in {"overlay", "relevancy", "rgb"}:
                 st.image(view.path, caption=view.caption or view.kind, use_container_width=True)
-        labels = [region.label for region in result.bounding_regions[:5]]
-        answer = plan.final_answer_template.format(items=", ".join(labels) if labels else query)
+        answer = synthesize_scene_answer(
+            task=query,
+            plan=plan.to_dict(),
+            results=[result],
+            top_k=5,
+        )
         st.subheader("Scene Answer")
-        st.write(answer)
+        st.write(answer.answer)
         report_path = Path(output_dir) / "dashboard_answer.json"
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps({"answer": answer, "plan": plan.to_dict()}, indent=2), encoding="utf-8")
+        report_path.write_text(
+            json.dumps({"answer": answer.answer, "answer_summary": answer.to_dict(), "plan": plan.to_dict()}, indent=2),
+            encoding="utf-8",
+        )
 
 
 def _read_json(path: Path) -> dict[str, Any]:

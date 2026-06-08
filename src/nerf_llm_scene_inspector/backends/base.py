@@ -172,6 +172,7 @@ class SceneQueryReport:
     plan: dict[str, Any]
     query_results: list[QueryResult]
     answer: str
+    answer_summary: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     timestamp: str = field(default_factory=utc_timestamp)
 
@@ -182,6 +183,7 @@ class SceneQueryReport:
             "plan": self.plan,
             "query_results": [result.to_dict() for result in self.query_results],
             "answer": self.answer,
+            "answer_summary": dict(self.answer_summary),
             "warnings": list(self.warnings),
             "timestamp": self.timestamp,
         }
@@ -190,6 +192,39 @@ class SceneQueryReport:
         output_path = Path(path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        return output_path
+
+    def to_markdown(self, path: str | Path) -> Path:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "# Scene Query Report",
+            "",
+            f"- Scene: {self.scene_name}",
+            f"- Task: {self.task}",
+            f"- Timestamp: {self.timestamp}",
+            "",
+            "## Answer",
+            "",
+            self.answer or "No answer was generated.",
+            "",
+            "## Answer Evidence",
+            "",
+            *_answer_evidence_lines(self.answer_summary),
+            "",
+            "## Query Plan",
+            "",
+            *_plan_lines(self.plan),
+            "",
+            "## Backend Results",
+            "",
+            *_query_result_lines(self.query_results),
+            "",
+            "## Warnings",
+            "",
+            *_markdown_list(self.warnings),
+        ]
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return output_path
 
 
@@ -234,3 +269,77 @@ def _optional_tuple(value: Any, size: int) -> tuple[float, ...] | None:
     if len(value) != size:
         raise ValueError(f"Expected tuple of length {size}, got {value}")
     return tuple(float(item) for item in value)
+
+
+def _answer_evidence_lines(summary: dict[str, Any]) -> list[str]:
+    if not summary:
+        return ["- No structured answer summary was recorded."]
+    lines = [
+        f"- Support level: `{summary.get('support_level', 'unknown')}`",
+        f"- Confidence: `{summary.get('confidence', 'unknown')}`",
+    ]
+    evidence = summary.get("evidence") if isinstance(summary.get("evidence"), list) else []
+    if evidence:
+        lines.append("- Ranked evidence:")
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+            label = item.get("label", "unknown")
+            query = item.get("query", "unknown")
+            score = item.get("score")
+            source = item.get("source_view") or "unknown view"
+            evidence_type = item.get("evidence_type", "unknown")
+            point_3d = item.get("point_3d")
+            point_text = f", point_3d={point_3d}" if point_3d else ""
+            lines.append(
+                f"  - `{label}` from query `{query}` ({evidence_type}, score={score}, source={source})"
+                f"{point_text}"
+            )
+    limitations = summary.get("limitations") if isinstance(summary.get("limitations"), list) else []
+    if limitations:
+        lines.append("- Limitations:")
+        lines.extend(f"  - {item}" for item in limitations)
+    followups = (
+        summary.get("recommended_followups")
+        if isinstance(summary.get("recommended_followups"), list)
+        else []
+    )
+    if followups:
+        lines.append("- Recommended follow-ups:")
+        lines.extend(f"  - {item}" for item in followups)
+    return lines
+
+
+def _plan_lines(plan: dict[str, Any]) -> list[str]:
+    if not plan:
+        return ["- No plan was recorded."]
+    lines = [
+        f"- Planner: `{plan.get('planner_name', 'unknown')}`",
+        f"- Primary visual queries: {', '.join(map(str, plan.get('primary_visual_queries') or [])) or 'none'}",
+        f"- Supporting visual queries: {', '.join(map(str, plan.get('supporting_visual_queries') or [])) or 'none'}",
+        f"- Relation hypotheses: {', '.join(map(str, plan.get('relation_hypotheses') or [])) or 'none'}",
+    ]
+    rationale = plan.get("rationale") if isinstance(plan.get("rationale"), list) else []
+    if rationale:
+        lines.append("- Planner rationale:")
+        lines.extend(f"  - {item}" for item in rationale)
+    return lines
+
+
+def _query_result_lines(results: list[QueryResult]) -> list[str]:
+    if not results:
+        return ["- No backend results were recorded."]
+    lines: list[str] = []
+    for result in results:
+        lines.append(
+            f"- `{result.query}` via `{result.backend_name}`: "
+            f"{len(result.bounding_regions)} regions, {len(result.rendered_images)} rendered artifacts, "
+            f"confidence={result.confidence}"
+        )
+    return lines
+
+
+def _markdown_list(items: list[str]) -> list[str]:
+    if not items:
+        return ["- None."]
+    return [f"- {item}" for item in items]

@@ -148,6 +148,7 @@ def _copy_run_materials(
     for source, relative_destination in run_files:
         _copy_share_safe_file(source, output / relative_destination, output, copied, missing, run_dir)
     _copy_command_logs(run_dir, output, copied)
+    _copy_query_reports(run_dir, output, copied)
     _copy_file(
         run_dir / "training" / "baseline_train_summary.json",
         output / "run/training/baseline_train_summary.json",
@@ -281,6 +282,21 @@ def _copy_command_logs(
         )
 
 
+def _copy_query_reports(
+    run_dir: Path,
+    output: Path,
+    copied: list[dict[str, str]],
+) -> None:
+    queries_dir = run_dir / "queries"
+    if not queries_dir.exists():
+        return
+    for source in sorted(queries_dir.rglob("*")):
+        if source.name not in {"scene_query_report.json", "scene_query_report.md", "query_result.json"}:
+            continue
+        relative = source.relative_to(run_dir)
+        _copy_share_safe_file(source, output / "run" / relative, output, copied, [], run_dir)
+
+
 def _copy_pipeline_summary(
     source: Path,
     destination: Path,
@@ -339,6 +355,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",
         "query_plan": "run/queries.yaml",
+        "query_reports": "run/queries/",
         "annotation_template": "run/annotation_template.json",
         "project_report": "run/project_report.md",
         "portfolio_card": "run/portfolio_result_card.md",

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from nerf_llm_scene_inspector.backends.base import QueryResult, RenderedView, SemanticFieldBackend
+from nerf_llm_scene_inspector.backends.base import BoundingRegion, QueryResult, RenderedView, SemanticFieldBackend
 from nerf_llm_scene_inspector.querying.query_types import QueryPlan
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 
@@ -23,6 +23,8 @@ class FakeBackend(SemanticFieldBackend):
             backend_name=self.backend_name,
             config_path=self.config_path or "",
             rendered_images=[RenderedView(path=str(Path(output_dir) / "overlay.png"), kind="overlay", query=query)],
+            bounding_regions=[BoundingRegion(label=query, score=0.8, bbox_2d=(1.0, 2.0, 10.0, 20.0))],
+            confidence=0.75,
         )
 
     def render_relevancy(self, query: str, output_dir: str) -> list[RenderedView]:
@@ -65,3 +67,23 @@ def test_semantic_query_engine_records_scene_name_and_unique_query_slugs(tmp_pat
     assert [Path(path).name for path in backend.output_dirs] == ["coffee_mug", "coffee_mug_2"]
     assert (tmp_path / "coffee_mug").exists()
     assert (tmp_path / "coffee_mug_2").exists()
+    assert report.answer_summary["support_level"] == "2d_relevancy_fallback"
+    assert report.answer_summary["evidence"][0]["label"] in {"Coffee mug!", "coffee mug"}
+    assert "Strongest evidence" in report.answer
+
+
+def test_scene_query_report_writes_markdown(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=DuplicateSlugPlanner(),
+        scene_name="desk_scene",
+    )
+
+    report = engine.run_task("Find coffee mugs", tmp_path)
+    output = report.to_markdown(tmp_path / "scene_query_report.md")
+
+    markdown = output.read_text(encoding="utf-8")
+    assert "# Scene Query Report" in markdown
+    assert "## Answer Evidence" in markdown
+    assert "Coffee mug!" in markdown

@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.agent.planner import get_default_planner  # noqa: 
 from nerf_llm_scene_inspector.backends.base import SceneQueryReport  # noqa: E402
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend  # noqa: E402
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend  # noqa: E402
+from nerf_llm_scene_inspector.querying.answer_synthesis import synthesize_scene_answer  # noqa: E402
 from nerf_llm_scene_inspector.querying.spatial_reasoning import aggregate_multi_query_results  # noqa: E402
 from nerf_llm_scene_inspector.utils.paths import slugify  # noqa: E402
 
@@ -77,24 +78,29 @@ def main() -> int:
             query_dir = output / slugify(query)
             results.append(backend.query_text(query, str(query_dir), top_k=args.top_k))
         aggregate = aggregate_multi_query_results(results)
-        items = [region.label for region in aggregate.bounding_regions[: args.top_k]]
-        if not items:
-            items = [result.query for result in results]
-        answer = plan.final_answer_template.format(items=", ".join(items))
+        answer = synthesize_scene_answer(
+            task=args.query,
+            plan=plan.to_dict(),
+            results=results,
+            top_k=args.top_k,
+        )
         report = SceneQueryReport(
             scene_name=args.scene_name,
             task=args.query,
             plan=plan.to_dict(),
             query_results=results,
-            answer=answer,
+            answer=answer.answer,
+            answer_summary=answer.to_dict(),
             warnings=plan.warnings + aggregate.warnings,
         )
         report_path = report.to_json(output / "scene_query_report.json")
+        report_md_path = report.to_markdown(output / "scene_query_report.md")
     except Exception as exc:
         print(f"query_scene failed: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(report.to_dict(), indent=2))
     print(f"\nWrote report: {report_path}")
+    print(f"Wrote markdown report: {report_md_path}")
     return 0
 
 
