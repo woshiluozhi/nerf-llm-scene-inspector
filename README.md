@@ -232,9 +232,12 @@ python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml
 ```
 
 This writes `experiment_matrix_summary.json`, `experiment_matrix_table.csv`, and
-`experiment_matrix_report.md` under `results/experiment_matrix/<matrix_name>/`. In real
-mode, use the same config shape but remove `dry_run: true` and run on a CUDA machine with
-Nerfstudio/LERF installed.
+`experiment_matrix_report.md` under `results/experiment_matrix/<matrix_name>/`. The
+matrix report includes candidate status, failure diagnostics, readiness level, quality-gate
+status, blocking reasons, and a selection summary so repeated captures or backend variants
+can be compared without opening every run directory by hand. In real mode, use the same
+config shape but remove `dry_run: true` and run on a CUDA machine with Nerfstudio/LERF
+installed.
 
 Refresh the latest annotated run and export a shareable portfolio package:
 

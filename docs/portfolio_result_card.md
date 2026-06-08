@@ -23,7 +23,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Failure-diagnostics report generation that classifies CUDA, LERF registration, COLMAP/FFmpeg, missing-config, and viewer-fallback issues from saved logs.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
 - Multi-run comparison report for ranking repeated captures or training attempts before selecting a portfolio candidate.
-- Experiment-matrix runner for small backend/query/variant ablations with CSV and Markdown summaries.
+- Experiment-matrix runner for small backend/query/variant ablations with CSV/Markdown summaries, candidate status, readiness gates, diagnostics, and blocking reasons.
 - Paper-style research report generation from run artifacts, metrics, limitations, and next steps.
 - Submission packet generation for claim-calibrated CV, portfolio, and professor-outreach sharing.
 - Run result-card generation that summarizes one run into a concise takeaway, evidence snapshot, safe blurb, limitations, and next actions.

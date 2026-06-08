@@ -34,7 +34,7 @@ detections.
 
 ## Experiment Matrices
 
-The experiment-matrix runner makes the project easier to treat like a small research study rather than a single demo. A YAML file defines backend variants, query sets, prompt-sensitivity suites, relation-analysis settings, and dry-run or real-run execution. The runner launches or collects pipeline runs and writes a JSON/CSV/Markdown ablation table with evidence scores, localization metrics, prompt stability, relation-edge counts, and run links.
+The experiment-matrix runner makes the project easier to treat like a small research study rather than a single demo. A YAML file defines backend variants, query sets, prompt-sensitivity suites, relation-analysis settings, and dry-run or real-run execution. The runner launches or collects pipeline runs and writes a JSON/CSV/Markdown ablation table with evidence scores, localization metrics, prompt stability, relation-edge counts, failure-diagnostics status, readiness gates, candidate status, blocking reasons, and run links.
 
 ## Research Reports
 

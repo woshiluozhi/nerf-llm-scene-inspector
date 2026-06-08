@@ -47,9 +47,10 @@ predictions.
 
 For small ablations, run `scripts/run_experiment_matrix.py` with
 `examples/experiment_matrix.yaml`. The matrix report summarizes each configured pipeline run
-with evidence score, prompt stability, relation-edge count, localization metrics, and links
-to run-scoped artifacts. This is intended for reproducible comparison across variants, not as
-a benchmark claim.
+with evidence score, prompt stability, relation-edge count, localization metrics, failure
+diagnostics, readiness status, candidate status, blocking reasons, and links to run-scoped
+artifacts. This is intended for reproducible comparison across variants and for selecting the
+strongest portfolio run, not as a benchmark claim.
 
 ## Annotation Workbench
 

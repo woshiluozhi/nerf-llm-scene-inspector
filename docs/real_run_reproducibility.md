@@ -186,7 +186,9 @@ python scripts/run_experiment_matrix.py \
 ```
 
 Use `--collect-only` after manual reruns or copied-in pipeline directories to refresh the
-matrix summary without launching training again.
+matrix summary without launching training again. Inspect `candidate_status`,
+`failure_diagnostics_status`, `readiness_level`, and `blocking_reasons` in the CSV before
+choosing which real run to package or share externally.
 
 Share `results/portfolio_pack.zip` together with the GitHub repository link when sending a
 portfolio or cold-email artifact. Do not claim benchmark superiority from a dry-run or a

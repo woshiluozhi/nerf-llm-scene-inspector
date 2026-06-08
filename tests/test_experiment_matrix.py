@@ -25,25 +25,53 @@ def test_experiment_matrix_collects_existing_runs(tmp_path: Path) -> None:
         "    backend: opennerf\n",
         encoding="utf-8",
     )
-    _write_run(output / "pipeline_runs" / "scene_lerf", scene_name="scene_lerf", backend="lerf", score=90)
+    _write_run(
+        output / "pipeline_runs" / "scene_lerf",
+        scene_name="scene_lerf",
+        backend="lerf",
+        score=90,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+    )
     _write_run(
         output / "pipeline_runs" / "scene_opennerf",
         scene_name="scene_opennerf",
         backend="opennerf",
         score=70,
+        dry_run=False,
+        diagnostics_status="blocked",
+        diagnostics_blockers=1,
+        readiness_level="blocked",
+        quality_status="pass",
     )
 
     report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
 
     assert report.total_experiments == 2
     assert report.successful_experiments == 2
+    assert report.portfolio_candidate_count == 1
+    assert report.blocked_experiment_count == 1
     assert report.best_experiment is not None
     assert report.best_experiment["experiment_name"] == "lerf_lite"
+    assert report.best_experiment["candidate_status"] == "portfolio_candidate"
     assert (output / "experiment_matrix_summary.json").exists()
     assert (output / "experiment_matrix_report.md").exists()
     rows = list(csv.DictReader((output / "experiment_matrix_table.csv").open(encoding="utf-8")))
     assert rows[0]["experiment_name"] == "lerf_lite"
+    assert rows[0]["candidate_status"] == "portfolio_candidate"
+    assert rows[0]["failure_diagnostics_status"] == "clear"
     assert rows[0]["relation_edge_count"] == "4"
+    assert rows[1]["candidate_status"] == "blocked"
+    assert "failure diagnostics blockers=1" in rows[1]["blocking_reasons"]
+    assert "run readiness is blocked" in rows[1]["blocking_reasons"]
+    markdown = (output / "experiment_matrix_report.md").read_text(encoding="utf-8")
+    assert "## Selection Summary" in markdown
+    assert "Recommended portfolio run" in markdown
 
 
 def test_run_experiment_matrix_cli_dry_run(tmp_path: Path) -> None:
@@ -92,24 +120,64 @@ def test_run_experiment_matrix_cli_dry_run(tmp_path: Path) -> None:
     summary = json.loads((output / "experiment_matrix_summary.json").read_text(encoding="utf-8"))
     assert summary["matrix_name"] == "cli_matrix"
     assert summary["successful_experiments"] == 1
+    assert summary["entries"][0]["candidate_status"] == "dry_run_smoke"
     assert (output / "pipeline_runs" / "cli_lerf" / "scene_relations" / "scene_relations_report.md").exists()
 
 
-def _write_run(run_dir: Path, *, scene_name: str, backend: str, score: int) -> None:
+def _write_run(
+    run_dir: Path,
+    *,
+    scene_name: str,
+    backend: str,
+    score: int,
+    dry_run: bool = True,
+    evidence_level: str = "dry_run_demo_ready",
+    diagnostics_status: str = "clear",
+    diagnostics_blockers: int = 0,
+    diagnostics_warnings: int = 0,
+    readiness_level: str = "dry_run_needs_real_run",
+    ready_for_external_review: bool = False,
+    submission_readiness: str = "shareable_smoke_demo",
+    quality_status: str = "warn",
+) -> None:
     _write_json(
         run_dir / "pipeline_summary.json",
         {
             "scene_name": scene_name,
             "success": True,
-            "dry_run": True,
+            "dry_run": dry_run,
             "backend": backend,
             "queries": ["mug", "cup"],
             "timestamp": "2026-01-01T00:00:00+00:00",
         },
     )
-    _write_json(run_dir / "evidence_scorecard.json", {"evidence_level": "dry_run_demo_ready", "score": score, "max_score": 100})
+    _write_json(run_dir / "evidence_scorecard.json", {"evidence_level": evidence_level, "score": score, "max_score": 100})
     _write_json(run_dir / "run_audit.json", {"status": "ready"})
-    _write_json(run_dir / "quality_gate.json", {"status": "warn", "passed": True})
+    _write_json(run_dir / "quality_gate.json", {"status": quality_status, "passed": quality_status != "fail"})
+    _write_json(
+        run_dir / "failure_diagnostics.json",
+        {
+            "status": diagnostics_status,
+            "blocker_count": diagnostics_blockers,
+            "warning_count": diagnostics_warnings,
+        },
+    )
+    _write_json(
+        run_dir / "run_readiness.json",
+        {
+            "readiness_level": readiness_level,
+            "ready_to_start_real_run": not dry_run,
+            "ready_for_external_review": ready_for_external_review,
+        },
+    )
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": submission_readiness,
+            "share_decision": "Ready for portfolio sharing with the recorded evidence and limitations.",
+        },
+    )
+    _write_json(run_dir / "run_result_card.json", {"result_status": "portfolio_ready" if not dry_run else "shareable_smoke_demo"})
     _write_json(
         run_dir / "evaluation" / "eval_summary.json",
         {
