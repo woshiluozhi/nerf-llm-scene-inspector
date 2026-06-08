@@ -511,9 +511,14 @@ For high-level tasks, `query_scene.py` runs the planner's primary and supporting
 calls by default; use `--max-queries` to cap prompt expansion, `--exact-query` to disable
 expansion, and `--include-negative-queries` when you explicitly want disambiguation prompts
 included in backend execution. Negative query results are tagged in provenance and excluded
-from positive answer evidence.
+from positive answer evidence. A successful query also writes `query_grid.png` by default
+as a compact visual overview across expanded prompts, plus `query_visual_summary.json`
+with the grid path, overlay count, and expanded query list. Use `--no-query-grid` to skip
+the static overview and `--make-montage` to additionally write `query_montage.gif`.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
+- `results/query_outputs/query_grid.png`
+- `results/query_outputs/query_visual_summary.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
 - `results/demo_assets/query_grid.png`
 - `results/demo_assets/demo_montage.gif`

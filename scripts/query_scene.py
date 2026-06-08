@@ -19,6 +19,7 @@ from nerf_llm_scene_inspector.querying.answer_synthesis import synthesize_scene_
 from nerf_llm_scene_inspector.querying.semantic_query import planned_backend_calls  # noqa: E402
 from nerf_llm_scene_inspector.querying.spatial_reasoning import aggregate_multi_query_results  # noqa: E402
 from nerf_llm_scene_inspector.utils.paths import slugify  # noqa: E402
+from nerf_llm_scene_inspector.visualization.make_video import make_mp4_or_gif, make_query_grid  # noqa: E402
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +59,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict-backend",
         action="store_true",
         help="Fail instead of writing viewer fallback artifacts when automated rendering fails.",
+    )
+    parser.add_argument(
+        "--no-query-grid",
+        action="store_true",
+        help="Skip writing output/query_grid.png from rendered overlay images.",
+    )
+    parser.add_argument(
+        "--make-montage",
+        action="store_true",
+        help="Also write output/query_montage.gif from rendered overlay images.",
     )
     return parser
 
@@ -122,13 +133,53 @@ def main() -> int:
         )
         report_path = report.to_json(output / "scene_query_report.json")
         report_md_path = report.to_markdown(output / "scene_query_report.md")
+        overlay_paths = [
+            Path(view.path)
+            for result in results
+            for view in result.rendered_images
+            if view.kind == "overlay"
+        ]
+        grid_path = None
+        if not args.no_query_grid:
+            grid_path = make_query_grid(overlay_paths, output / "query_grid.png")
+        montage_path = None
+        if args.make_montage and overlay_paths:
+            montage_path = make_mp4_or_gif(overlay_paths, output / "query_montage.gif")
+        visual_summary_path = output / "query_visual_summary.json"
+        visual_summary_path.write_text(
+            json.dumps(
+                {
+                    "scene_name": args.scene_name,
+                    "task": args.query,
+                    "backend": args.backend,
+                    "num_overlay_images": len([path for path in overlay_paths if path.exists()]),
+                    "query_grid": _relative_to_output(grid_path, output) if grid_path else None,
+                    "query_montage": _relative_to_output(montage_path, output) if montage_path else None,
+                    "expanded_queries": [result.query for result in results],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
     except Exception as exc:
         print(f"query_scene failed: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(report.to_dict(), indent=2))
     print(f"\nWrote report: {report_path}")
     print(f"Wrote markdown report: {report_md_path}")
+    print(f"Wrote visual summary: {visual_summary_path}")
+    if grid_path:
+        print(f"Wrote query grid: {grid_path}")
+    if montage_path:
+        print(f"Wrote query montage: {montage_path}")
     return 0
+
+
+def _relative_to_output(path: Path, output_dir: Path) -> str:
+    try:
+        return str(path.relative_to(output_dir)).replace("\\", "/")
+    except ValueError:
+        return str(path)
 
 
 if __name__ == "__main__":

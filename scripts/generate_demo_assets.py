@@ -19,8 +19,7 @@ from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner  # noqa: E40
 from nerf_llm_scene_inspector.backends.base import QueryResult  # noqa: E402
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine  # noqa: E402
 from nerf_llm_scene_inspector.utils.paths import slugify  # noqa: E402
-from nerf_llm_scene_inspector.visualization.make_video import make_mp4_or_gif  # noqa: E402
-from PIL import Image, ImageDraw, ImageFont  # noqa: E402
+from nerf_llm_scene_inspector.visualization.make_video import make_mp4_or_gif, make_query_grid  # noqa: E402
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -86,7 +85,7 @@ def main() -> int:
         video_path = None
         if overlay_paths:
             video_path = make_mp4_or_gif(overlay_paths, output / "demo_montage.gif")
-        grid_path = _make_query_grid(overlay_paths, output / "query_grid.png")
+        grid_path = make_query_grid(overlay_paths, output / "query_grid.png")
         query_rows = [
             {
                 "query": result.query,
@@ -211,38 +210,6 @@ def _dedupe_preserving_order(items: list[str]) -> list[str]:
             seen.add(key)
             deduped.append(normalized)
     return deduped
-
-
-def _make_query_grid(image_paths: list[Path], output_path: Path, max_columns: int = 2) -> Path | None:
-    existing = [path for path in image_paths if path.exists()]
-    if not existing:
-        return None
-    thumbs = []
-    target_width = 720
-    for path in existing:
-        image = Image.open(path).convert("RGB")
-        scale = target_width / image.width
-        thumb = image.resize((target_width, int(image.height * scale)))
-        thumbs.append((path, thumb))
-
-    columns = min(max_columns, len(thumbs))
-    rows = (len(thumbs) + columns - 1) // columns
-    cell_w = target_width
-    cell_h = max(image.height for _path, image in thumbs) + 34
-    canvas = Image.new("RGB", (columns * cell_w, rows * cell_h), color=(248, 248, 248))
-    draw = ImageDraw.Draw(canvas)
-    font = ImageFont.load_default()
-    for index, (path, image) in enumerate(thumbs):
-        col = index % columns
-        row = index // columns
-        x = col * cell_w
-        y = row * cell_h
-        label = path.parent.name.replace("_", " ")
-        draw.text((x + 10, y + 10), label[:80], fill=(20, 20, 20), font=font)
-        canvas.paste(image, (x, y + 34))
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    canvas.save(output_path)
-    return output_path
 
 
 def _write_portfolio_result_card(
