@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Collect portfolio-facing project artifacts into results/portfolio_pack."""
+"""Collect portfolio-facing project and pipeline-run artifacts."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import argparse
 import json
 import shutil
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -14,39 +15,190 @@ ROOT = Path(__file__).resolve().parents[1]
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="results/portfolio_pack")
+    parser.add_argument(
+        "--run-dir",
+        help="Optional run-scoped pipeline directory, for example results/pipeline_runs/desk_scene.",
+    )
+    parser.add_argument("--zip", action="store_true", help="Also create a .zip archive of the pack.")
+    parser.add_argument("--allow-missing", action="store_true", help="Exit 0 even if expected files are missing.")
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
-    output = ROOT / args.output
+    output = _resolve(args.output)
+    if output.exists():
+        _clean_output(output)
     output.mkdir(parents=True, exist_ok=True)
-    files = [
-        ROOT / "README.md",
-        ROOT / "docs" / "portfolio_result_card.md",
-        ROOT / "docs" / "cv_bullets.md",
-        ROOT / "docs" / "cold_email_paragraph.md",
-        ROOT / "results" / "dry_run_demo_summary.json",
-        ROOT / "results" / "evaluation" / "eval_summary.json",
-    ]
-    copied: list[str] = []
+
+    copied: list[dict[str, str]] = []
     missing: list[str] = []
-    for path in files:
-        if path.exists():
-            destination = output / path.name
-            shutil.copy2(path, destination)
-            copied.append(str(destination))
-        else:
-            missing.append(str(path))
+    optional_missing: list[str] = []
+    _copy_project_materials(output, copied, missing, optional_missing)
+
+    run_dir = _resolve(args.run_dir) if args.run_dir else None
+    run_summary: dict[str, Any] | None = None
+    if run_dir is not None:
+        run_summary = _copy_run_materials(run_dir, output, copied, missing)
+
+    archive_path = None
+    if args.zip:
+        archive_path = shutil.make_archive(str(output), "zip", output)
+
     index = {
         "copied": copied,
         "missing": missing,
+        "optional_missing": optional_missing,
         "github": "https://github.com/woshiluozhi/nerf-llm-scene-inspector",
-        "recommended_demo_command": "python scripts/run_dry_run_demo.py",
+        "run_dir": _display_source_path(run_dir) if run_dir else None,
+        "run_summary": run_summary,
+        "archive": _display_source_path(Path(archive_path)) if archive_path else None,
+        "recommended_demo_command": "python scripts/run_scene_pipeline.py --dry-run --query mug",
     }
     (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     print(json.dumps(index, indent=2))
-    return 0 if not missing else 1
+    return 0 if not missing or args.allow_missing else 1
+
+
+def _copy_project_materials(
+    output: Path,
+    copied: list[dict[str, str]],
+    missing: list[str],
+    optional_missing: list[str],
+) -> None:
+    required_project_files = [
+        (ROOT / "README.md", "project/README.md"),
+        (ROOT / "LICENSE", "project/LICENSE"),
+        (ROOT / "CITATION.cff", "project/CITATION.cff"),
+        (ROOT / "docs" / "portfolio_result_card.md", "project/docs/portfolio_result_card.md"),
+        (ROOT / "docs" / "project_report.md", "project/docs/project_report.md"),
+        (ROOT / "docs" / "method_summary.md", "project/docs/method_summary.md"),
+        (ROOT / "docs" / "cv_bullets.md", "project/docs/cv_bullets.md"),
+        (ROOT / "docs" / "cold_email_paragraph.md", "project/docs/cold_email_paragraph.md"),
+        (ROOT / "docs" / "real_scene_capture_checklist.md", "project/docs/real_scene_capture_checklist.md"),
+        (ROOT / "docs" / "assets" / "query_grid.png", "project/docs/assets/query_grid.png"),
+        (ROOT / "docs" / "assets" / "demo_montage.gif", "project/docs/assets/demo_montage.gif"),
+    ]
+    optional_project_files = [
+        (ROOT / "results" / "dry_run_demo_summary.json", "project/results/dry_run_demo_summary.json"),
+        (ROOT / "results" / "evaluation" / "eval_summary.json", "project/results/evaluation/eval_summary.json"),
+    ]
+    for source, relative_destination in required_project_files:
+        _copy_file(source, output / relative_destination, output, copied, missing)
+    for source, relative_destination in optional_project_files:
+        _copy_file(source, output / relative_destination, output, copied, optional_missing)
+
+
+def _copy_run_materials(
+    run_dir: Path,
+    output: Path,
+    copied: list[dict[str, str]],
+    missing: list[str],
+) -> dict[str, Any] | None:
+    pipeline_summary_path = run_dir / "pipeline_summary.json"
+    run_summary = _load_json_if_exists(pipeline_summary_path)
+    run_files = [
+        (pipeline_summary_path, "run/pipeline_summary.json"),
+        (run_dir / "environment_report.json", "run/environment_report.json"),
+        (run_dir / "scene_data_inspection.json", "run/scene_data_inspection.json"),
+        (run_dir / "scene_data_inspection.md", "run/scene_data_inspection.md"),
+        (run_dir / "queries.yaml", "run/queries.yaml"),
+        (run_dir / "project_report.md", "run/project_report.md"),
+        (run_dir / "portfolio_result_card.md", "run/portfolio_result_card.md"),
+        (run_dir / "evaluation" / "eval_summary.json", "run/evaluation/eval_summary.json"),
+        (run_dir / "evaluation" / "eval_table.csv", "run/evaluation/eval_table.csv"),
+        (run_dir / "evaluation" / "qualitative_report.md", "run/evaluation/qualitative_report.md"),
+        (run_dir / "demo_assets" / "demo_summary.json", "run/demo_assets/demo_summary.json"),
+        (run_dir / "demo_assets" / "query_grid.png", "run/demo_assets/query_grid.png"),
+        (run_dir / "demo_assets" / "demo_montage.gif", "run/demo_assets/demo_montage.gif"),
+    ]
+    for source, relative_destination in run_files:
+        _copy_file(source, output / relative_destination, output, copied, missing)
+    for overlay in sorted((run_dir / "demo_assets").rglob("*overlay.png"))[:8]:
+        _copy_file(
+            overlay,
+            output / "run" / "demo_assets" / "overlays" / overlay.parent.name / overlay.name,
+            output,
+            copied,
+            missing,
+        )
+    return _run_summary_excerpt(run_summary)
+
+
+def _copy_file(
+    source: Path,
+    destination: Path,
+    pack_root: Path,
+    copied: list[dict[str, str]],
+    missing: list[str],
+) -> None:
+    if source.exists():
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        copied.append(
+            {
+                "source": _display_source_path(source),
+                "destination": _relative_display_path(destination, pack_root),
+            }
+        )
+    else:
+        missing.append(_display_source_path(source))
+
+
+def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not summary:
+        return None
+    return {
+        "scene_name": summary.get("scene_name"),
+        "success": summary.get("success"),
+        "dry_run": summary.get("dry_run"),
+        "backend": summary.get("backend"),
+        "timestamp": summary.get("timestamp"),
+        "queries": summary.get("queries"),
+        "paths": summary.get("paths"),
+    }
+
+
+def _resolve(path: str | Path) -> Path:
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return ROOT / candidate
+
+
+def _display_source_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve())).replace("\\", "/")
+    except ValueError:
+        return path.name
+
+
+def _relative_display_path(path: Path, base: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(base.resolve())).replace("\\", "/")
+    except ValueError:
+        return path.name
+
+
+def _clean_output(output: Path) -> None:
+    resolved_output = output.resolve()
+    resolved_root = ROOT.resolve()
+    try:
+        resolved_output.relative_to(resolved_root)
+    except ValueError:
+        raise RuntimeError(f"Refusing to clean output outside repository: {resolved_output}")
+    if resolved_output == resolved_root:
+        raise RuntimeError("Refusing to use repository root as export output.")
+    shutil.rmtree(resolved_output)
 
 
 if __name__ == "__main__":

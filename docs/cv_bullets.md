@@ -4,13 +4,13 @@
 
 - Built an open-vocabulary 3D scene inspection pipeline that connects Nerfstudio-style reconstruction, LERF-style language-field querying, and natural-language scene search.
 - Implemented deterministic query planning, semantic relevancy artifacts, spatial heuristics, dry-run demos, and lightweight evaluation without requiring GPU dependencies in tests.
-- Designed reproducible CLI workflows for data processing, scene-data validation, baseline NeRF training, language-field training, query visualization, and portfolio-ready reporting.
+- Designed reproducible CLI workflows for data processing, scene-data validation, baseline NeRF training, language-field training, query visualization, run-scoped evaluation, and portfolio-ready export.
 
 ## Stronger Research-Style Version
 
 - Engineered a research-oriented NeRF/VLM scene understanding system that turns monocular captures into language-queryable scene artifacts using Nerfstudio and LERF-style backends.
 - Integrated open-vocabulary visual query expansion, relevancy rendering, typed QueryResult schemas, 2D/3D fallback spatial reasoning, and annotation-based evaluation tables.
-- Built CPU-safe reproducibility infrastructure including dry-run training/query simulation, CI checks, environment diagnostics, processed-scene quality reports, demo asset generation, and professor-facing documentation.
+- Built CPU-safe reproducibility infrastructure including dry-run training/query simulation, CI checks, environment diagnostics, processed-scene quality reports, demo asset generation, run-scoped portfolio packs, and professor-facing documentation.
 
 ## Conservative No-Overclaim Version
 

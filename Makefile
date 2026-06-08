@@ -1,4 +1,4 @@
-.PHONY: install test lint check demo-dry-run pipeline-dry-run clean-generated
+.PHONY: install test lint check demo-dry-run pipeline-dry-run portfolio-pack clean-generated
 
 PYTHON ?= python
 
@@ -29,6 +29,9 @@ demo-dry-run:
 
 pipeline-dry-run:
 	$(PYTHON) scripts/run_scene_pipeline.py --dry-run --query mug
+
+portfolio-pack:
+	$(PYTHON) scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 
 clean-generated:
 	rm -rf data runs outputs viewer_logs wandb

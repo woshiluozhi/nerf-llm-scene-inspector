@@ -52,3 +52,6 @@ jobs:
 
       - name: Run practical pipeline dry-run
         run: python scripts/run_scene_pipeline.py --dry-run --query mug
+
+      - name: Export run-scoped portfolio pack
+        run: python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip

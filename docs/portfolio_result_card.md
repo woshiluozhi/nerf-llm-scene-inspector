@@ -36,6 +36,7 @@ a trained semantic field and an NVIDIA GPU environment.
 python -m pip install -e ".[dev,video]"
 python scripts/run_dry_run_demo.py
 python scripts/run_scene_pipeline.py --dry-run
+python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 ```
 
 ## Outputs
@@ -45,6 +46,7 @@ python scripts/run_scene_pipeline.py --dry-run
 - Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`
 - Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`
 - Run-scoped evaluation: `results/pipeline_runs/desk_scene/evaluation/eval_summary.json`
+- Portfolio pack: `results/portfolio_pack.zip`
 - Evaluation summary: `results/evaluation/eval_summary.json`
 - Qualitative report: `results/evaluation/qualitative_report.md`
 

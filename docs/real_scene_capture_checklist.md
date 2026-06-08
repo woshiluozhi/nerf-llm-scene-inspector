@@ -57,6 +57,12 @@ Review `results/pipeline_runs/desk_scene/pipeline_summary.json` and
 The pipeline cleans the current run's `queries/`, `demo_assets/`, and `evaluation/` folders by default so
 reruns do not accidentally evaluate stale artifacts. Use `--no-clean-run` only when preserving prior files is intentional.
 
+Export a shareable run package:
+
+```bash
+python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+```
+
 ## LERF Prompt Examples
 
 - `mug`

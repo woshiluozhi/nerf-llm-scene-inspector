@@ -151,6 +151,12 @@ Each pipeline run writes run-scoped query, demo, evaluation, and report artifact
 cleaned by default to avoid stale results; pass `--no-clean-run` only when you intentionally
 want to preserve prior files.
 
+Export the latest run into a shareable portfolio package:
+
+```bash
+python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+```
+
 Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
 ```bash
@@ -211,6 +217,8 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
 - `results/pipeline_runs/<scene>/project_report.md`
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
+- `results/portfolio_pack/portfolio_pack_index.json`
+- `results/portfolio_pack.zip`
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
@@ -251,6 +259,7 @@ python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help
+python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 ```
 
 If `ruff` is installed:
