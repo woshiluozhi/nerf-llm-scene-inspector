@@ -57,6 +57,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
     assert str(tmp_path) not in packed_summary
     assert (output_dir / "run" / "pipeline_summary.json").exists()
+    assert (output_dir / "run" / "run_audit.json").exists()
+    assert (output_dir / "run" / "run_audit.md").exists()
     assert (output_dir / "run" / "annotation_template.json").exists()
     assert (output_dir / "run" / "project_report.md").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_validation.json").exists()

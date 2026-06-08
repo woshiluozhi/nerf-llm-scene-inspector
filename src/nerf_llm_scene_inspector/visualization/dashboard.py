@@ -20,6 +20,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
     return {
         "run_dir": str(root),
         "pipeline_summary": pipeline_summary,
+        "run_audit": _read_json(root / "run_audit.json"),
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
         "training_summaries": {
@@ -128,6 +129,15 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
     col_b.metric("Backend", str(summary.get("backend", "unknown")))
     col_c.metric("Dry Run", str(summary.get("dry_run")))
     col_d.metric("Queries", str(len(summary.get("queries") or [])))
+
+    if bundle["run_audit"]:
+        audit = bundle["run_audit"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Audit", str(audit.get("status", "unknown")))
+        col_b.metric("Audit Score", str(audit.get("score", "unknown")))
+        col_c.metric("Findings", str(len(audit.get("findings") or [])))
+        with st.expander("Run Audit Findings", expanded=audit.get("status") != "ready"):
+            st.json(audit)
 
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})
@@ -255,6 +265,7 @@ def _read_text(path: Path) -> str:
 def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = None) -> list[str]:
     expected = [
         "pipeline_summary.json",
+        "run_audit.json",
         "environment_report.json",
         "scene_data_inspection.json",
         "annotation_template.json",

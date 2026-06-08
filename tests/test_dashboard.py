@@ -27,6 +27,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
             "provenance": {"git_commit": "abc123"},
         },
     )
+    _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100})
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
     _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
@@ -52,6 +53,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["annotation_template"]["queries"][0]["query"] == "mug"
     assert bundle["training_summaries"]["baseline"]["run_type"] == "baseline"
     assert bundle["training_summaries"]["language"]["run_type"] == "language"
+    assert bundle["run_audit"]["status"] == "ready"
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"

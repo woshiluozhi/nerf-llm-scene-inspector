@@ -143,6 +143,7 @@ Practical one-command dry-run pipeline:
 
 ```bash
 python scripts/run_scene_pipeline.py --dry-run
+python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 ```
 
 This writes a reproducible pipeline record to `results/pipeline_runs/desk_scene/pipeline_summary.json`.
@@ -239,6 +240,8 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/annotation_validation.json`
 - `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
+- `results/pipeline_runs/<scene>/run_audit.json`
+- `results/pipeline_runs/<scene>/run_audit.md`
 - `results/pipeline_runs/<scene>/project_report.md`
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
 - `results/portfolio_pack/portfolio_pack_index.json`
@@ -299,6 +302,7 @@ python scripts/create_annotation_template.py --help
 python scripts/validate_annotations.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
+python scripts/audit_run.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip

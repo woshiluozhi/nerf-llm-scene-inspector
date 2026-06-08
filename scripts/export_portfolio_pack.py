@@ -102,6 +102,8 @@ def _copy_run_materials(
     run_summary = _load_json_if_exists(pipeline_summary_path)
     _copy_pipeline_summary(pipeline_summary_path, output / "run/pipeline_summary.json", output, copied, missing, run_dir)
     run_files = [
+        (run_dir / "run_audit.json", "run/run_audit.json"),
+        (run_dir / "run_audit.md", "run/run_audit.md"),
         (run_dir / "environment_report.json", "run/environment_report.json"),
         (run_dir / "scene_data_inspection.json", "run/scene_data_inspection.json"),
         (run_dir / "scene_data_inspection.md", "run/scene_data_inspection.md"),
@@ -204,6 +206,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         return None
     artifacts = {
         "pipeline_summary": "run/pipeline_summary.json",
+        "run_audit": "run/run_audit.md",
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",
         "baseline_train_summary": "run/training/baseline_train_summary.json",

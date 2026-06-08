@@ -49,6 +49,7 @@ python scripts/run_scene_pipeline.py \
 - `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
+- `run_audit.md`: run-level health summary for environment, data, query, annotation, and evaluation readiness.
 - `demo_assets/query_grid.png`: compact qualitative query visualization.
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
@@ -112,6 +113,9 @@ python scripts/evaluate_queries.py \
   --results results/pipeline_runs/desk_scene/queries \
   --output results/pipeline_runs/desk_scene/evaluation \
   --report-output results/pipeline_runs/desk_scene/project_report.md
+
+python scripts/audit_run.py \
+  --run-dir results/pipeline_runs/desk_scene
 ```
 
 Only rows with a filled `bbox_2d` are included in localization metrics such as

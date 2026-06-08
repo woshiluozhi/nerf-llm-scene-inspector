@@ -13,6 +13,7 @@ from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.data_processing import prepare_data
+from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 from nerf_llm_scene_inspector.scene_validation import inspect_processed_scene
 from nerf_llm_scene_inspector.training import train_baseline_nerf, train_language_field
@@ -143,6 +144,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "evaluation": str(eval_dir),
         "training": str(training_dir),
         "run_queries": str(run_queries_path),
+        "run_audit_json": str(run_dir / "run_audit.json"),
+        "run_audit_markdown": str(run_dir / "run_audit.md"),
         "project_report": str(run_dir / "project_report.md"),
         "portfolio_card": str(run_dir / "portfolio_result_card.md"),
     }
@@ -385,7 +388,27 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         provenance=build_provenance(command=config.command, repo_root=root).to_dict(),
         warnings=warnings,
     )
-    summary.to_json(run_dir / "pipeline_summary.json")
+    summary_path = run_dir / "pipeline_summary.json"
+    summary.to_json(summary_path)
+    audit = audit_pipeline_run(run_dir)
+    audit_json = audit.to_json(run_dir / "run_audit.json")
+    audit_md = audit.to_markdown(run_dir / "run_audit.md")
+    steps.append(
+        PipelineStep(
+            "audit_run",
+            _audit_step_status(audit.status),
+            summary={
+                "status": audit.status,
+                "score": audit.score,
+                "blocker_count": audit.blocker_count,
+                "warning_count": audit.warning_count,
+            },
+            outputs={"json": str(audit_json), "markdown": str(audit_md)},
+        )
+    )
+    if audit.status == "blocked":
+        summary.success = False
+    summary.to_json(summary_path)
     return summary
 
 
@@ -473,3 +496,11 @@ def _small_dict(raw: dict[str, object]) -> dict[str, Any]:
         "returncode",
     }
     return {key: raw[key] for key in keep if key in raw}
+
+
+def _audit_step_status(status: str) -> str:
+    if status == "ready":
+        return "success"
+    if status == "needs_review":
+        return "warning"
+    return "failed"
