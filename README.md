@@ -70,6 +70,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
 - Submission packets that turn a validated run into a claim-calibrated CV/professor-outreach checklist with allowed claims, claims to avoid, and next actions.
 - Real-run action plans that convert a smoke run into concrete capture, GPU training, annotation, quality-gate, portfolio-pack, and professor-outreach commands.
+- Claim-audit reports that scan portfolio-facing text for unsupported SOTA, novelty, benchmark, production, or robotics-policy claims before sharing.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
 
 ## Not Claimed
@@ -178,6 +179,7 @@ python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/des
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene
+python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
@@ -234,6 +236,7 @@ python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/submission_packet/submission_packet.json
+python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 ```
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
@@ -374,6 +377,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/evidence_scorecard.md`
 - `results/pipeline_runs/<scene>/quality_gate.json`
 - `results/pipeline_runs/<scene>/quality_gate.md`
+- `results/pipeline_runs/<scene>/claim_audit.json`
+- `results/pipeline_runs/<scene>/claim_audit.md`
 - `results/pipeline_runs/<scene>/portfolio_page.html`
 - `results/pipeline_runs/<scene>/research_report.json`
 - `results/pipeline_runs/<scene>/research_report.md`
@@ -476,6 +481,7 @@ python scripts/create_reproduction_bundle.py --help
 python scripts/generate_research_report.py --help
 python scripts/create_submission_packet.py --help
 python scripts/create_real_run_plan.py --help
+python scripts/audit_claims.py --help
 python scripts/index_runs.py --help
 python scripts/compare_runs.py --help
 python scripts/run_experiment_matrix.py --help

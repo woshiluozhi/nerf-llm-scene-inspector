@@ -86,6 +86,8 @@ Export a shareable run package:
 
 ```bash
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 ```
 
 ## LERF Prompt Examples

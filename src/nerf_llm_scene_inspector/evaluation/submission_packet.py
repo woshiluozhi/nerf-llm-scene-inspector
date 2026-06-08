@@ -169,14 +169,25 @@ def build_submission_packet(
     recommendations = _read_json(root / "run_recommendations.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
     research = _read_json(root / "research_report.json")
+    claim_audit = _read_json(root / "claim_audit.json")
     pack_validation = _pack_validation(pack_dir, pack_validation_path)
 
     scene_name = str(summary.get("scene_name") or scorecard.get("scene_name") or root.name)
     backend = str(summary.get("backend") or scorecard.get("backend") or research.get("backend") or "unknown")
     dry_run = bool(summary.get("dry_run", scorecard.get("dry_run", False)))
-    checklist = _checklist(root, summary, scorecard, quality, audit, annotations, pack_validation, ci_url)
+    checklist = _checklist(
+        root,
+        summary,
+        scorecard,
+        quality,
+        audit,
+        annotations,
+        claim_audit,
+        pack_validation,
+        ci_url,
+    )
     readiness = _readiness(dry_run, summary, scorecard, quality, pack_validation, checklist)
-    warnings = _warnings(quality, audit, annotations, pack_validation)
+    warnings = _warnings(quality, audit, annotations, claim_audit, pack_validation)
     return SubmissionPacket(
         run_dir=_display_path(root),
         scene_name=scene_name,
@@ -232,6 +243,7 @@ def _checklist(
     quality: dict[str, Any],
     audit: dict[str, Any],
     annotations: dict[str, Any],
+    claim_audit: dict[str, Any],
     pack_validation: dict[str, Any],
     ci_url: str,
 ) -> list[SubmissionChecklistItem]:
@@ -268,6 +280,7 @@ def _checklist(
         _quality_item(quality),
         _audit_item(audit),
         _annotation_item(annotations),
+        _claim_audit_item(claim_audit),
         _pack_item(pack_validation),
         _path_leak_item(pack_validation),
         SubmissionChecklistItem(
@@ -353,6 +366,34 @@ def _annotation_item(annotations: dict[str, Any]) -> SubmissionChecklistItem:
         f"ok={annotations.get('ok')}, warnings={len(warnings)}",
         "Resolve annotation warnings before reporting quantitative localization numbers." if warnings else "",
         "evaluation/annotation_validation.json",
+    )
+
+
+def _claim_audit_item(claim_audit: dict[str, Any]) -> SubmissionChecklistItem:
+    if not claim_audit:
+        return SubmissionChecklistItem(
+            "claim_audit",
+            "warn",
+            "claim audit missing",
+            "Run audit_claims.py before external sharing.",
+            "claim_audit.json",
+        )
+    status = str(claim_audit.get("status") or "")
+    if status == "fail" or claim_audit.get("ok") is False:
+        checklist_status: ChecklistStatus = "fail"
+        action = "Fix unsupported external-facing claims before sharing."
+    elif status == "warn":
+        checklist_status = "warn"
+        action = "Review claim_audit.md warnings before professor outreach."
+    else:
+        checklist_status = "pass"
+        action = ""
+    return SubmissionChecklistItem(
+        "claim_audit",
+        checklist_status,
+        f"status={status}, fails={claim_audit.get('fail_count', 0)}, warnings={claim_audit.get('warn_count', 0)}",
+        action,
+        "claim_audit.md",
     )
 
 
@@ -466,6 +507,7 @@ def _warnings(
     quality: dict[str, Any],
     audit: dict[str, Any],
     annotations: dict[str, Any],
+    claim_audit: dict[str, Any],
     pack_validation: dict[str, Any],
 ) -> list[str]:
     warnings: list[str] = []
@@ -475,6 +517,10 @@ def _warnings(
         warnings.append(f"Run audit status is {audit.get('status')}.")
     for item in annotations.get("warnings") or []:
         warnings.append(f"Annotation warning: {item}")
+    if claim_audit.get("status") == "warn":
+        warnings.append("Claim audit has warning-level findings.")
+    if claim_audit.get("status") == "fail":
+        warnings.append("Claim audit has failure-level findings.")
     for item in pack_validation.get("warnings") or []:
         warnings.append(f"Pack warning: {item}")
     return warnings

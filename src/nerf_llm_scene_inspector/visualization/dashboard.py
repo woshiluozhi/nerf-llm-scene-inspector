@@ -34,6 +34,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "evidence_scorecard_markdown": _read_text(root / "evidence_scorecard.md"),
         "quality_gate": _read_json(root / "quality_gate.json"),
         "quality_gate_markdown": _read_text(root / "quality_gate.md"),
+        "claim_audit": _read_json(root / "claim_audit.json"),
+        "claim_audit_markdown": _read_text(root / "claim_audit.md"),
         "run_audit": _read_json(root / "run_audit.json"),
         "run_recommendations": _read_json(root / "run_recommendations.json"),
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
@@ -276,6 +278,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["quality_gate_markdown"])
             else:
                 st.json(gate)
+    if bundle["claim_audit"]:
+        audit = bundle["claim_audit"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Claim Audit", str(audit.get("status", "unknown")))
+        col_b.metric("Claim Fails", str(audit.get("fail_count", 0)))
+        col_c.metric("Claim Warnings", str(audit.get("warn_count", 0)))
+        with st.expander("Claim Audit", expanded=audit.get("status") == "fail"):
+            if bundle["claim_audit_markdown"]:
+                st.markdown(bundle["claim_audit_markdown"])
+            else:
+                st.json(audit)
     if bundle["portfolio_page"]:
         st.markdown(f"[Open static portfolio page]({bundle['portfolio_page']})")
 
@@ -481,6 +494,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "preflight_report.json",
         "evidence_scorecard.json",
         "quality_gate.json",
+        "claim_audit.json",
         "run_audit.json",
         "run_recommendations.json",
         "reproduction_manifest.json",
@@ -524,6 +538,8 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("research_report.md")
     if _step_succeeded(pipeline_summary, "create_real_run_plan"):
         expected.append("real_run_plan/real_run_plan.md")
+    if _step_succeeded(pipeline_summary, "audit_claims"):
+        expected.append("claim_audit.md")
     if _step_succeeded(pipeline_summary, "create_submission_packet"):
         expected.extend(
             [

@@ -59,6 +59,19 @@ def test_validate_portfolio_pack_fails_quality_gate_failure(tmp_path: Path) -> N
     assert "quality_gate.json reports a failed run quality gate." in report.errors
 
 
+def test_validate_portfolio_pack_fails_claim_audit_failure(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "claim_audit.json").write_text(
+        json.dumps({"status": "fail", "ok": False, "fail_count": 1}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "claim_audit.json reports unsupported external-facing claims." in report.errors
+
+
 def test_validate_portfolio_pack_cli_writes_report(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     output = tmp_path / "validation.json"
@@ -109,6 +122,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/evidence_scorecard.md",
         "run/quality_gate.json",
         "run/quality_gate.md",
+        "run/claim_audit.json",
+        "run/claim_audit.md",
         "run/run_audit.json",
         "run/run_audit.md",
         "run/run_recommendations.json",
@@ -172,6 +187,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "preflight_report": "run/preflight_report.md",
                 "evidence_scorecard": "run/evidence_scorecard.md",
                 "quality_gate": "run/quality_gate.md",
+                "claim_audit": "run/claim_audit.md",
                 "portfolio_page": "run/portfolio_page.html",
                 "run_index": "run_index.md",
                 "run_audit": "run/run_audit.md",
@@ -218,6 +234,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"evidence_level": "dry_run_demo_ready", "dry_run": True, "score": 82})
     if relative_path.endswith("quality_gate.json"):
         return json.dumps({"profile": "smoke", "status": "pass", "passed": True})
+    if relative_path.endswith("claim_audit.json"):
+        return json.dumps({"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     if relative_path.endswith("annotation_validation.json"):
         return json.dumps({"ok": True, "warnings": []})
     if relative_path.endswith("pipeline_summary.json"):

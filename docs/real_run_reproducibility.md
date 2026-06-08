@@ -72,6 +72,7 @@ python scripts/run_scene_pipeline.py \
 - `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
 - `evidence_scorecard.md`: conservative multi-criterion scorecard for whether the run is strong enough to share, including capture/privacy metadata readiness.
 - `quality_gate.md`: pass/warn/fail gate for smoke, real-run, or final portfolio sharing profiles.
+- `claim_audit.md`: scan of README/docs/run-facing text for unsupported SOTA, novelty, production, benchmark, or robotics-policy claims.
 - `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
 - `research_report.md`: paper-style summary of run evidence, limitations, reproducibility artifacts, and next steps.
 - `research_report.json`: machine-readable version of the same research report.
@@ -228,6 +229,10 @@ python scripts/create_real_run_plan.py \
   --input path/to/video.mp4 \
   --type video \
   --submission-packet results/submission_packet/submission_packet.json
+
+python scripts/audit_claims.py \
+  --run-dir results/pipeline_runs/desk_scene \
+  --pack results/portfolio_pack
 
 python scripts/generate_research_report.py \
   --run-dir results/pipeline_runs/desk_scene

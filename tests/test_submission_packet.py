@@ -36,6 +36,7 @@ def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> No
     assert packet.pack_ok is True
     assert any("CPU-safe pipeline wiring" in claim for claim in packet.allowed_claims)
     assert any("trained LERF outputs" in claim for claim in packet.avoid_claims)
+    assert any(item.name == "claim_audit" and item.status == "pass" for item in packet.checklist)
     assert any(item.name == "path_leaks" and item.status == "pass" for item in packet.checklist)
 
 
@@ -81,6 +82,16 @@ def test_create_submission_packet_cli(tmp_path: Path) -> None:
     assert payload["readiness_level"] == "needs_pack_validation"
 
 
+def test_submission_packet_blocks_failed_claim_audit(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    _write_json(run_dir / "claim_audit.json", {"status": "fail", "ok": False, "fail_count": 1})
+
+    packet = build_submission_packet(run_dir)
+
+    assert packet.readiness_level == "blocked"
+    assert any(item.name == "claim_audit" and item.status == "fail" for item in packet.checklist)
+
+
 def _write_run(run_dir: Path, *, dry_run: bool) -> Path:
     _write_json(
         run_dir / "pipeline_summary.json",
@@ -108,6 +119,7 @@ def _write_run(run_dir: Path, *, dry_run: bool) -> Path:
         {"profile": "smoke" if dry_run else "portfolio", "status": "warn", "passed": True},
     )
     _write_json(run_dir / "run_audit.json", {"status": "needs_review", "score": 70})
+    _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     _write_json(
         run_dir / "run_recommendations.json",
         {"recommendations": [{"action": "Run a real CUDA-backed scene."}]},

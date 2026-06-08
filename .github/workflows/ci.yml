@@ -64,6 +64,7 @@ jobs:
           python scripts/generate_research_report.py --help
           python scripts/create_submission_packet.py --help
           python scripts/create_real_run_plan.py --help
+          python scripts/audit_claims.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help
           python scripts/run_experiment_matrix.py --help
@@ -95,3 +96,6 @@ jobs:
 
       - name: Create real-run action plan
         run: python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input examples --type images --submission-packet results/submission_packet/submission_packet.json --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
+
+      - name: Audit external-facing claims
+        run: python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/claim_audit.json --markdown-output results/claim_audit.md

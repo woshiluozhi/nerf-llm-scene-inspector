@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.capture_manifest import copy_or_create_capture_manifest
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
+from nerf_llm_scene_inspector.evaluation.claim_audit import write_claim_audit
 from nerf_llm_scene_inspector.evaluation.prompt_sensitivity import prompt_suite_queries
 from nerf_llm_scene_inspector.evaluation.quality_gate import check_run_quality
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
@@ -218,6 +219,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_recommendations_markdown": str(run_dir / "run_recommendations.md"),
         "quality_gate_json": str(run_dir / "quality_gate.json"),
         "quality_gate_markdown": str(run_dir / "quality_gate.md"),
+        "claim_audit_json": str(run_dir / "claim_audit.json"),
+        "claim_audit_markdown": str(run_dir / "claim_audit.md"),
         "reproduction_manifest": str(run_dir / "reproduction_manifest.json"),
         "reproduction_report": str(run_dir / "reproduction_report.md"),
         "reproduce_script": str(run_dir / "reproduce_run.sh"),
@@ -833,6 +836,40 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
+    reproduction = build_reproduction_bundle(run_dir)
+    reproduction.to_json(run_dir / "reproduction_manifest.json")
+    reproduction.to_markdown(run_dir / "reproduction_report.md")
+    reproduction.to_shell_script(run_dir / "reproduce_run.sh")
+    refreshed_index = index_pipeline_runs(runs_root)
+    refreshed_index.to_json(runs_root / "run_index.json")
+    refreshed_index.to_markdown(runs_root / "run_index.md")
+    refreshed_comparison = compare_pipeline_runs(runs_root)
+    refreshed_comparison.to_json(runs_root / "run_comparison.json")
+    refreshed_comparison.to_markdown(runs_root / "run_comparison.md")
+    write_research_report(run_dir)
+    build_portfolio_page(run_dir).write_html(run_dir / "portfolio_page.html")
+    claim_audit = write_claim_audit(root=root, run_dir=run_dir)
+    steps.append(
+        PipelineStep(
+            "audit_claims",
+            "success" if claim_audit.status == "pass" else "warning" if claim_audit.status == "warn" else "failed",
+            summary={
+                "status": claim_audit.status,
+                "ok": claim_audit.ok,
+                "fail_count": claim_audit.fail_count,
+                "warn_count": claim_audit.warn_count,
+                "scanned_files": len(claim_audit.scanned_files),
+            },
+            outputs={
+                "json": str(run_dir / "claim_audit.json"),
+                "markdown": str(run_dir / "claim_audit.md"),
+            },
+        )
+    )
+    if claim_audit.status == "fail":
+        summary.success = False
+    summary.to_json(summary_path)
+    write_submission_packet(run_dir)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction.to_json(run_dir / "reproduction_manifest.json")
     reproduction.to_markdown(run_dir / "reproduction_report.md")

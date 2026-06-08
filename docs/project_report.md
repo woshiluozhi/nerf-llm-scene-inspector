@@ -73,6 +73,13 @@ path/to/video.mp4 --type video` to generate a concrete command playbook for movi
 dry-run smoke evidence to a real CUDA/Nerfstudio/LERF scene run. The plan is an execution
 checklist, not a claim that the real run has already succeeded.
 
+## Claim Audit
+
+Run `scripts/audit_claims.py --run-dir results/pipeline_runs/<scene> --pack
+results/portfolio_pack` before sharing. The audit checks portfolio-facing text for
+unsupported SOTA, novelty, benchmark-superiority, production-readiness, or robotics-policy
+claims and verifies required disclaimers.
+
 ## Notes
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.

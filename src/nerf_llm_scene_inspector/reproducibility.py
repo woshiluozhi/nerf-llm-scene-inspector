@@ -183,6 +183,7 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_submission_packet.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_real_run_plan.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/audit_claims.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/compare_runs.py", "--root", runs_root]),
         _format_command(
             [
@@ -264,6 +265,7 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         ("recommendations", root / "run_recommendations.md", "run_recommendations.md", "Actionable next steps."),
         ("evidence_scorecard", root / "evidence_scorecard.md", "evidence_scorecard.md", "Portfolio evidence quality scorecard."),
         ("quality_gate", root / "quality_gate.md", "quality_gate.md", "Pass/warn/fail run quality gate report."),
+        ("claim_audit", root / "claim_audit.md", "claim_audit.md", "Audit report for avoiding unsupported external-facing claims."),
         ("portfolio_page", root / "portfolio_page.html", "portfolio_page.html", "Static HTML page for sharing run evidence."),
         (
             "real_run_plan",

@@ -40,6 +40,8 @@ RUN_REQUIRED_FILES = [
     "run/evidence_scorecard.md",
     "run/quality_gate.json",
     "run/quality_gate.md",
+    "run/claim_audit.json",
+    "run/claim_audit.md",
     "run/run_audit.json",
     "run/run_audit.md",
     "run/run_recommendations.json",
@@ -162,6 +164,7 @@ def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
         _check_capture_manifest(pack_path, warnings, errors)
         _check_evidence_scorecard(pack_path, warnings, errors)
         _check_quality_gate(pack_path, warnings, errors)
+        _check_claim_audit(pack_path, warnings, errors)
         _check_annotation_validation(pack_path, warnings, errors)
     else:
         warnings.append("No run/ directory found; pack includes project materials but no run-scoped evidence.")
@@ -349,6 +352,19 @@ def _check_quality_gate(pack_path: Path, warnings: list[str], errors: list[str])
         warnings.append("quality_gate.json status is warn; inspect criteria before sharing.")
     elif status and status != "pass":
         warnings.append(f"quality_gate.json has unrecognized status: {status}")
+
+
+def _check_claim_audit(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    audit = _read_json(pack_path / "run" / "claim_audit.json", errors)
+    if not isinstance(audit, dict):
+        return
+    status = str(audit.get("status") or "")
+    if audit.get("ok") is False or status == "fail":
+        errors.append("claim_audit.json reports unsupported external-facing claims.")
+    elif status == "warn":
+        warnings.append("claim_audit.json status is warn; inspect claim_audit.md before sharing.")
+    elif status and status != "pass":
+        warnings.append(f"claim_audit.json has unrecognized status: {status}")
 
 
 def _check_annotation_validation(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
