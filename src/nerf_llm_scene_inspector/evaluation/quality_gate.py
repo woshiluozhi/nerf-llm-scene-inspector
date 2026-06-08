@@ -536,7 +536,7 @@ def _pack_criterion(pack_dir: str | Path | None, policy: GatePolicy) -> QualityG
             "portfolio_pack",
             status,
             "No exported portfolio pack was provided for validation.",
-            "Run export_portfolio_pack.py and pass --pack for final sharing checks.",
+            "Run finalize_annotations.py with --export-pack --zip-pack, then pass --pack for final sharing checks.",
             "results/portfolio_pack",
         )
     validation = validate_portfolio_pack(pack_dir)

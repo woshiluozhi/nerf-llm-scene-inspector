@@ -33,7 +33,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--queries", help="Query YAML file to use for the real run.")
     parser.add_argument(
         "--submission-packet",
-        help="Optional submission_packet.json to read, for example results/submission_packet/submission_packet.json after pack validation.",
+        help=(
+            "Optional submission_packet.json to read, for example "
+            "results/pipeline_runs/<scene>/submission_packet/submission_packet.json after finalization."
+        ),
     )
     parser.add_argument("--output-root", default="results/pipeline_runs", help="Pipeline output root.")
     parser.add_argument(

@@ -328,7 +328,7 @@ def _add_annotation_actions(
                 rationale="No bbox-annotated queries were evaluated quantitatively.",
                 command=(
                     "python scripts/finalize_annotations.py --run-dir results/pipeline_runs/<scene> "
-                    "--filled path/to/annotations_filled.json --profile real-run"
+                    "--filled path/to/annotations_filled.json --profile real-run --export-pack --zip-pack"
                 ),
                 artifact="results/pipeline_runs/<scene>/annotation_finalize_report.md",
             )
@@ -396,9 +396,15 @@ def _add_export_action(
         RecommendationItem(
             severity="low",
             category="portfolio_export",
-            action="Export and validate a shareable portfolio pack after reviewing warnings.",
-            rationale="A portable pack is the safest artifact to share in cold emails or applications.",
-            command=f"python scripts/export_portfolio_pack.py --run-dir {root} --zip && python scripts/validate_portfolio_pack.py --pack results/portfolio_pack",
+            action="Finalize annotations and export a validated portfolio pack after reviewing warnings.",
+            rationale=(
+                "The finalizer refreshes evaluation, reporting, quality checks, submission materials, "
+                "pack validation, and the final shareable zip in one run-scoped command."
+            ),
+            command=(
+                f"python scripts/finalize_annotations.py --run-dir {root} "
+                "--filled path/to/annotations_filled.json --profile real-run --export-pack --zip-pack"
+            ),
             artifact="portfolio_pack_index.json",
         )
     )

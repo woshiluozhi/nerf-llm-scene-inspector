@@ -48,6 +48,8 @@ def test_write_submission_packet_outputs_markdown_and_briefs(tmp_path: Path) -> 
     packet = write_submission_packet(run_dir, output_dir=output_dir)
 
     assert packet.readiness_level == "needs_pack_validation"
+    assert packet.next_actions[0].startswith("Finalize annotations")
+    assert "--export-pack --zip-pack" in packet.next_actions[0]
     assert (output_dir / "submission_packet.json").exists()
     assert (output_dir / "submission_checklist.md").exists()
     assert (output_dir / "cv_project_entry.md").exists()

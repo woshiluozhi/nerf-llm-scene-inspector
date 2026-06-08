@@ -17,6 +17,8 @@ def test_recommendations_for_ready_run_suggest_export(tmp_path: Path) -> None:
     assert report.readiness_level == "ready_for_portfolio"
     assert report.critical_count == 0
     assert report.recommendations[0].category == "portfolio_export"
+    assert "finalize_annotations.py" in report.recommendations[0].command
+    assert "--export-pack --zip-pack" in report.recommendations[0].command
 
 
 def test_recommendations_for_dry_run_prioritize_real_gpu_run(tmp_path: Path) -> None:

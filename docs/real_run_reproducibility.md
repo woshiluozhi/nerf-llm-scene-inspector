@@ -128,13 +128,18 @@ The exported portfolio pack keeps the original run files but sanitizes machine-s
 inside the packaged copy. The top-level `portfolio_pack_index.json` exposes only a compact,
 share-safe provenance excerpt.
 
-## Export
+## Finalize And Export
 
 ```bash
-python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled path/to/annotations_filled.json --profile portfolio --export-pack --zip-pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack
 ```
+
+Use `export_portfolio_pack.py` directly only when debugging packaging internals. For normal
+run-scoped sharing, the finalizer is preferred because it refreshes evaluation, visual QA,
+reports, scorecards, submission materials, pack validation, and the final zip.
 
 Refresh the multi-run index after manual edits or copied-in run folders:
 

@@ -86,20 +86,20 @@ jobs:
       - name: Check run quality gate
         run: python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 
+      - name: Create annotation workbench
+        run: python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
+
+      - name: Finalize run and export portfolio pack
+        run: python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
+
       - name: Generate project site
         run: python scripts/generate_project_site.py --output results/project_site/index.html --run-index results/pipeline_runs/run_index.json
-
-      - name: Export run-scoped portfolio pack
-        run: python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 
       - name: Validate portfolio pack
         run: python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 
-      - name: Create submission packet
-        run: python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
-
       - name: Create real-run action plan
-        run: python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input examples --type images --submission-packet results/submission_packet/submission_packet.json --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
+        run: python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input examples --type images --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
 
       - name: Audit external-facing claims
         run: python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/claim_audit.json --markdown-output results/claim_audit.md

@@ -522,7 +522,8 @@ python scripts/run_experiment_matrix.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/validate_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help
-python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 ```
 

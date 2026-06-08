@@ -403,7 +403,7 @@ def _pack_item(pack_validation: dict[str, Any]) -> SubmissionChecklistItem:
             "portfolio_pack",
             "warn",
             "portfolio pack was not validated for this packet",
-            "Run export_portfolio_pack.py and validate_portfolio_pack.py, then regenerate this packet with --pack.",
+            "Run finalize_annotations.py with --export-pack --zip-pack, then regenerate this packet with --pack.",
             "results/portfolio_pack",
         )
     return SubmissionChecklistItem(
@@ -537,7 +537,10 @@ def _next_actions(
         if isinstance(item, dict) and item.get("action")
     ]
     if readiness == "needs_pack_validation":
-        actions.insert(0, "Export and validate a shareable portfolio pack, then regenerate this submission packet with --pack.")
+        actions.insert(
+            0,
+            "Finalize annotations with --export-pack --zip-pack, then regenerate this submission packet with --pack.",
+        )
     if pack_validation.get("warnings"):
         actions.append("Review portfolio pack validation warnings before sending the packet externally.")
     return _dedupe(actions)[:8]

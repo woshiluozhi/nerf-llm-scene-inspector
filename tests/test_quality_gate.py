@@ -31,6 +31,9 @@ def test_quality_gate_portfolio_rejects_dry_run_without_pack(tmp_path: Path) -> 
     failed = {criterion.name for criterion in report.criteria if criterion.status == "fail"}
     assert "run_mode" in failed
     assert "portfolio_pack" in failed
+    pack_criterion = next(criterion for criterion in report.criteria if criterion.name == "portfolio_pack")
+    assert "finalize_annotations.py" in pack_criterion.recommendation
+    assert "--export-pack --zip-pack" in pack_criterion.recommendation
 
 
 def test_check_run_quality_cli_writes_json_and_markdown(tmp_path: Path) -> None:
