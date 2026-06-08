@@ -22,6 +22,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "pipeline_summary": pipeline_summary,
         "run_index": _read_json(root.parent / "run_index.json"),
         "run_audit": _read_json(root / "run_audit.json"),
+        "run_recommendations": _read_json(root / "run_recommendations.json"),
+        "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
         "training_summaries": {
@@ -152,6 +154,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
         col_c.metric("Findings", str(len(audit.get("findings") or [])))
         with st.expander("Run Audit Findings", expanded=audit.get("status") != "ready"):
             st.json(audit)
+    if bundle["run_recommendations"]:
+        recommendations = bundle["run_recommendations"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Readiness", str(recommendations.get("readiness_level", "unknown")))
+        col_b.metric("Critical Actions", str(recommendations.get("critical_count", 0)))
+        col_c.metric("High Actions", str(recommendations.get("high_count", 0)))
+        with st.expander("Recommended Next Steps", expanded=True):
+            if bundle["run_recommendations_markdown"]:
+                st.markdown(bundle["run_recommendations_markdown"])
+            else:
+                st.json(recommendations)
     if bundle["run_index"]:
         index = bundle["run_index"]
         with st.expander("Run Index"):
@@ -298,6 +311,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
     expected = [
         "pipeline_summary.json",
         "run_audit.json",
+        "run_recommendations.json",
         "environment_report.json",
         "scene_data_inspection.json",
         "annotation_template.json",

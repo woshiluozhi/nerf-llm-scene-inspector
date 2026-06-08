@@ -31,6 +31,8 @@ RUN_REQUIRED_FILES = [
     "run/pipeline_summary.json",
     "run/run_audit.json",
     "run/run_audit.md",
+    "run/run_recommendations.json",
+    "run/run_recommendations.md",
     "run/environment_report.json",
     "run/scene_data_inspection.json",
     "run/scene_data_inspection.md",

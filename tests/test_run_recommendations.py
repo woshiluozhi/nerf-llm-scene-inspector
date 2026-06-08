@@ -1,0 +1,117 @@
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_recommendations_for_ready_run_suggest_export(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "ready_for_portfolio"
+    assert report.critical_count == 0
+    assert report.recommendations[0].category == "portfolio_export"
+
+
+def test_recommendations_for_dry_run_prioritize_real_gpu_run(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "dry_run_ready_for_smoke_demo"
+    assert report.top_next_action.startswith("Run the same pipeline on a real captured scene")
+    assert any(item.category == "run_mode" for item in report.recommendations)
+
+
+def test_recommendations_block_on_audit_blocker(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="blocked")
+    _write_json(
+        run_dir / "run_audit.json",
+        {
+            "status": "blocked",
+            "findings": [
+                {
+                    "severity": "blocker",
+                    "category": "scene_data",
+                    "message": "Processed scene is not ready.",
+                    "recommendation": "Recapture the scene.",
+                    "artifact": "scene_data_inspection.md",
+                }
+            ],
+        },
+    )
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "blocked"
+    assert report.critical_count == 1
+    assert report.top_next_action == "Recapture the scene."
+
+
+def test_recommend_next_steps_cli_writes_reports(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
+    output = tmp_path / "recommendations.json"
+    markdown = tmp_path / "recommendations.md"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "recommend_next_steps.py"),
+            "--run-dir",
+            str(run_dir),
+            "--output",
+            str(output),
+            "--markdown-output",
+            str(markdown),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(output.read_text(encoding="utf-8"))["readiness_level"] == "dry_run_ready_for_smoke_demo"
+    assert "# Run Recommendations" in markdown.read_text(encoding="utf-8")
+
+
+def _write_run(tmp_path: Path, *, dry_run: bool, audit_status: str) -> Path:
+    run_dir = tmp_path / "run"
+    _write_json(
+        run_dir / "pipeline_summary.json",
+        {
+            "scene_name": "desk_scene",
+            "success": True,
+            "dry_run": dry_run,
+            "backend": "lerf",
+            "queries": ["mug"],
+            "steps": [
+                {"name": "query_scene", "status": "success"},
+                {"name": "generate_demo_assets", "status": "success"},
+                {"name": "evaluate_queries", "status": "success"},
+            ],
+        },
+    )
+    _write_json(run_dir / "run_audit.json", {"status": audit_status, "findings": []})
+    _write_json(run_dir / "environment_report.json", {"ok": True, "strict_failures": []})
+    _write_json(
+        run_dir / "scene_data_inspection.json",
+        {"ready_for_training": True, "quality_score": 0.95},
+    )
+    _write_json(run_dir / "evaluation" / "annotation_validation.json", {"ok": True, "warnings": []})
+    _write_json(
+        run_dir / "evaluation" / "eval_summary.json",
+        {"num_evaluated_queries": 1, "num_bbox_annotated_queries": 1},
+    )
+    return run_dir
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")

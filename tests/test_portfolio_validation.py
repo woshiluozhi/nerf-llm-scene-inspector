@@ -87,6 +87,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/pipeline_summary.json",
         "run/run_audit.json",
         "run/run_audit.md",
+        "run/run_recommendations.json",
+        "run/run_recommendations.md",
         "run/environment_report.json",
         "run/scene_data_inspection.json",
         "run/scene_data_inspection.md",
@@ -126,6 +128,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "pipeline_summary": "run/pipeline_summary.json",
                 "run_index": "run_index.md",
                 "run_audit": "run/run_audit.md",
+                "run_recommendations": "run/run_recommendations.md",
                 "command_logs": "run/logs/",
                 "evaluation_summary": "run/evaluation/eval_summary.json",
                 "annotation_validation": "run/evaluation/annotation_validation.json",
@@ -142,6 +145,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
 def _file_payload(relative_path: str) -> str:
     if relative_path.endswith("run_audit.json"):
         return json.dumps({"status": "ready", "score": 100})
+    if relative_path.endswith("run_recommendations.json"):
+        return json.dumps({"readiness_level": "ready_for_portfolio", "recommendations": []})
     if relative_path.endswith("annotation_validation.json"):
         return json.dumps({"ok": True, "warnings": []})
     if relative_path.endswith("pipeline_summary.json"):

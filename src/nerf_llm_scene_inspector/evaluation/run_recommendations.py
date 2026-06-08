@@ -1,0 +1,399 @@
+"""Actionable next-step recommendations for a pipeline run."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Literal
+
+from nerf_llm_scene_inspector.utils.paths import project_root, utc_timestamp
+
+RecommendationSeverity = Literal["critical", "high", "medium", "low"]
+ReadinessLevel = Literal[
+    "blocked",
+    "dry_run_ready_for_smoke_demo",
+    "needs_review",
+    "ready_for_portfolio",
+]
+
+
+@dataclass
+class RecommendationItem:
+    """One concrete next action for improving a run."""
+
+    severity: RecommendationSeverity
+    category: str
+    action: str
+    rationale: str
+    command: str = ""
+    artifact: str = ""
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass
+class RunRecommendationReport:
+    """Action plan derived from run audit, environment, scene, and evaluation artifacts."""
+
+    run_dir: str
+    scene_name: str
+    readiness_level: ReadinessLevel
+    summary: str
+    top_next_action: str
+    recommendations: list[RecommendationItem] = field(default_factory=list)
+    timestamp: str = field(default_factory=utc_timestamp)
+
+    @property
+    def critical_count(self) -> int:
+        return sum(1 for item in self.recommendations if item.severity == "critical")
+
+    @property
+    def high_count(self) -> int:
+        return sum(1 for item in self.recommendations if item.severity == "high")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "run_dir": self.run_dir,
+            "scene_name": self.scene_name,
+            "readiness_level": self.readiness_level,
+            "summary": self.summary,
+            "top_next_action": self.top_next_action,
+            "critical_count": self.critical_count,
+            "high_count": self.high_count,
+            "recommendations": [item.to_dict() for item in self.recommendations],
+            "timestamp": self.timestamp,
+        }
+
+    def to_json(self, path: str | Path) -> Path:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        return output_path
+
+    def to_markdown(self, path: str | Path) -> Path:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "# Run Recommendations",
+            "",
+            f"- Scene: {self.scene_name or 'unknown'}",
+            f"- Readiness: {self.readiness_level}",
+            f"- Summary: {self.summary}",
+            f"- Top next action: {self.top_next_action or 'None'}",
+            "",
+            "## Actions",
+            "",
+            *_recommendation_lines(self.recommendations),
+        ]
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return output_path
+
+
+def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
+    """Build a concrete action plan for one pipeline run directory."""
+
+    root = Path(run_dir)
+    pipeline_summary = _read_json(root / "pipeline_summary.json")
+    run_audit = _read_json(root / "run_audit.json")
+    environment_report = _read_json(root / "environment_report.json")
+    scene_inspection = _read_json(root / "scene_data_inspection.json")
+    annotation_validation = _read_json(root / "evaluation" / "annotation_validation.json")
+    eval_summary = _read_json(root / "evaluation" / "eval_summary.json")
+
+    scene_name = str(pipeline_summary.get("scene_name") or root.name)
+    dry_run = bool(pipeline_summary.get("dry_run"))
+    recommendations: list[RecommendationItem] = []
+
+    _add_audit_findings(run_audit, recommendations)
+    _add_environment_actions(environment_report, recommendations, dry_run=dry_run)
+    _add_scene_actions(scene_inspection, recommendations, dry_run=dry_run)
+    _add_annotation_actions(annotation_validation, eval_summary, recommendations)
+    _add_pipeline_step_actions(pipeline_summary, recommendations)
+    _add_run_mode_actions(scene_name, dry_run, recommendations)
+    _add_export_action(root, run_audit, recommendations)
+    recommendations = _dedupe_recommendations(recommendations)
+    readiness = _readiness_level(recommendations, dry_run=dry_run, audit_status=str(run_audit.get("status") or ""))
+    summary = _summary(readiness, recommendations)
+    top_next_action = recommendations[0].action if recommendations else "Run is ready to present as a portfolio artifact."
+    return RunRecommendationReport(
+        run_dir=_display_run_dir(root),
+        scene_name=scene_name,
+        readiness_level=readiness,
+        summary=summary,
+        top_next_action=top_next_action,
+        recommendations=recommendations,
+    )
+
+
+def _add_audit_findings(audit: dict[str, Any], recommendations: list[RecommendationItem]) -> None:
+    for finding in audit.get("findings") or []:
+        if not isinstance(finding, dict):
+            continue
+        severity = str(finding.get("severity") or "")
+        if severity not in {"blocker", "warning"}:
+            continue
+        if severity == "warning" and str(finding.get("category") or "") in {"annotations", "evaluation"}:
+            continue
+        recommendations.append(
+            RecommendationItem(
+                severity="critical" if severity == "blocker" else "medium",
+                category=str(finding.get("category") or "audit"),
+                action=str(finding.get("recommendation") or finding.get("message") or "Review run audit finding."),
+                rationale=str(finding.get("message") or "Run audit reported a finding."),
+                artifact=str(finding.get("artifact") or "run_audit.json"),
+            )
+        )
+
+
+def _add_environment_actions(
+    report: dict[str, Any],
+    recommendations: list[RecommendationItem],
+    *,
+    dry_run: bool,
+) -> None:
+    failures = [str(name) for name in report.get("strict_failures") or []]
+    if failures:
+        recommendations.append(
+            RecommendationItem(
+                severity="high" if dry_run else "critical",
+                category="environment",
+                action="Install or fix required upstream runtime dependencies before real training.",
+                rationale="Environment checks reported: " + ", ".join(failures),
+                command="python scripts/check_env.py --upstream --require-gpu --verbose",
+                artifact="environment_report.json",
+            )
+        )
+
+
+def _add_scene_actions(
+    inspection: dict[str, Any],
+    recommendations: list[RecommendationItem],
+    *,
+    dry_run: bool,
+) -> None:
+    if not inspection:
+        return
+    if inspection.get("ready_for_training") is False:
+        recommendations.append(
+            RecommendationItem(
+                severity="high" if dry_run else "critical",
+                category="scene_capture",
+                action="Recapture or reprocess the scene until pose coverage passes readiness checks.",
+                rationale="The processed scene is not marked ready for training.",
+                command="python scripts/inspect_scene_data.py --data data/processed/<scene> --min-frames 50 --min-pose-extent 0.05",
+                artifact="scene_data_inspection.md",
+            )
+        )
+    quality = _safe_float(inspection.get("quality_score"))
+    if 0 < quality < 0.75:
+        recommendations.append(
+            RecommendationItem(
+                severity="medium",
+                category="scene_capture",
+                action="Improve capture quality with slower motion, more overlap, stronger parallax, and less blur.",
+                rationale=f"Scene quality score is {quality:.2f}.",
+                artifact="scene_data_inspection.json",
+            )
+        )
+
+
+def _add_annotation_actions(
+    validation: dict[str, Any],
+    evaluation: dict[str, Any],
+    recommendations: list[RecommendationItem],
+) -> None:
+    if validation.get("ok") is False:
+        recommendations.append(
+            RecommendationItem(
+                severity="critical",
+                category="annotations",
+                action="Fix invalid annotations before treating evaluation results as evidence.",
+                rationale="Annotation validation failed.",
+                command="python scripts/validate_annotations.py --annotations results/annotations_template.json --results results/query_outputs",
+                artifact="evaluation/annotation_validation.json",
+            )
+        )
+    warnings = [str(item) for item in validation.get("warnings") or []]
+    if warnings:
+        recommendations.append(
+            RecommendationItem(
+                severity="medium",
+                category="annotations",
+                action="Resolve annotation coverage and view-id warnings before reporting quantitative scores.",
+                rationale="Annotation validation warnings: " + "; ".join(warnings[:3]),
+                artifact="evaluation/annotation_validation.json",
+            )
+        )
+    if _safe_int(evaluation.get("num_bbox_annotated_queries")) == 0 or _safe_int(
+        evaluation.get("num_evaluated_queries")
+    ) == 0:
+        recommendations.append(
+            RecommendationItem(
+                severity="medium",
+                category="evaluation",
+                action="Add manual bbox_2d annotations for at least a few core queries and rerun evaluation.",
+                rationale="No bbox-annotated queries were evaluated quantitatively.",
+                command="python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite",
+                artifact="annotation_template.json",
+            )
+        )
+
+
+def _add_pipeline_step_actions(summary: dict[str, Any], recommendations: list[RecommendationItem]) -> None:
+    for step in summary.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        name = str(step.get("name") or "")
+        status = str(step.get("status") or "")
+        if status == "failed":
+            recommendations.append(
+                RecommendationItem(
+                    severity="critical",
+                    category="pipeline",
+                    action=f"Fix the failed pipeline step and rerun it: {name}.",
+                    rationale=str(step.get("error") or "Pipeline step failed."),
+                    artifact="pipeline_summary.json",
+                )
+            )
+        elif status == "skipped" and name in {"query_scene", "generate_demo_assets", "evaluate_queries"}:
+            recommendations.append(
+                RecommendationItem(
+                    severity="high",
+                    category="pipeline",
+                    action=f"Run the skipped portfolio-facing step: {name}.",
+                    rationale="Complete query, demo, and evaluation steps are needed for a CV-ready artifact.",
+                    command="python scripts/run_scene_pipeline.py --dry-run --query mug",
+                    artifact="pipeline_summary.json",
+                )
+            )
+
+
+def _add_run_mode_actions(
+    scene_name: str,
+    dry_run: bool,
+    recommendations: list[RecommendationItem],
+) -> None:
+    if dry_run:
+        recommendations.append(
+            RecommendationItem(
+                severity="high",
+                category="run_mode",
+                action="Run the same pipeline on a real captured scene with Nerfstudio/LERF installed on an NVIDIA GPU machine.",
+                rationale="Dry-run artifacts verify wiring only; they are not trained NeRF/LERF evidence.",
+                command=(
+                    "python scripts/run_scene_pipeline.py --input path/to/video.mp4 "
+                    f"--scene-name {scene_name} --type video --backend lerf --variant lerf-lite --strict"
+                ),
+                artifact="pipeline_summary.json",
+            )
+        )
+
+
+def _add_export_action(
+    root: Path,
+    audit: dict[str, Any],
+    recommendations: list[RecommendationItem],
+) -> None:
+    if audit.get("status") == "blocked":
+        return
+    recommendations.append(
+        RecommendationItem(
+            severity="low",
+            category="portfolio_export",
+            action="Export and validate a shareable portfolio pack after reviewing warnings.",
+            rationale="A portable pack is the safest artifact to share in cold emails or applications.",
+            command=f"python scripts/export_portfolio_pack.py --run-dir {root} --zip && python scripts/validate_portfolio_pack.py --pack results/portfolio_pack",
+            artifact="portfolio_pack_index.json",
+        )
+    )
+
+
+def _readiness_level(
+    recommendations: list[RecommendationItem],
+    *,
+    dry_run: bool,
+    audit_status: str,
+) -> ReadinessLevel:
+    if audit_status == "blocked" or any(item.severity == "critical" for item in recommendations):
+        return "blocked"
+    if dry_run:
+        return "dry_run_ready_for_smoke_demo"
+    if audit_status == "needs_review" or any(item.severity in {"high", "medium"} for item in recommendations):
+        return "needs_review"
+    return "ready_for_portfolio"
+
+
+def _summary(readiness: ReadinessLevel, recommendations: list[RecommendationItem]) -> str:
+    if readiness == "blocked":
+        return "Run has blocker-level issues that must be fixed before it is useful as evidence."
+    if readiness == "dry_run_ready_for_smoke_demo":
+        return "Run is useful as a smoke demo, but still needs a real GPU-backed scene run for research evidence."
+    if readiness == "needs_review":
+        return "Run is structurally complete but needs review or annotation cleanup before portfolio use."
+    if recommendations:
+        return "Run is ready; optional recommendations remain for packaging or presentation."
+    return "Run is ready for portfolio presentation."
+
+
+def _dedupe_recommendations(items: list[RecommendationItem]) -> list[RecommendationItem]:
+    seen: set[tuple[str, str]] = set()
+    deduped: list[RecommendationItem] = []
+    for item in sorted(items, key=_recommendation_sort_key):
+        key = (item.category, item.action)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
+def _recommendation_sort_key(item: RecommendationItem) -> tuple[int, str, str]:
+    order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    return order[item.severity], item.category, item.action
+
+
+def _recommendation_lines(items: list[RecommendationItem]) -> list[str]:
+    if not items:
+        return ["- None."]
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"- [{item.severity}] {item.category}: {item.action}")
+        lines.append(f"  Rationale: {item.rationale}")
+        if item.command:
+            lines.append(f"  Command: `{item.command}`")
+        if item.artifact:
+            lines.append(f"  Artifact: `{item.artifact}`")
+    return lines
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _display_run_dir(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(project_root().resolve())).replace("\\", "/")
+    except ValueError:
+        return path.name
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_float(value: object) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0

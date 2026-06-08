@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
+from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 from nerf_llm_scene_inspector.scene_validation import inspect_processed_scene
 from nerf_llm_scene_inspector.training import train_baseline_nerf, train_language_field
@@ -152,6 +153,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_queries": str(run_queries_path),
         "run_audit_json": str(run_dir / "run_audit.json"),
         "run_audit_markdown": str(run_dir / "run_audit.md"),
+        "run_recommendations_json": str(run_dir / "run_recommendations.json"),
+        "run_recommendations_markdown": str(run_dir / "run_recommendations.md"),
         "project_report": str(run_dir / "project_report.md"),
         "portfolio_card": str(run_dir / "portfolio_result_card.md"),
     }
@@ -430,6 +433,23 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     )
     if audit.status == "blocked":
         summary.success = False
+    summary.to_json(summary_path)
+    recommendations = build_run_recommendations(run_dir)
+    recommendations_json = recommendations.to_json(run_dir / "run_recommendations.json")
+    recommendations_md = recommendations.to_markdown(run_dir / "run_recommendations.md")
+    steps.append(
+        PipelineStep(
+            "recommend_next_steps",
+            "failed" if recommendations.readiness_level == "blocked" else "success",
+            summary={
+                "readiness_level": recommendations.readiness_level,
+                "critical_count": recommendations.critical_count,
+                "high_count": recommendations.high_count,
+                "top_next_action": recommendations.top_next_action,
+            },
+            outputs={"json": str(recommendations_json), "markdown": str(recommendations_md)},
+        )
+    )
     summary.to_json(summary_path)
     run_index = index_pipeline_runs(runs_root)
     run_index.to_json(runs_root / "run_index.json")

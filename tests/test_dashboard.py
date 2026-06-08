@@ -30,6 +30,11 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     )
     _write_json(tmp_path / "run_index.json", {"total_runs": 1, "entries": [{"scene_name": "run"}]})
     _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100})
+    _write_json(
+        run_dir / "run_recommendations.json",
+        {"readiness_level": "ready_for_portfolio", "recommendations": []},
+    )
+    (run_dir / "run_recommendations.md").write_text("# Run Recommendations\n", encoding="utf-8")
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
     _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
@@ -58,6 +63,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["training_summaries"]["baseline"]["run_type"] == "baseline"
     assert bundle["training_summaries"]["language"]["run_type"] == "language"
     assert bundle["run_audit"]["status"] == "ready"
+    assert bundle["run_recommendations"]["readiness_level"] == "ready_for_portfolio"
+    assert "# Run Recommendations" in bundle["run_recommendations_markdown"]
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["command_logs"][0]["label"] == "logs/prepare_data_command.json"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"

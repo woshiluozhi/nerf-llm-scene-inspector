@@ -107,6 +107,8 @@ def _copy_run_materials(
     run_files = [
         (run_dir / "run_audit.json", "run/run_audit.json"),
         (run_dir / "run_audit.md", "run/run_audit.md"),
+        (run_dir / "run_recommendations.json", "run/run_recommendations.json"),
+        (run_dir / "run_recommendations.md", "run/run_recommendations.md"),
         (run_dir / "environment_report.json", "run/environment_report.json"),
         (run_dir / "scene_data_inspection.json", "run/scene_data_inspection.json"),
         (run_dir / "scene_data_inspection.md", "run/scene_data_inspection.md"),
@@ -294,6 +296,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "pipeline_summary": "run/pipeline_summary.json",
         "run_index": "run_index.md",
         "run_audit": "run/run_audit.md",
+        "run_recommendations": "run/run_recommendations.md",
         "command_logs": "run/logs/",
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",
