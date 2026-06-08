@@ -21,6 +21,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_dir": str(root),
         "pipeline_summary": pipeline_summary,
         "run_index": _read_json(root.parent / "run_index.json"),
+        "preflight_report": _read_json(root / "preflight_report.json"),
+        "preflight_markdown": _read_text(root / "preflight_report.md"),
         "run_audit": _read_json(root / "run_audit.json"),
         "run_recommendations": _read_json(root / "run_recommendations.json"),
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
@@ -179,6 +181,18 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 }
             )
 
+    if bundle["preflight_report"]:
+        preflight = bundle["preflight_report"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Preflight", str(preflight.get("status", "unknown")))
+        col_b.metric("Preflight Fails", str(preflight.get("fail_count", 0)))
+        col_c.metric("Preflight Warnings", str(preflight.get("warn_count", 0)))
+        with st.expander("Real-Run Preflight", expanded=preflight.get("status") == "blocked"):
+            if bundle["preflight_markdown"]:
+                st.markdown(bundle["preflight_markdown"])
+            else:
+                st.json(preflight)
+
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})
     if bundle["reproduction_manifest"]:
@@ -318,6 +332,7 @@ def _read_text(path: Path) -> str:
 def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = None) -> list[str]:
     expected = [
         "pipeline_summary.json",
+        "preflight_report.json",
         "run_audit.json",
         "run_recommendations.json",
         "reproduction_manifest.json",

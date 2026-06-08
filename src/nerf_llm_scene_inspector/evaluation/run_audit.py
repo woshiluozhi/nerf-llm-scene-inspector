@@ -111,6 +111,7 @@ def audit_pipeline_run(run_dir: str | Path) -> RunAuditReport:
     root = Path(run_dir)
     findings: list[AuditFinding] = []
     pipeline_summary = _read_json(root / "pipeline_summary.json")
+    preflight_report = _read_json(root / "preflight_report.json")
     scene_inspection = _read_json(root / "scene_data_inspection.json")
     environment_report = _read_json(root / "environment_report.json")
     annotation_validation = _read_json(root / "evaluation" / "annotation_validation.json")
@@ -128,6 +129,7 @@ def audit_pipeline_run(run_dir: str | Path) -> RunAuditReport:
     _check_pipeline_summary(pipeline_summary, findings)
     _check_steps(pipeline_summary, findings)
     _check_declared_command_logs(root, pipeline_summary, findings)
+    _check_preflight(preflight_report, findings, dry_run=dry_run)
     _check_environment(environment_report, findings, dry_run=dry_run)
     _check_scene_inspection(scene_inspection, findings, dry_run=dry_run)
     _check_training(root, pipeline_summary, findings)
@@ -170,6 +172,7 @@ def _check_required_files(
 ) -> None:
     required = [
         "pipeline_summary.json",
+        "preflight_report.json",
         "environment_report.json",
         "scene_data_inspection.json",
         "queries.yaml",
@@ -224,6 +227,37 @@ def _check_pipeline_summary(summary: dict[str, Any], findings: list[AuditFinding
                 message="Pipeline summary reports success=false.",
                 recommendation="Inspect failed step entries and rerun after fixing the root cause.",
                 artifact="pipeline_summary.json",
+            )
+        )
+
+
+def _check_preflight(
+    report: dict[str, Any],
+    findings: list[AuditFinding],
+    *,
+    dry_run: bool,
+) -> None:
+    if not report:
+        return
+    status = str(report.get("status") or "")
+    if status == "blocked":
+        findings.append(
+            AuditFinding(
+                severity="blocker",
+                category="preflight",
+                message="Real-run preflight reported blocker-level checks.",
+                recommendation="Open preflight_report.md and fix failed environment, input, scene, or config checks.",
+                artifact="preflight_report.md",
+            )
+        )
+    elif status == "needs_attention" and not dry_run:
+        findings.append(
+            AuditFinding(
+                severity="warning",
+                category="preflight",
+                message="Real-run preflight reported checks that need attention.",
+                recommendation="Review preflight_report.md before spending GPU time on the run.",
+                artifact="preflight_report.md",
             )
         )
 
@@ -308,7 +342,7 @@ def _check_environment(
                 severity="blocker" if not dry_run else "warning",
                 category="environment",
                 message="Required environment checks failed: " + ", ".join(strict_failures),
-                recommendation="Run python scripts/check_env.py --upstream --require-gpu and follow the hints.",
+                recommendation="Run python scripts/check_env.py --check-upstream --require-gpu and follow the hints.",
                 artifact="environment_report.json",
             )
         )
@@ -427,6 +461,7 @@ def _check_evaluation(summary: dict[str, Any], findings: list[AuditFinding]) -> 
 def _key_artifacts(root: Path) -> dict[str, str]:
     candidates = {
         "pipeline_summary": "pipeline_summary.json",
+        "preflight_report": "preflight_report.md",
         "run_audit": "run_audit.json",
         "command_logs": "logs/",
         "environment_report": "environment_report.json",

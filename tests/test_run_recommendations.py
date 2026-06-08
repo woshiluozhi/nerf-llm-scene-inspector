@@ -54,6 +54,22 @@ def test_recommendations_block_on_audit_blocker(tmp_path: Path) -> None:
     assert report.top_next_action == "Recapture the scene."
 
 
+def test_recommendations_include_preflight_failures(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+    _write_json(
+        run_dir / "preflight_report.json",
+        {
+            "status": "blocked",
+            "checks": [{"name": "ns-train", "status": "fail"}],
+        },
+    )
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "blocked"
+    assert any(item.category == "preflight" for item in report.recommendations)
+
+
 def test_recommend_next_steps_cli_writes_reports(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
     output = tmp_path / "recommendations.json"
@@ -98,6 +114,7 @@ def _write_run(tmp_path: Path, *, dry_run: bool, audit_status: str) -> Path:
             ],
         },
     )
+    _write_json(run_dir / "preflight_report.json", {"status": "ready", "checks": []})
     _write_json(run_dir / "run_audit.json", {"status": audit_status, "findings": []})
     _write_json(run_dir / "environment_report.json", {"ok": True, "strict_failures": []})
     _write_json(

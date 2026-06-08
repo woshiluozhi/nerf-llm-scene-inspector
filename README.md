@@ -54,6 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
+- Real-run preflight reports that check raw input, processed scene data, config paths, CUDA/upstream tools, and backend method registration before expensive training.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
@@ -99,6 +100,7 @@ Check the local environment:
 ```bash
 python scripts/check_env.py --verbose
 python scripts/check_env.py --json
+python scripts/preflight_real_run.py --input examples --type images --no-check-upstream --dry-run --allow-warnings
 ```
 
 Full reconstruction and training require Nerfstudio, LERF, CUDA-compatible PyTorch, Tiny CUDA NN, COLMAP, FFmpeg, and an NVIDIA GPU. The helper script prints a complete setup path:
@@ -188,7 +190,9 @@ python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annota
 Real mode uses the installed upstream tools:
 
 ```bash
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/desk_scene --require-gpu
 python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50 --min-pose-extent 0.05
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
@@ -250,6 +254,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 
 - `data/processed/<scene>/transforms.json`
 - `data/processed/<scene>/scene_inspector_metadata.json`
+- `results/pipeline_runs/<scene>/preflight_report.json`
+- `results/pipeline_runs/<scene>/preflight_report.md`
 - `results/pipeline_runs/<scene>/pipeline_summary.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.md`
@@ -320,6 +326,7 @@ The tests do not require GPU, Nerfstudio, LERF, or trained checkpoints:
 ```bash
 pytest
 python scripts/check_env.py --json
+python scripts/preflight_real_run.py --help
 python scripts/run_dry_run_demo.py
 python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/prepare_data.py --help

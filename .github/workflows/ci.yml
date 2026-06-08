@@ -39,6 +39,7 @@ jobs:
       - name: Check CLI help
         run: |
           python scripts/check_env.py --json
+          python scripts/preflight_real_run.py --help
           python scripts/prepare_data.py --help
           python scripts/inspect_scene_data.py --help
           python scripts/train_baseline_nerf.py --help

@@ -72,6 +72,7 @@ def test_audit_run_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 def _write_complete_run(tmp_path: Path) -> Path:
     run_dir = tmp_path / "run"
     steps = [
+        {"name": "preflight_real_run", "status": "success"},
         {"name": "check_environment", "status": "success"},
         {
             "name": "prepare_data",
@@ -97,6 +98,8 @@ def _write_complete_run(tmp_path: Path) -> Path:
             "steps": steps,
         },
     )
+    _write_json(run_dir / "preflight_report.json", {"status": "ready", "ready_for_real_run": True})
+    _write_text(run_dir / "preflight_report.md", "# Preflight\n")
     _write_json(run_dir / "environment_report.json", {"ok": True, "strict_failures": []})
     _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0})
     _write_json(

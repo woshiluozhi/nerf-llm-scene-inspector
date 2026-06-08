@@ -85,6 +85,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "project/docs/assets/query_grid.png",
         "project/docs/assets/demo_montage.gif",
         "run/pipeline_summary.json",
+        "run/preflight_report.json",
+        "run/preflight_report.md",
         "run/run_audit.json",
         "run/run_audit.md",
         "run/run_recommendations.json",
@@ -129,6 +131,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
             "backend": "lerf",
             "artifacts": {
                 "pipeline_summary": "run/pipeline_summary.json",
+                "preflight_report": "run/preflight_report.md",
                 "run_index": "run_index.md",
                 "run_audit": "run/run_audit.md",
                 "run_recommendations": "run/run_recommendations.md",
@@ -154,6 +157,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"readiness_level": "ready_for_portfolio", "recommendations": []})
     if relative_path.endswith("reproduction_manifest.json"):
         return json.dumps({"scene_name": "desk_scene", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"})
+    if relative_path.endswith("preflight_report.json"):
+        return json.dumps({"status": "ready", "ready_for_real_run": True})
     if relative_path.endswith("annotation_validation.json"):
         return json.dumps({"ok": True, "warnings": []})
     if relative_path.endswith("pipeline_summary.json"):

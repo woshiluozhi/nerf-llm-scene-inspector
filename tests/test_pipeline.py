@@ -28,6 +28,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
 
     assert summary.success is True
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "pipeline_summary.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.md").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.json").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
@@ -53,6 +55,10 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
         ).read_text(encoding="utf-8")
     )
     assert report_payload["scene_name"] == "unit_scene"
+    preflight_step = next(step for step in summary.steps if step.name == "preflight_real_run")
+    assert preflight_step.outputs["json"] == str(
+        tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.json"
+    )
     inspect_step = next(step for step in summary.steps if step.name == "inspect_scene_data")
     assert inspect_step.summary["ready_for_training"] is True
     assert summary.provenance["project_version"] == "0.1.0"
@@ -84,6 +90,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
 
     assert summary.success is True
     assert (run_dir / "queries.yaml").exists()
+    assert (run_dir / "preflight_report.json").exists()
+    assert (run_dir / "preflight_report.md").exists()
     assert (run_dir / "annotation_template.json").exists()
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
     assert (run_dir / "demo_assets" / "query_grid.png").exists()

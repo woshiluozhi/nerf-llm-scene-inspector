@@ -106,7 +106,7 @@ class ReproductionBundle:
             "python scripts/check_env.py --json",
         ]
         if not self.dry_run:
-            lines.append("python scripts/check_env.py --upstream --require-gpu --verbose")
+            lines.append("python scripts/check_env.py --check-upstream --require-gpu --verbose")
         if self.replay_command:
             lines.append(self.replay_command)
         lines.extend(self.verification_commands)
@@ -203,6 +203,7 @@ def _prerequisites(*, dry_run: bool) -> list[str]:
 def _artifacts(root: Path) -> list[ReproductionArtifact]:
     candidates = {
         "pipeline_summary": ("pipeline_summary.json", "Top-level run status and provenance."),
+        "preflight_report": ("preflight_report.md", "Real-run readiness checks before training."),
         "environment_report": ("environment_report.json", "Runtime and upstream dependency checks."),
         "scene_inspection": ("scene_data_inspection.md", "Processed scene quality and pose readiness."),
         "run_audit": ("run_audit.md", "Run health audit."),

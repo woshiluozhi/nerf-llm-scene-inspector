@@ -12,10 +12,14 @@
 ## Data Processing
 
 ```bash
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/desk_scene --require-gpu
 python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50 --min-pose-extent 0.05
 ```
 
+The first preflight command checks the raw capture and upstream environment before data
+processing. The second command checks the processed Nerfstudio scene before training.
 The inspection report checks more than frame count: it reports missing images, invalid
 camera transforms, camera translation extent, approximate camera path length, median camera
 step, duplicate adjacent poses, and a pose coverage score. If pose coverage is low, the
@@ -41,7 +45,7 @@ Start with `lerf-lite` for smaller GPUs. Increase training iterations only after
 
 ## One-Command Pipeline
 
-After `scripts/check_env.py --check-upstream --require-gpu` passes on a GPU machine, run:
+After `python scripts/check_env.py --check-upstream --require-gpu` passes on a GPU machine, run:
 
 ```bash
 python scripts/run_scene_pipeline.py \
@@ -58,7 +62,8 @@ python scripts/run_scene_pipeline.py \
   --strict
 ```
 
-Review `results/pipeline_runs/desk_scene/pipeline_summary.json` and
+Review `results/pipeline_runs/desk_scene/preflight_report.md`,
+`results/pipeline_runs/desk_scene/pipeline_summary.json`, and
 `results/pipeline_runs/desk_scene/scene_data_inspection.md` before using the results in a portfolio report.
 The pipeline cleans the current run's `queries/`, `demo_assets/`, and `evaluation/` folders by default so
 reruns do not accidentally evaluate stale artifacts. Use `--no-clean-run` only when preserving prior files is intentional.

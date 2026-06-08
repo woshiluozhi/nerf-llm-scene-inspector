@@ -16,6 +16,7 @@ from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
+from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 from nerf_llm_scene_inspector.reproducibility import build_reproduction_bundle
 from nerf_llm_scene_inspector.scene_validation import inspect_processed_scene
@@ -152,6 +153,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "training": str(training_dir),
         "logs": str(logs_dir),
         "run_queries": str(run_queries_path),
+        "preflight_json": str(run_dir / "preflight_report.json"),
+        "preflight_markdown": str(run_dir / "preflight_report.md"),
         "run_audit_json": str(run_dir / "run_audit.json"),
         "run_audit_markdown": str(run_dir / "run_audit.md"),
         "run_recommendations_json": str(run_dir / "run_recommendations.json"),
@@ -164,6 +167,38 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     }
 
     try:
+        preflight = build_real_run_preflight(
+            input_path=config.input_path,
+            input_type=config.data_type,
+            data_path=processed_dir if config.skip_prepare else None,
+            config_path=config.config_path,
+            scene_name=config.scene_name,
+            backend=config.backend,
+            variant=config.variant,
+            min_frames=config.min_frames,
+            min_pose_extent=config.min_pose_extent,
+            require_gpu=config.strict and not config.dry_run,
+            check_upstream=not config.dry_run,
+            dry_run=config.dry_run,
+        )
+        preflight_json = preflight.to_json(run_dir / "preflight_report.json")
+        preflight_md = preflight.to_markdown(run_dir / "preflight_report.md")
+        steps.append(
+            PipelineStep(
+                "preflight_real_run",
+                _preflight_step_status(preflight.status),
+                summary={
+                    "status": preflight.status,
+                    "ready_for_real_run": preflight.ready_for_real_run,
+                    "fail_count": preflight.fail_count,
+                    "warn_count": preflight.warn_count,
+                },
+                outputs={"json": str(preflight_json), "markdown": str(preflight_md)},
+            )
+        )
+        if config.strict and preflight.status == "blocked":
+            raise RuntimeError("Preflight checks blocked real training. Inspect preflight_report.md.")
+
         env_report = build_env_report(
             require_gpu=config.strict and not config.dry_run,
             check_upstream=not config.dry_run,
@@ -579,5 +614,13 @@ def _audit_step_status(status: str) -> str:
     if status == "ready":
         return "success"
     if status == "needs_review":
+        return "warning"
+    return "failed"
+
+
+def _preflight_step_status(status: str) -> str:
+    if status == "ready":
+        return "success"
+    if status == "needs_attention":
         return "warning"
     return "failed"

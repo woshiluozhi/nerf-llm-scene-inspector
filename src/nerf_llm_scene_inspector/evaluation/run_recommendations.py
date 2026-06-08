@@ -97,6 +97,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     root = Path(run_dir)
     pipeline_summary = _read_json(root / "pipeline_summary.json")
     run_audit = _read_json(root / "run_audit.json")
+    preflight_report = _read_json(root / "preflight_report.json")
     environment_report = _read_json(root / "environment_report.json")
     scene_inspection = _read_json(root / "scene_data_inspection.json")
     annotation_validation = _read_json(root / "evaluation" / "annotation_validation.json")
@@ -107,6 +108,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     recommendations: list[RecommendationItem] = []
 
     _add_audit_findings(run_audit, recommendations)
+    _add_preflight_actions(preflight_report, recommendations, dry_run=dry_run)
     _add_environment_actions(environment_report, recommendations, dry_run=dry_run)
     _add_scene_actions(scene_inspection, recommendations, dry_run=dry_run)
     _add_annotation_actions(annotation_validation, eval_summary, recommendations)
@@ -147,6 +149,41 @@ def _add_audit_findings(audit: dict[str, Any], recommendations: list[Recommendat
         )
 
 
+def _add_preflight_actions(
+    report: dict[str, Any],
+    recommendations: list[RecommendationItem],
+    *,
+    dry_run: bool,
+) -> None:
+    status = str(report.get("status") or "")
+    if not status or status == "ready":
+        return
+    failed = _preflight_check_names(report, "fail")
+    warned = _preflight_check_names(report, "warn")
+    if failed:
+        recommendations.append(
+            RecommendationItem(
+                severity="high" if dry_run else "critical",
+                category="preflight",
+                action="Fix failed real-run preflight checks before launching training.",
+                rationale="Failed checks: " + ", ".join(failed[:6]),
+                command="python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/<scene> --require-gpu",
+                artifact="preflight_report.md",
+            )
+        )
+    elif warned and not dry_run:
+        recommendations.append(
+            RecommendationItem(
+                severity="medium",
+                category="preflight",
+                action="Review warning-level preflight checks before spending GPU time.",
+                rationale="Warning checks: " + ", ".join(warned[:6]),
+                command="python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/<scene>",
+                artifact="preflight_report.md",
+            )
+        )
+
+
 def _add_environment_actions(
     report: dict[str, Any],
     recommendations: list[RecommendationItem],
@@ -161,7 +198,7 @@ def _add_environment_actions(
                 category="environment",
                 action="Install or fix required upstream runtime dependencies before real training.",
                 rationale="Environment checks reported: " + ", ".join(failures),
-                command="python scripts/check_env.py --upstream --require-gpu --verbose",
+                command="python scripts/check_env.py --check-upstream --require-gpu --verbose",
                 artifact="environment_report.json",
             )
         )
@@ -376,6 +413,14 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _preflight_check_names(report: dict[str, Any], status: str) -> list[str]:
+    names: list[str] = []
+    for check in report.get("checks") or []:
+        if isinstance(check, dict) and check.get("status") == status:
+            names.append(str(check.get("name") or check.get("category") or "unknown"))
+    return names
 
 
 def _display_run_dir(path: Path) -> str:

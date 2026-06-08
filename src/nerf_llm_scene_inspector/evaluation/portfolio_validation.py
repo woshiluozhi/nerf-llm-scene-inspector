@@ -29,6 +29,8 @@ PROJECT_REQUIRED_FILES = [
 
 RUN_REQUIRED_FILES = [
     "run/pipeline_summary.json",
+    "run/preflight_report.json",
+    "run/preflight_report.md",
     "run/run_audit.json",
     "run/run_audit.md",
     "run/run_recommendations.json",

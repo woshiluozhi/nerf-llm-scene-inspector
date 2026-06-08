@@ -55,6 +55,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["missing"] == []
     assert "baseline_train_summary" not in index["run_summary"]["artifacts"]
     assert "language_train_summary" not in index["run_summary"]["artifacts"]
+    assert index["run_summary"]["artifacts"]["preflight_report"] == "run/preflight_report.md"
     assert index["run_summary"]["scene_name"] == "export_scene"
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
@@ -66,6 +67,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     )
     assert demo_log["command"][0] == "python"
     assert (output_dir / "run" / "pipeline_summary.json").exists()
+    assert (output_dir / "run" / "preflight_report.json").exists()
+    assert (output_dir / "run" / "preflight_report.md").exists()
     assert (output_dir / "run_index.json").exists()
     assert (output_dir / "run_index.md").exists()
     assert (output_dir / "run" / "logs" / "prepare_data_command.json").exists()

@@ -14,6 +14,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Deterministic local query planner for object, affordance, material, and relation prompts.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
+- Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
 
 ## Implemented
 
@@ -23,6 +24,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - CPU-only dry-run demo with mock RGB/relevancy/overlay outputs.
 - Real-mode wrappers for Nerfstudio/LERF commands when upstream tools are installed.
 - Run-scoped pipeline artifacts avoid stale query/evaluation results across reruns.
+- Shareable preflight, audit, recommendation, and reproduction artifacts for portfolio review.
 
 ## Dry-Run vs Real GPU Mode
 
@@ -44,6 +46,7 @@ python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_sce
 - Query grid: `results\demo_assets\query_grid.png`
 - Demo montage: `results\demo_assets\demo_montage.gif`
 - Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`
+- Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
 - Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`
 - Run-scoped evaluation: `results/pipeline_runs/desk_scene/evaluation/eval_summary.json`
 - Portfolio pack: `results/portfolio_pack.zip`

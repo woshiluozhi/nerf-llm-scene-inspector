@@ -8,6 +8,7 @@ artifact shape. For a real scene, keep the full run directory and the exported p
 ```bash
 git status --short
 python scripts/check_env.py --check-upstream --require-gpu --verbose
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 ```
 
 Record the upstream versions that matter for interpretation:
@@ -42,6 +43,7 @@ python scripts/run_scene_pipeline.py \
 ## What To Inspect
 
 - `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
+- `preflight_report.md`: raw input, processed scene, config path, CUDA/upstream, and backend-method readiness checks.
 - `../run_index.md`: compact comparison table across pipeline runs in the same root.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
 - `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps.
@@ -145,6 +147,13 @@ python scripts/recommend_next_steps.py \
 
 python scripts/create_reproduction_bundle.py \
   --run-dir results/pipeline_runs/desk_scene
+
+python scripts/preflight_real_run.py \
+  --input path/to/video.mp4 \
+  --type video \
+  --data data/processed/desk_scene \
+  --require-gpu \
+  --output results/pipeline_runs/desk_scene
 ```
 
 Only rows with a filled `bbox_2d` are included in localization metrics such as
