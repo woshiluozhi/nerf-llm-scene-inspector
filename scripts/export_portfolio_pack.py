@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -97,8 +98,8 @@ def _copy_run_materials(
 ) -> dict[str, Any] | None:
     pipeline_summary_path = run_dir / "pipeline_summary.json"
     run_summary = _load_json_if_exists(pipeline_summary_path)
+    _copy_pipeline_summary(pipeline_summary_path, output / "run/pipeline_summary.json", output, copied, missing, run_dir)
     run_files = [
-        (pipeline_summary_path, "run/pipeline_summary.json"),
         (run_dir / "environment_report.json", "run/environment_report.json"),
         (run_dir / "scene_data_inspection.json", "run/scene_data_inspection.json"),
         (run_dir / "scene_data_inspection.md", "run/scene_data_inspection.md"),
@@ -145,6 +146,32 @@ def _copy_file(
         missing.append(_display_source_path(source))
 
 
+def _copy_pipeline_summary(
+    source: Path,
+    destination: Path,
+    pack_root: Path,
+    copied: list[dict[str, str]],
+    missing: list[str],
+    run_dir: Path,
+) -> None:
+    if not source.exists():
+        missing.append(_display_source_path(source))
+        return
+    summary = _load_json_if_exists(source)
+    if summary is None:
+        _copy_file(source, destination, pack_root, copied, missing)
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    portable_summary = _sanitize_for_portfolio(summary, run_dir)
+    destination.write_text(json.dumps(portable_summary, indent=2), encoding="utf-8")
+    copied.append(
+        {
+            "source": _display_source_path(source),
+            "destination": _relative_display_path(destination, pack_root),
+        }
+    )
+
+
 def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -157,6 +184,17 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
 def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | None:
     if not summary:
         return None
+    artifacts = {
+        "pipeline_summary": "run/pipeline_summary.json",
+        "environment_report": "run/environment_report.json",
+        "scene_data_inspection": "run/scene_data_inspection.md",
+        "query_plan": "run/queries.yaml",
+        "project_report": "run/project_report.md",
+        "portfolio_card": "run/portfolio_result_card.md",
+        "evaluation_summary": "run/evaluation/eval_summary.json",
+        "demo_grid": "run/demo_assets/query_grid.png",
+        "demo_montage": "run/demo_assets/demo_montage.gif",
+    }
     return {
         "scene_name": summary.get("scene_name"),
         "success": summary.get("success"),
@@ -164,8 +202,45 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "backend": summary.get("backend"),
         "timestamp": summary.get("timestamp"),
         "queries": summary.get("queries"),
-        "paths": summary.get("paths"),
+        "artifacts": artifacts,
     }
+
+
+def _sanitize_for_portfolio(value: Any, run_dir: Path) -> Any:
+    if isinstance(value, dict):
+        return {key: _sanitize_for_portfolio(item, run_dir) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_for_portfolio(item, run_dir) for item in value]
+    if isinstance(value, str):
+        return _sanitize_text_for_portfolio(value, run_dir)
+    return value
+
+
+def _sanitize_text_for_portfolio(text: str, run_dir: Path) -> str:
+    sanitized = text
+    for raw, replacement in _sensitive_path_replacements(run_dir):
+        if raw:
+            sanitized = sanitized.replace(raw, replacement)
+    sanitized = re.sub(r"'~[\\/][^']*?python(?:\.exe)?'", "python", sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'"~[\\/][^"]*?python(?:\.exe)?"', "python", sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r"~[\\/]\S*?python(?:\.exe)?", "python", sanitized, flags=re.IGNORECASE)
+    return sanitized
+
+
+def _sensitive_path_replacements(run_dir: Path) -> list[tuple[str, str]]:
+    candidates: list[tuple[Path, str]] = [
+        (ROOT.resolve(), "."),
+        (Path.home().resolve(), "~"),
+        (run_dir.resolve(), "<run-dir>"),
+        (run_dir.resolve().parent, "<pipeline-runs-dir>"),
+        (run_dir.resolve().parent.parent, "<run-workspace>"),
+    ]
+    replacements: dict[str, str] = {}
+    for path, label in candidates:
+        path_texts = {str(path), path.as_posix()}
+        for path_text in path_texts:
+            replacements[path_text] = label
+    return sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True)
 
 
 def _resolve(path: str | Path) -> Path:
