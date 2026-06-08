@@ -25,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--backend", choices=["lerf", "opennerf"], default="lerf")
     parser.add_argument("--query", required=True, help="Text query or high-level scene task.")
     parser.add_argument("--output", required=True, help="Output directory for query artifacts.")
+    parser.add_argument("--scene-name", default="unknown", help="Scene name stored in the query report.")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--prefer-llm", action="store_true", help="Use optional LLM planner when configured.")
     parser.add_argument("--exact-query", action="store_true", help="Run the query text directly without expansion.")
@@ -81,7 +82,7 @@ def main() -> int:
             items = [result.query for result in results]
         answer = plan.final_answer_template.format(items=", ".join(items))
         report = SceneQueryReport(
-            scene_name="unknown",
+            scene_name=args.scene_name,
             task=args.query,
             plan=plan.to_dict(),
             query_results=results,

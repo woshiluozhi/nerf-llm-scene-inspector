@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from nerf_llm_scene_inspector.pipeline import PipelineConfig, run_scene_pipeline
@@ -35,6 +36,17 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
         / "mug"
         / "scene_query_report.json"
     ).exists()
+    report_payload = json.loads(
+        (
+            tmp_path
+            / "pipeline_runs"
+            / "unit_scene"
+            / "queries"
+            / "mug"
+            / "scene_query_report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert report_payload["scene_name"] == "unit_scene"
     inspect_step = next(step for step in summary.steps if step.name == "inspect_scene_data")
     assert inspect_step.summary["ready_for_training"] is True
     assert summary.provenance["project_version"] == "0.1.0"

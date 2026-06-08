@@ -380,7 +380,12 @@ def _run_queries(
         else OpenNeRFBackend(dry_run=config.dry_run)
     )
     backend.load(config_path)
-    engine = SemanticQueryEngine(backend=backend, planner=LocalRulePlanner(), top_k=config.top_k)
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=LocalRulePlanner(),
+        top_k=config.top_k,
+        scene_name=config.scene_name,
+    )
     outputs: dict[str, str] = {}
     for query in config.queries:
         task_dir = output_dir / slugify(query)

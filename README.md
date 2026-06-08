@@ -237,6 +237,8 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 translation extent, approximate path length, duplicate adjacent poses, and a pose coverage
 score. Low pose coverage usually means the camera rotated in place or COLMAP could not recover
 enough parallax for reliable training.
+Each `scene_query_report.json` stores the originating scene name and uses stable slugged query
+directories so query artifacts remain traceable across repeated runs.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
