@@ -226,25 +226,6 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(
             [
                 "python",
-                "scripts/merge_annotation_workbench.py",
-                "--template",
-                f"{run_dir}/annotation_template.json",
-                "--filled",
-                f"{run_dir}/evaluation/annotation_workbench/annotation_seed.json",
-                "--output",
-                f"{run_dir}/annotations_merged.json",
-                "--queries",
-                f"{run_dir}/queries.yaml",
-                "--results",
-                f"{run_dir}/queries",
-                "--report-output",
-                f"{run_dir}/annotation_merge_report.json",
-                "--overwrite",
-            ]
-        ),
-        _format_command(
-            [
-                "python",
                 "scripts/finalize_annotations.py",
                 "--run-dir",
                 run_dir,
@@ -252,22 +233,10 @@ def _verification_commands(root: Path) -> list[str]:
                 f"{run_dir}/evaluation/annotation_workbench/annotation_seed.json",
                 "--profile",
                 "smoke",
+                "--export-pack",
+                "--zip-pack",
             ]
         ),
-        _format_command(
-            [
-                "python",
-                "scripts/review_annotations.py",
-                "--annotations",
-                f"{run_dir}/annotations_merged.json",
-                "--results",
-                f"{run_dir}/queries",
-                "--output",
-                f"{run_dir}/evaluation",
-                "--allow-warnings",
-            ]
-        ),
-        _format_command(["python", "scripts/export_portfolio_pack.py", "--run-dir", run_dir, "--zip"]),
         _format_command(["python", "scripts/validate_portfolio_pack.py", "--pack", "results/portfolio_pack"]),
     ]
 

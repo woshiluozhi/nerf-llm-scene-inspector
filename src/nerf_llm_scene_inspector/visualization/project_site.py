@@ -85,9 +85,22 @@ class ProjectPortfolioSite:
                 _capability("Language fields", "LERF-first semantic query path with OpenNeRF as a secondary adapter."),
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
                 _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
+                _capability(
+                    "Annotation workbench",
+                    "Offline bbox labeling plus finalize tooling for turning browser-edited boxes into refreshed run evidence.",
+                ),
                 _capability("Experiment matrix", "Ablation-style JSON, CSV, and Markdown summaries across variants and query sets."),
                 _capability("Research reports", "Paper-style run summaries that combine metrics, evidence, limitations, and next steps."),
+                _capability(
+                    "Run result cards",
+                    "One-page reviewer summaries with a calibrated takeaway, evidence snapshot, limitations, and safe sharing language.",
+                ),
                 _capability("Submission packets", "Claim-calibrated CV and outreach checklists for sharing without overclaiming."),
+                _capability("Real-run plans", "Command playbooks for upgrading smoke evidence into a real CUDA/Nerfstudio/LERF run."),
+                _capability(
+                    "Claim audits",
+                    "Checks portfolio-facing text for unsupported SOTA, novelty, benchmark, production, or robotics-policy claims.",
+                ),
                 _capability(
                     "Evidence packaging",
                     "Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.",
@@ -323,11 +336,10 @@ def _code_panel() -> str:
     return """      <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
-python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
 python scripts/compare_runs.py --root results/pipeline_runs
-python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
-python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet</code></pre>"""
+python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json</code></pre>"""
 
 
 def _run_comparison_link(run_index_path: str | Path | None, output_dir: Path) -> str:

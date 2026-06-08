@@ -81,20 +81,18 @@ Use `results/pipeline_runs/desk_scene/annotation_template.json` as the starting 
 2D localization annotations before reporting quantitative query metrics.
 Open `results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_workbench.html`
 to draw or adjust `bbox_2d` labels in a browser and export filled annotation JSON.
-Merge that export before evaluation:
+Finalize the run from that export:
 
 ```bash
-python scripts/merge_annotation_workbench.py --template results/pipeline_runs/desk_scene/annotation_template.json --filled path/to/annotations_filled.json --output results/pipeline_runs/desk_scene/annotations_merged.json --queries results/pipeline_runs/desk_scene/queries.yaml --results results/pipeline_runs/desk_scene/queries --overwrite
 python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled path/to/annotations_filled.json --profile real-run --export-pack --zip-pack
 ```
 
 Then open `results/pipeline_runs/desk_scene/evaluation/annotation_review.md` and the contact sheet
 to catch wrong view ids, shifted boxes, or qualitative-only labels before sharing scores.
 
-Export a shareable run package:
+The finalizer also exports and validates the shareable pack. To rerun only the sharing checks:
 
 ```bash
-python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 ```

@@ -449,6 +449,46 @@ def _command_specs(
             ),
         ]
     )
+    if export_pack:
+        commands.extend(
+            [
+                _CommandSpec(
+                    "final_export_portfolio_pack",
+                    [
+                        py,
+                        "scripts/export_portfolio_pack.py",
+                        "--run-dir",
+                        str(run_root),
+                        "--output",
+                        str(pack),
+                        *(["--zip"] if zip_pack else []),
+                    ],
+                    {"portfolio_pack": str(pack), "portfolio_pack_zip": str(pack) + ".zip"},
+                    critical=False,
+                ),
+                _CommandSpec(
+                    "final_validate_portfolio_pack",
+                    [py, "scripts/validate_portfolio_pack.py", "--pack", str(pack)],
+                    {"portfolio_pack_validation": str(pack / "portfolio_pack_validation.json")},
+                    critical=False,
+                ),
+            ]
+        )
+        if zip_pack:
+            commands.append(
+                _CommandSpec(
+                    "final_archive_portfolio_pack",
+                    [
+                        py,
+                        "-c",
+                        "import shutil, sys; shutil.make_archive(sys.argv[1], 'zip', sys.argv[2])",
+                        str(pack),
+                        str(pack),
+                    ],
+                    {"portfolio_pack_zip": str(pack) + ".zip"},
+                    critical=False,
+                )
+            )
     return commands
 
 

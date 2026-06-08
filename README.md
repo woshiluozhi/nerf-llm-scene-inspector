@@ -229,17 +229,19 @@ This writes `experiment_matrix_summary.json`, `experiment_matrix_table.csv`, and
 mode, use the same config shape but remove `dry_run: true` and run on a CUDA machine with
 Nerfstudio/LERF installed.
 
-Export the latest run into a shareable portfolio package:
+Refresh the latest annotated run and export a shareable portfolio package:
 
 ```bash
-python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
-python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
-python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene
-python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/submission_packet/submission_packet.json
-python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
+python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
+
+Use `export_portfolio_pack.py` directly only for low-level pack debugging. The finalizer is
+the preferred portfolio path after annotation edits because it refreshes evaluation,
+reporting, quality checks, submission materials, pack validation, and the final zip.
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, and text/JSON files do not leak user-home, temporary, or CI workspace

@@ -105,13 +105,16 @@ def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: 
 
     monkeypatch.setattr(annotation_finalize, "run_command", fake_run_command)
 
-    report = finalize_workbench_annotations(run_dir=run_dir, filled_path=filled, profile="smoke", export_pack=True)
+    report = finalize_workbench_annotations(run_dir=run_dir, filled_path=filled, profile="smoke", export_pack=True, zip_pack=True)
     step_names = [step.name for step in report.steps]
 
     assert report.ok is True
     assert step_names.index("refresh_quality_gate_with_pack") > step_names.index("validate_portfolio_pack")
     assert report.steps[step_names.index("check_run_quality")].command.endswith("--no-require-pack")
     assert "--pack" in report.steps[step_names.index("refresh_quality_gate_with_pack")].command
+    assert step_names.index("final_export_portfolio_pack") > step_names.index("refresh_reproduction_bundle")
+    assert step_names.index("final_validate_portfolio_pack") > step_names.index("final_export_portfolio_pack")
+    assert step_names.index("final_archive_portfolio_pack") > step_names.index("final_validate_portfolio_pack")
 
 
 def _pipeline_run(tmp_path: Path, scene_name: str) -> Path:

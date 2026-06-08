@@ -30,9 +30,11 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert any("python scripts/analyze_prompt_sensitivity.py" in command for command in bundle.verification_commands)
     assert any("python scripts/analyze_scene_relations.py" in command for command in bundle.verification_commands)
     assert any("python scripts/create_annotation_workbench.py" in command for command in bundle.verification_commands)
-    assert any("python scripts/merge_annotation_workbench.py" in command for command in bundle.verification_commands)
     assert any("python scripts/finalize_annotations.py" in command for command in bundle.verification_commands)
-    assert any("python scripts/review_annotations.py" in command for command in bundle.verification_commands)
+    assert any("--export-pack --zip-pack" in command for command in bundle.verification_commands)
+    assert not any("python scripts/merge_annotation_workbench.py" in command for command in bundle.verification_commands)
+    assert not any("python scripts/review_annotations.py" in command for command in bundle.verification_commands)
+    assert not any("python scripts/export_portfolio_pack.py" in command for command in bundle.verification_commands)
     assert any(artifact.name == "pipeline_summary" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "capture_manifest" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "preflight_report" and artifact.exists for artifact in bundle.artifacts)
@@ -72,8 +74,11 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     assert "python scripts/audit_claims.py --run-dir run" in script_text
     assert "python scripts/create_run_result_card.py --run-dir run" in script_text
     assert "python scripts/create_annotation_workbench.py --annotations run/annotation_template.json" in script_text
-    assert "python scripts/merge_annotation_workbench.py --template run/annotation_template.json" in script_text
     assert "python scripts/finalize_annotations.py --run-dir run" in script_text
+    assert "--export-pack --zip-pack" in script_text
+    assert "python scripts/merge_annotation_workbench.py --template run/annotation_template.json" not in script_text
+    assert "python scripts/review_annotations.py --annotations run/annotations_merged.json" not in script_text
+    assert "python scripts/export_portfolio_pack.py --run-dir run --zip" not in script_text
     assert "python scripts/compare_runs.py --root ." in script_text
     assert "python scripts/check_run_quality.py --run-dir run --profile smoke" in script_text
 

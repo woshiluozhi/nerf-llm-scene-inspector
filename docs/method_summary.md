@@ -32,7 +32,7 @@ Each run can also produce `run_result_card.md` and `run_result_card.json`, a one
 
 ## Annotation Workbench
 
-The evaluation path includes an offline HTML annotation workbench generated from `annotation_template.json` and query render artifacts. It copies candidate images, preloads candidate boxes, and lets a reviewer draw `bbox_2d` labels in the browser. The downloaded JSON is merged back into a clean evaluation annotation file with `merge_annotation_workbench.py`, then passed through `validate_annotations.py`, `review_annotations.py`, and `evaluate_queries.py`. This keeps quantitative metrics tied to explicit human-reviewed labels rather than hidden assumptions.
+The evaluation path includes an offline HTML annotation workbench generated from `annotation_template.json` and query render artifacts. It copies candidate images, preloads candidate boxes, and lets a reviewer draw `bbox_2d` labels in the browser. The downloaded JSON is merged back into a clean evaluation annotation file, validated, visually reviewed, and evaluated. In normal run-scoped usage, `finalize_annotations.py` orchestrates those lower-level steps so quantitative metrics stay tied to explicit human-reviewed labels rather than hidden assumptions.
 
 After manual labels are exported, `finalize_annotations.py` provides the practical one-command path for refreshing a run: merge filled labels, rerun evaluation and annotation visual QA, update audit/recommendation/scorecard/quality-gate artifacts, regenerate research reports, result cards, portfolio pages, reproduction bundles, run indexes, and optionally export a fresh portfolio pack.
 

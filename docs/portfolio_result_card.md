@@ -61,15 +61,12 @@ python scripts/run_scene_pipeline.py --dry-run
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
-python scripts/merge_annotation_workbench.py --template results/pipeline_runs/desk_scene/annotation_template.json --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --output results/pipeline_runs/desk_scene/annotations_merged.json --overwrite
-python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
-python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
-python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
-python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/submission_packet/submission_packet.json
-python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
 
 ## Outputs

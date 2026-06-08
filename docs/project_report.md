@@ -57,13 +57,12 @@ Run `scripts/create_annotation_workbench.py --annotations results/pipeline_runs/
 --results results/pipeline_runs/<scene>/queries --output results/pipeline_runs/<scene>/evaluation/annotation_workbench`
 to generate an offline HTML bbox-labeling workspace. The workbench copies query render images,
 preloads candidate boxes, and exports filled annotation JSON for validation, visual review,
-and evaluation. Merge the downloaded JSON back into the standard annotation schema with
-`scripts/merge_annotation_workbench.py --template results/pipeline_runs/<scene>/annotation_template.json
---filled path/to/annotations_filled.json --output results/pipeline_runs/<scene>/annotations_merged.json`
-before running validation or reporting metrics.
+and evaluation. For run-scoped work, prefer the finalizer instead of manually chaining merge,
+validation, review, evaluation, quality gates, pack export, and submission updates.
 For a run-scoped refresh, use `scripts/finalize_annotations.py --run-dir
-results/pipeline_runs/<scene> --filled path/to/annotations_filled.json --profile real-run`
-to merge labels and regenerate evaluation, QA, scorecards, reports, result cards, and portfolio pages.
+results/pipeline_runs/<scene> --filled path/to/annotations_filled.json --profile real-run
+--export-pack --zip-pack` to merge labels and regenerate evaluation, QA, scorecards, reports,
+result cards, portfolio pages, reproduction bundles, pack validation, and submission materials.
 
 ## Research Report
 
