@@ -445,6 +445,7 @@ def _artifacts(root: Path) -> dict[str, str]:
         "reproduction_report": "reproduction_report.md",
         "query_grid": "demo_assets/query_grid.png",
         "annotation_review": "evaluation/annotation_review.md",
+        "annotation_finalize": "annotation_finalize_report.md",
         "scene_relations": "scene_relations/scene_relations_report.md",
     }
     return {name: path for name, path in candidates.items() if (root / path).exists()}

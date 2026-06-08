@@ -25,6 +25,7 @@ check:
 	$(PYTHON) scripts/create_annotation_template.py --help
 	$(PYTHON) scripts/create_annotation_workbench.py --help
 	$(PYTHON) scripts/merge_annotation_workbench.py --help
+	$(PYTHON) scripts/finalize_annotations.py --help
 	$(PYTHON) scripts/validate_annotations.py --help
 	$(PYTHON) scripts/review_annotations.py --help
 	$(PYTHON) scripts/compare_runs.py --help

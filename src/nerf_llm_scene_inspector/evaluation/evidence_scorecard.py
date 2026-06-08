@@ -392,6 +392,18 @@ def _evaluation_criterion(
     if evaluation.get("num_result_queries") is not None:
         score += 2
     status = _criterion_status(score, 20)
+    recommendation = ""
+    if status != "pass":
+        if bbox_count == 0 or evaluated == 0:
+            recommendation = (
+                "Fill manual bbox_2d labels in the annotation workbench, then run "
+                "finalize_annotations.py to refresh evaluation and reports."
+            )
+        else:
+            recommendation = (
+                "Add reviewed bbox_2d labels for more core queries, then run "
+                "finalize_annotations.py to refresh evaluation and reports."
+            )
     return EvidenceCriterion(
         name="annotation_and_evaluation",
         category="evaluation",
@@ -402,11 +414,7 @@ def _evaluation_criterion(
             f"annotation_ok={annotation_validation.get('ok')}, bbox_queries={bbox_count}, "
             f"evaluated={evaluated}, metrics_present={has_metrics}"
         ),
-        recommendation=(
-            ""
-            if status == "pass"
-            else "Fill manual bbox_2d labels for core queries and rerun evaluate_queries.py."
-        ),
+        recommendation=recommendation,
         artifact="evaluation/eval_summary.json",
     )
 

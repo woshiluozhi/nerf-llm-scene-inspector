@@ -245,6 +245,18 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(
             [
                 "python",
+                "scripts/finalize_annotations.py",
+                "--run-dir",
+                run_dir,
+                "--filled",
+                f"{run_dir}/evaluation/annotation_workbench/annotation_seed.json",
+                "--profile",
+                "smoke",
+            ]
+        ),
+        _format_command(
+            [
+                "python",
                 "scripts/review_annotations.py",
                 "--annotations",
                 f"{run_dir}/annotations_merged.json",
@@ -345,6 +357,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             root / "evaluation" / "annotation_workbench" / "annotation_workbench.html",
             "evaluation/annotation_workbench/annotation_workbench.html",
             "Offline browser workbench for drawing and exporting manual bbox annotations.",
+        ),
+        (
+            "annotation_finalize",
+            root / "annotation_finalize_report.md",
+            "annotation_finalize_report.md",
+            "Post-workbench refresh report for merged annotations, evaluation, QA, and portfolio artifacts.",
         ),
         (
             "annotations_merged",

@@ -171,105 +171,26 @@ each query, fill or adjust:
 - `bbox_2d`: `[x1, y1, x2, y2]` in the selected rendered view
 - `notes`: uncertainty, ambiguity, or qualitative-only rationale
 
-Download the filled JSON from the workbench, then merge and rerun:
+Download the filled JSON from the workbench, then use the run-scoped finalizer. This is the
+recommended path because it merges annotations, reruns evaluation and visual QA, refreshes
+audits/recommendations/scorecards/quality gates, regenerates reports/result cards/portfolio
+pages/reproduction bundles, and can export a fresh portfolio pack.
 
 ```bash
-python scripts/merge_annotation_workbench.py \
-  --template results/pipeline_runs/desk_scene/annotation_template.json \
+python scripts/finalize_annotations.py \
+  --run-dir results/pipeline_runs/desk_scene \
   --filled path/to/annotations_filled.json \
-  --output results/pipeline_runs/desk_scene/annotations_merged.json \
-  --queries results/pipeline_runs/desk_scene/queries.yaml \
-  --results results/pipeline_runs/desk_scene/queries \
-  --report-output results/pipeline_runs/desk_scene/annotation_merge_report.json \
-  --overwrite
-
-python scripts/validate_annotations.py \
-  --queries results/pipeline_runs/desk_scene/queries.yaml \
-  --annotations results/pipeline_runs/desk_scene/annotations_merged.json \
-  --results results/pipeline_runs/desk_scene/queries \
-  --output results/pipeline_runs/desk_scene/evaluation/annotation_validation.json
-
-python scripts/review_annotations.py \
-  --annotations results/pipeline_runs/desk_scene/annotations_merged.json \
-  --results results/pipeline_runs/desk_scene/queries \
-  --output results/pipeline_runs/desk_scene/evaluation \
-  --allow-warnings
-
-python scripts/evaluate_queries.py \
-  --queries results/pipeline_runs/desk_scene/queries.yaml \
-  --annotations results/pipeline_runs/desk_scene/annotations_merged.json \
-  --results results/pipeline_runs/desk_scene/queries \
-  --output results/pipeline_runs/desk_scene/evaluation \
-  --report-output results/pipeline_runs/desk_scene/project_report.md
-
-python scripts/analyze_prompt_sensitivity.py \
-  --suite examples/prompt_sensitivity.yaml \
-  --results results/pipeline_runs/desk_scene/queries \
-  --output results/pipeline_runs/desk_scene/prompt_sensitivity
-
-python scripts/analyze_scene_relations.py \
-  --results results/pipeline_runs/desk_scene/queries \
-  --output results/pipeline_runs/desk_scene/scene_relations \
-  --scene-name desk_scene
-
-python scripts/audit_run.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/recommend_next_steps.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/generate_research_report.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/create_evidence_scorecard.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/check_run_quality.py \
-  --run-dir results/pipeline_runs/desk_scene \
-  --profile smoke
-
-python scripts/generate_research_report.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/create_annotation_workbench.py \
-  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
-  --results results/pipeline_runs/desk_scene/queries \
-  --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
-
-python scripts/create_run_result_card.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/generate_portfolio_page.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/create_reproduction_bundle.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/create_real_run_plan.py \
-  --run-dir results/pipeline_runs/desk_scene \
-  --input path/to/video.mp4 \
-  --type video \
-  --submission-packet results/submission_packet/submission_packet.json
-
-python scripts/audit_claims.py \
-  --run-dir results/pipeline_runs/desk_scene \
-  --pack results/portfolio_pack
-
-python scripts/generate_research_report.py \
-  --run-dir results/pipeline_runs/desk_scene
-
-python scripts/create_submission_packet.py \
-  --run-dir results/pipeline_runs/desk_scene \
-  --pack results/portfolio_pack \
-  --output results/submission_packet
-
-python scripts/preflight_real_run.py \
-  --input path/to/video.mp4 \
-  --type video \
-  --data data/processed/desk_scene \
-  --require-gpu \
-  --output results/pipeline_runs/desk_scene
+  --profile real-run \
+  --export-pack \
+  --zip-pack
 ```
+
+The lower-level tools are still available for debugging individual steps:
+`merge_annotation_workbench.py`, `validate_annotations.py`, `review_annotations.py`,
+`evaluate_queries.py`, `audit_run.py`, `recommend_next_steps.py`,
+`create_evidence_scorecard.py`, `check_run_quality.py`, `generate_research_report.py`,
+`create_run_result_card.py`, `generate_portfolio_page.py`, `create_reproduction_bundle.py`,
+`audit_claims.py`, and `create_submission_packet.py`.
 
 Only rows with a filled `bbox_2d` are included in localization metrics such as
 `top_k_hit_rate` and `mean_iou_2d`. Rows without bbox annotations stay in the qualitative

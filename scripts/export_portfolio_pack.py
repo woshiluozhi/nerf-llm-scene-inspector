@@ -236,6 +236,8 @@ def _copy_run_materials(
     for source, relative_destination in (
         (run_dir / "annotations_merged.json", "run/annotations_merged.json"),
         (run_dir / "annotation_merge_report.json", "run/annotation_merge_report.json"),
+        (run_dir / "annotation_finalize_report.json", "run/annotation_finalize_report.json"),
+        (run_dir / "annotation_finalize_report.md", "run/annotation_finalize_report.md"),
     ):
         _copy_share_safe_file(source, output / relative_destination, output, copied, optional_missing, run_dir)
     return _run_summary_excerpt(run_summary, run_dir)
@@ -471,6 +473,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None, run_dir: Path | None = 
         artifacts["annotations_merged"] = "run/annotations_merged.json"
     if run_dir is not None and (run_dir / "annotation_merge_report.json").exists():
         artifacts["annotation_merge_report"] = "run/annotation_merge_report.json"
+    if run_dir is not None and (run_dir / "annotation_finalize_report.md").exists():
+        artifacts["annotation_finalize"] = "run/annotation_finalize_report.md"
     if _step_succeeded(summary, "train_baseline_nerf"):
         artifacts["baseline_train_summary"] = "run/training/baseline_train_summary.json"
     if _step_succeeded(summary, "train_language_field"):

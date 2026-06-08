@@ -85,6 +85,7 @@ Merge that export before evaluation:
 
 ```bash
 python scripts/merge_annotation_workbench.py --template results/pipeline_runs/desk_scene/annotation_template.json --filled path/to/annotations_filled.json --output results/pipeline_runs/desk_scene/annotations_merged.json --queries results/pipeline_runs/desk_scene/queries.yaml --results results/pipeline_runs/desk_scene/queries --overwrite
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled path/to/annotations_filled.json --profile real-run --export-pack --zip-pack
 ```
 
 Then open `results/pipeline_runs/desk_scene/evaluation/annotation_review.md` and the contact sheet

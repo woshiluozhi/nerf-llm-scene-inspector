@@ -51,6 +51,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     (run_dir / "annotation_merge_report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+    (run_dir / "annotation_finalize_report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+    (run_dir / "annotation_finalize_report.md").write_text("# Annotation Finalization Report\n", encoding="utf-8")
 
     result = subprocess.run(
         [
@@ -89,6 +91,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     )
     assert index["run_summary"]["artifacts"]["annotations_merged"] == "run/annotations_merged.json"
     assert index["run_summary"]["artifacts"]["annotation_merge_report"] == "run/annotation_merge_report.json"
+    assert index["run_summary"]["artifacts"]["annotation_finalize"] == "run/annotation_finalize_report.md"
     assert index["run_summary"]["artifacts"]["research_report"] == "run/research_report.md"
     assert index["run_summary"]["artifacts"]["real_run_plan"] == "run/real_run_plan/real_run_plan.md"
     assert index["run_summary"]["artifacts"]["submission_checklist"] == (
@@ -144,6 +147,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "annotation_template.json").exists()
     assert (output_dir / "run" / "annotations_merged.json").exists()
     assert (output_dir / "run" / "annotation_merge_report.json").exists()
+    assert (output_dir / "run" / "annotation_finalize_report.json").exists()
+    assert (output_dir / "run" / "annotation_finalize_report.md").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.md").exists()
     assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()

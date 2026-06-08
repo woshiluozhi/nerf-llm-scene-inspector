@@ -50,6 +50,7 @@ jobs:
           python scripts/create_annotation_template.py --help
           python scripts/create_annotation_workbench.py --help
           python scripts/merge_annotation_workbench.py --help
+          python scripts/finalize_annotations.py --help
           python scripts/validate_annotations.py --help
           python scripts/review_annotations.py --help
           python scripts/generate_demo_assets.py --help

@@ -61,6 +61,9 @@ and evaluation. Merge the downloaded JSON back into the standard annotation sche
 `scripts/merge_annotation_workbench.py --template results/pipeline_runs/<scene>/annotation_template.json
 --filled path/to/annotations_filled.json --output results/pipeline_runs/<scene>/annotations_merged.json`
 before running validation or reporting metrics.
+For a run-scoped refresh, use `scripts/finalize_annotations.py --run-dir
+results/pipeline_runs/<scene> --filled path/to/annotations_filled.json --profile real-run`
+to merge labels and regenerate evaluation, QA, scorecards, reports, result cards, and portfolio pages.
 
 ## Research Report
 

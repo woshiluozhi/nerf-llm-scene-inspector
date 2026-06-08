@@ -470,7 +470,10 @@ def _evaluation_criterion(
             "evaluation_coverage",
             "fail",
             f"Only {evaluated} evaluated queries found; profile requires {policy.min_evaluated_queries}.",
-            "Add manual bbox_2d annotations and rerun evaluate_queries.py.",
+            (
+                "Add manual bbox_2d annotations with the workbench, then run "
+                "finalize_annotations.py to refresh evaluation and reports."
+            ),
             "evaluation/eval_summary.json",
         )
     if evaluated == 0:

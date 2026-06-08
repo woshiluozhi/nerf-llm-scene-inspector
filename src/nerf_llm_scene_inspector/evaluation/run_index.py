@@ -181,6 +181,7 @@ def _artifacts(run_dir: Path) -> dict[str, str]:
         "annotation_review": "evaluation/annotation_review.md",
         "annotation_review_contact_sheet": "evaluation/annotation_review_contact_sheet.png",
         "annotation_workbench": "evaluation/annotation_workbench/annotation_workbench.html",
+        "annotation_finalize": "annotation_finalize_report.md",
     }
     return {name: relative for name, relative in candidates.items() if (run_dir / relative).exists()}
 

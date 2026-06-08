@@ -54,7 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Scene-relation graph analysis that converts saved query regions/points into entity lists, relation edges, CSV tables, and Markdown reports with explicit `2d_fallback` or `3d` evidence tags.
-- Annotation templates, an offline bbox annotation workbench, merge tooling for filled workbench exports, and review artifacts for QA before reporting metrics.
+- Annotation templates, an offline bbox annotation workbench, merge/finalize tooling for filled workbench exports, and review artifacts for QA before reporting metrics.
 - Prompt-sensitivity analysis that checks whether wording variants retrieve consistent regions, views, and relevancy scores.
 - Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
@@ -301,6 +301,10 @@ CSV keeps all rows while summary metrics use the best row per unique query.
 The annotation workbench's downloaded JSON can be merged back into the evaluation schema with
 `merge_annotation_workbench.py`; the merge report records changed fields, missing template
 queries, duplicate filled queries, invalid boxes, and optional validation results.
+For run-scoped work, `finalize_annotations.py` wraps that merge plus evaluation, visual QA,
+run audit, recommendations, evidence scorecard, quality gate, research report, result card,
+portfolio page, reproduction bundle, run index, comparison report, and optional portfolio-pack
+export.
 
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
@@ -331,7 +335,13 @@ python scripts/run_scene_pipeline.py \
   --num-views 3 \
   --min-pose-extent 0.05 \
   --strict
-python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile real-run
+```
+
+After reviewing `results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_workbench.html`
+and downloading filled annotations:
+
+```bash
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled path/to/annotations_filled.json --profile real-run --export-pack --zip-pack
 ```
 
 Launch the Nerfstudio viewer for a trained run:
@@ -372,6 +382,10 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/scene_relations/scene_relations_edges.csv`
 - `results/pipeline_runs/<scene>/scene_relations/scene_relations_report.md`
 - `results/pipeline_runs/<scene>/annotation_template.json`
+- `results/pipeline_runs/<scene>/annotations_merged.json`
+- `results/pipeline_runs/<scene>/annotation_merge_report.json`
+- `results/pipeline_runs/<scene>/annotation_finalize_report.json`
+- `results/pipeline_runs/<scene>/annotation_finalize_report.md`
 - `results/pipeline_runs/<scene>/evaluation/annotation_workbench/annotation_workbench.html`
 - `results/pipeline_runs/<scene>/evaluation/annotation_workbench/annotation_workbench_manifest.json`
 - `results/pipeline_runs/<scene>/evaluation/annotation_workbench/annotation_seed.json`
@@ -482,6 +496,7 @@ python scripts/import_viewer_outputs.py --help
 python scripts/create_annotation_template.py --help
 python scripts/create_annotation_workbench.py --help
 python scripts/merge_annotation_workbench.py --help
+python scripts/finalize_annotations.py --help
 python scripts/validate_annotations.py --help
 python scripts/review_annotations.py --help
 python scripts/generate_demo_assets.py --help

@@ -322,9 +322,8 @@ def _capability(title: str, description: str) -> str:
 def _code_panel() -> str:
     return """      <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
-python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
-python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
-python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
+python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
+python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack

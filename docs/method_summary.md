@@ -34,6 +34,8 @@ Each run can also produce `run_result_card.md` and `run_result_card.json`, a one
 
 The evaluation path includes an offline HTML annotation workbench generated from `annotation_template.json` and query render artifacts. It copies candidate images, preloads candidate boxes, and lets a reviewer draw `bbox_2d` labels in the browser. The downloaded JSON is merged back into a clean evaluation annotation file with `merge_annotation_workbench.py`, then passed through `validate_annotations.py`, `review_annotations.py`, and `evaluate_queries.py`. This keeps quantitative metrics tied to explicit human-reviewed labels rather than hidden assumptions.
 
+After manual labels are exported, `finalize_annotations.py` provides the practical one-command path for refreshing a run: merge filled labels, rerun evaluation and annotation visual QA, update audit/recommendation/scorecard/quality-gate artifacts, regenerate research reports, result cards, portfolio pages, reproduction bundles, run indexes, and optionally export a fresh portfolio pack.
+
 ## Submission Packets
 
 The submission-packet step converts run evidence into a claim-calibrated sharing checklist. It records what can safely be said in a CV bullet or professor email, what must not be claimed, whether a validated portfolio pack exists, and which warnings still need review. This keeps dry-run demos, real trained-scene results, and portfolio-ready evidence clearly separated.

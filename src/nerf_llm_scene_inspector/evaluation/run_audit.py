@@ -507,7 +507,10 @@ def _check_evaluation(summary: dict[str, Any], findings: list[AuditFinding]) -> 
                 severity="warning",
                 category="evaluation",
                 message="No bbox-annotated queries were evaluated quantitatively.",
-                recommendation="Fill annotation_template.json with manual bbox_2d labels and rerun evaluate_queries.py.",
+                recommendation=(
+                    "Fill bbox_2d labels in the annotation workbench, then run "
+                    "finalize_annotations.py to refresh evaluation and reporting artifacts."
+                ),
                 artifact="evaluation/eval_summary.json",
             )
         )

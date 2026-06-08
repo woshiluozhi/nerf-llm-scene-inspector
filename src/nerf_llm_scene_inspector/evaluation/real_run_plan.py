@@ -685,7 +685,7 @@ def _claim_upgrade_path(dry_run: bool) -> list[str]:
     return [
         f"{prefix}: use only to show pipeline architecture, artifact format, and reproducibility wiring.",
         "Real-scene run: capture a static, well-lit scene and run Nerfstudio/LERF without --dry-run on a CUDA machine.",
-        "Reviewed evidence: inspect overlays, fill annotation boxes, rerun evaluation, and pass the real-run quality gate.",
+        "Reviewed evidence: inspect overlays, fill annotation boxes, run finalize_annotations.py, and pass the real-run quality gate.",
         "Portfolio-ready claim: share only after portfolio pack validation and submission packet readiness are clean.",
     ]
 
