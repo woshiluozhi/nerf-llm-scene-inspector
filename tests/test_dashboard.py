@@ -118,6 +118,19 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "evaluation" / "annotation_validation.json", {"ok": True})
     _write_json(run_dir / "evaluation" / "annotation_review.json", {"ok": True, "items": []})
     (run_dir / "evaluation" / "annotation_review.md").write_text("# Annotation Review\n", encoding="utf-8")
+    (run_dir / "evaluation" / "annotation_workbench").mkdir(parents=True, exist_ok=True)
+    (run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html").write_text(
+        "<!doctype html>\n",
+        encoding="utf-8",
+    )
+    _write_json(
+        run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench_manifest.json",
+        {"item_count": 1, "image_count": 1},
+    )
+    _write_json(
+        run_dir / "evaluation" / "annotation_workbench" / "annotation_seed.json",
+        {"queries": [{"query": "mug"}]},
+    )
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"top_k_hit_rate": 1.0})
     _write_json(
         run_dir / "prompt_sensitivity" / "prompt_sensitivity_summary.json",
@@ -191,6 +204,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["annotation_review"]["ok"] is True
     assert "# Annotation Review" in bundle["annotation_review_markdown"]
+    assert bundle["annotation_workbench"].endswith("annotation_workbench.html")
+    assert bundle["annotation_workbench_manifest"]["item_count"] == 1
     assert bundle["prompt_sensitivity"]["stable_group_count"] == 1
     assert "# Prompt Sensitivity Report" in bundle["prompt_sensitivity_markdown"]
     assert bundle["scene_relations"]["num_relations"] == 1

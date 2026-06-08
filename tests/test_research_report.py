@@ -25,6 +25,7 @@ def test_build_research_report_from_run_artifacts(tmp_path: Path) -> None:
     assert (run_dir / "research_report.json").exists()
     assert written.artifacts["scene_relations"] == "scene_relations/scene_relations_report.md"
     assert written.artifacts["run_result_card"] == "run_result_card.md"
+    assert written.artifacts["annotation_workbench"] == "evaluation/annotation_workbench/annotation_workbench.html"
 
 
 def test_generate_research_report_cli(tmp_path: Path) -> None:
@@ -93,6 +94,7 @@ def _write_run(run_dir: Path) -> Path:
     )
     _write_text(run_dir / "scene_relations" / "scene_relations_report.md", "# Relations\n")
     _write_text(run_dir / "run_result_card.md", "# Run Result Card\n")
+    _write_text(run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html", "<!doctype html>\n")
     _write_json(
         run_dir / "run_recommendations.json",
         {"recommendations": [{"severity": "high", "action": "Run a real GPU experiment."}]},

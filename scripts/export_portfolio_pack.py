@@ -155,6 +155,18 @@ def _copy_run_materials(
             run_dir / "evaluation" / "annotation_review_contact_sheet.png",
             "run/evaluation/annotation_review_contact_sheet.png",
         ),
+        (
+            run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html",
+            "run/evaluation/annotation_workbench/annotation_workbench.html",
+        ),
+        (
+            run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench_manifest.json",
+            "run/evaluation/annotation_workbench/annotation_workbench_manifest.json",
+        ),
+        (
+            run_dir / "evaluation" / "annotation_workbench" / "annotation_seed.json",
+            "run/evaluation/annotation_workbench/annotation_seed.json",
+        ),
         (run_dir / "evaluation" / "qualitative_report.md", "run/evaluation/qualitative_report.md"),
         (
             run_dir / "scene_relations" / "scene_relations_summary.json",
@@ -190,6 +202,7 @@ def _copy_run_materials(
     _copy_command_logs(run_dir, output, copied)
     _copy_query_reports(run_dir, output, copied)
     _copy_prompt_sensitivity(run_dir, output, copied)
+    _copy_annotation_workbench_assets(run_dir, output, copied)
     _copy_file(
         run_dir / "training" / "baseline_train_summary.json",
         output / "run/training/baseline_train_summary.json",
@@ -353,6 +366,26 @@ def _copy_prompt_sensitivity(
         _copy_share_safe_file(source, output / "run" / relative, output, copied, [], run_dir)
 
 
+def _copy_annotation_workbench_assets(
+    run_dir: Path,
+    output: Path,
+    copied: list[dict[str, str]],
+) -> None:
+    assets_dir = run_dir / "evaluation" / "annotation_workbench" / "assets"
+    if not assets_dir.exists():
+        return
+    for source in sorted(assets_dir.glob("*")):
+        if not source.is_file():
+            continue
+        _copy_file(
+            source,
+            output / "run" / "evaluation" / "annotation_workbench" / "assets" / source.name,
+            output,
+            copied,
+            [],
+        )
+
+
 def _copy_pipeline_summary(
     source: Path,
     destination: Path,
@@ -425,6 +458,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "annotation_validation": "run/evaluation/annotation_validation.json",
         "annotation_review": "run/evaluation/annotation_review.md",
         "annotation_review_contact_sheet": "run/evaluation/annotation_review_contact_sheet.png",
+        "annotation_workbench": "run/evaluation/annotation_workbench/annotation_workbench.html",
         "demo_grid": "run/demo_assets/query_grid.png",
         "demo_montage": "run/demo_assets/demo_montage.gif",
     }

@@ -54,7 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Scene-relation graph analysis that converts saved query regions/points into entity lists, relation edges, CSV tables, and Markdown reports with explicit `2d_fallback` or `3d` evidence tags.
-- Annotation review artifacts that draw manual `bbox_2d` labels over rendered views for QA before reporting metrics.
+- Annotation templates, an offline bbox annotation workbench, and review artifacts for QA before reporting metrics.
 - Prompt-sensitivity analysis that checks whether wording variants retrieve consistent regions, views, and relevancy scores.
 - Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
@@ -264,6 +264,7 @@ python scripts/analyze_prompt_sensitivity.py --suite examples/prompt_sensitivity
 python scripts/analyze_scene_relations.py --results results/query_outputs --output results/scene_relations --scene-name desk_scene --dry-run
 python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
+python scripts/create_annotation_workbench.py --annotations results/annotations_template.json --results results/query_outputs --output results/annotation_workbench
 python scripts/validate_annotations.py --annotations examples/annotations_example.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations examples/annotations_example.json --results results/query_outputs --output results/evaluation --allow-warnings
 python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.yml --backend lerf --dry-run
@@ -283,6 +284,7 @@ python scripts/train_language_field.py --data data/processed/desk_scene --backen
 python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
 python scripts/analyze_scene_relations.py --results results/query_outputs --output results/scene_relations --scene-name desk_scene
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
+python scripts/create_annotation_workbench.py --annotations results/annotations_template.json --results results/query_outputs --output results/annotation_workbench
 python scripts/validate_annotations.py --annotations results/annotations_template.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations results/annotations_template.json --results results/query_outputs --output results/evaluation --allow-warnings
 streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
@@ -365,6 +367,9 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/scene_relations/scene_relations_edges.csv`
 - `results/pipeline_runs/<scene>/scene_relations/scene_relations_report.md`
 - `results/pipeline_runs/<scene>/annotation_template.json`
+- `results/pipeline_runs/<scene>/evaluation/annotation_workbench/annotation_workbench.html`
+- `results/pipeline_runs/<scene>/evaluation/annotation_workbench/annotation_workbench_manifest.json`
+- `results/pipeline_runs/<scene>/evaluation/annotation_workbench/annotation_seed.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/annotation_validation.json`
 - `results/pipeline_runs/<scene>/evaluation/annotation_review.json`
@@ -470,6 +475,7 @@ python scripts/train_language_field.py --help
 python scripts/query_scene.py --help
 python scripts/import_viewer_outputs.py --help
 python scripts/create_annotation_template.py --help
+python scripts/create_annotation_workbench.py --help
 python scripts/validate_annotations.py --help
 python scripts/review_annotations.py --help
 python scripts/generate_demo_assets.py --help

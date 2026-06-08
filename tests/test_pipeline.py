@@ -38,6 +38,14 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.md").exists()
+    assert (
+        tmp_path
+        / "pipeline_runs"
+        / "unit_scene"
+        / "evaluation"
+        / "annotation_workbench"
+        / "annotation_workbench.html"
+    ).exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_result_card.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_result_card.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "portfolio_page.html").exists()
@@ -153,6 +161,9 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "evaluation" / "annotation_review.json").exists()
     assert (run_dir / "evaluation" / "annotation_review.md").exists()
     assert (run_dir / "evaluation" / "annotation_review_contact_sheet.png").exists()
+    assert (run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html").exists()
+    assert (run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench_manifest.json").exists()
+    assert (run_dir / "evaluation" / "annotation_workbench" / "annotation_seed.json").exists()
     assert (run_dir / "evaluation" / "eval_summary.json").exists()
     assert (run_dir / "evaluation" / "qualitative_report.md").exists()
     assert (run_dir / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
@@ -186,6 +197,9 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
     assert run_index["entries"][0]["artifacts"]["claim_audit"] == "claim_audit.md"
+    assert run_index["entries"][0]["artifacts"]["annotation_workbench"] == (
+        "evaluation/annotation_workbench/annotation_workbench.html"
+    )
     assert run_index["entries"][0]["artifacts"]["run_result_card"] == "run_result_card.md"
     assert run_index["entries"][0]["artifacts"]["real_run_plan"] == "real_run_plan/real_run_plan.md"
     run_comparison = json.loads(
@@ -194,6 +208,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert run_comparison["best_run"]["scene_name"] == "scoped_scene"
     assert (run_dir / "logs" / "prepare_data_command.json").exists()
     assert (run_dir / "logs" / "create_annotation_template_command.json").exists()
+    assert (run_dir / "logs" / "create_annotation_workbench_command.json").exists()
     assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()
     assert (run_dir / "logs" / "evaluate_queries_command.json").exists()
     assert (run_dir / "logs" / "review_annotations_command.json").exists()
@@ -212,6 +227,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     )
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
+    workbench_step = next(step for step in summary.steps if step.name == "create_annotation_workbench")
+    assert workbench_step.outputs["html"] == str(
+        run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html"
+    )
     query_step = next(step for step in summary.steps if step.name == "query_scene")
     assert query_step.summary["num_queries"] == 2
     assert query_step.outputs["mug_markdown"] == str(run_dir / "queries" / "mug" / "scene_query_report.md")
@@ -255,6 +274,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
     assert any(artifact["name"] == "real_run_plan" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "claim_audit" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
+    assert any(artifact["name"] == "annotation_workbench" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "run_result_card" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     research_step = next(step for step in summary.steps if step.name == "generate_research_report")
     assert research_step.outputs["markdown"] == str(run_dir / "research_report.md")

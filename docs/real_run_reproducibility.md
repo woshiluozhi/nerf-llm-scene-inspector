@@ -65,6 +65,8 @@ python scripts/run_scene_pipeline.py \
 - `scene_relations/scene_relations_report.md`: deterministic relation graph over query-derived entities, with `3d` or `2d_fallback` evidence tags.
 - `scene_relations/scene_relations_edges.csv`: relation edge table for support/proximity/containment/layout review.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
+- `evaluation/annotation_workbench/annotation_workbench.html`: offline browser workbench for drawing and exporting manual `bbox_2d` labels.
+- `evaluation/annotation_workbench/annotation_seed.json`: seed annotation JSON generated for the workbench.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
 - `evaluation/annotation_review.md`: visual QA table for manual bbox annotations.
 - `evaluation/annotation_review_contact_sheet.png`: contact sheet with bboxes drawn over rendered views.
@@ -218,6 +220,11 @@ python scripts/check_run_quality.py \
 
 python scripts/generate_research_report.py \
   --run-dir results/pipeline_runs/desk_scene
+
+python scripts/create_annotation_workbench.py \
+  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --results results/pipeline_runs/desk_scene/queries \
+  --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 
 python scripts/create_run_result_card.py \
   --run-dir results/pipeline_runs/desk_scene

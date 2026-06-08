@@ -48,6 +48,7 @@ jobs:
           python scripts/query_scene.py --help
           python scripts/import_viewer_outputs.py --help
           python scripts/create_annotation_template.py --help
+          python scripts/create_annotation_workbench.py --help
           python scripts/validate_annotations.py --help
           python scripts/review_annotations.py --help
           python scripts/generate_demo_assets.py --help

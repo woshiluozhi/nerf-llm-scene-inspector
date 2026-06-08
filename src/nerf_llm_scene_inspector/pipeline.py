@@ -144,6 +144,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     query_dir = run_dir / "queries"
     demo_dir = run_dir / "demo_assets"
     eval_dir = run_dir / "evaluation"
+    annotation_workbench_dir = eval_dir / "annotation_workbench"
     prompt_sensitivity_dir = run_dir / "prompt_sensitivity"
     relation_dir = run_dir / "scene_relations"
     real_run_plan_dir = run_dir / "real_run_plan"
@@ -202,6 +203,10 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "annotation_review_json": str(eval_dir / "annotation_review.json"),
         "annotation_review_markdown": str(eval_dir / "annotation_review.md"),
         "annotation_review_contact_sheet": str(eval_dir / "annotation_review_contact_sheet.png"),
+        "annotation_workbench": str(annotation_workbench_dir),
+        "annotation_workbench_html": str(annotation_workbench_dir / "annotation_workbench.html"),
+        "annotation_workbench_manifest": str(annotation_workbench_dir / "annotation_workbench_manifest.json"),
+        "annotation_workbench_seed": str(annotation_workbench_dir / "annotation_seed.json"),
         "training": str(training_dir),
         "logs": str(logs_dir),
         "run_queries": str(run_queries_path),
@@ -468,6 +473,28 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 {"annotation_template": str(run_dir / "annotation_template.json")}
             )
             steps.append(annotation_template_result)
+            workbench_result = _run_helper_script(
+                [
+                    sys.executable,
+                    str(root / "scripts" / "create_annotation_workbench.py"),
+                    "--annotations",
+                    str(run_dir / "annotation_template.json"),
+                    "--results",
+                    str(query_dir),
+                    "--output",
+                    str(annotation_workbench_dir),
+                ],
+                root=root,
+                log_path=logs_dir / "create_annotation_workbench_command.json",
+            )
+            workbench_result.outputs.update(
+                {
+                    "html": str(annotation_workbench_dir / "annotation_workbench.html"),
+                    "manifest": str(annotation_workbench_dir / "annotation_workbench_manifest.json"),
+                    "seed": str(annotation_workbench_dir / "annotation_seed.json"),
+                }
+            )
+            steps.append(workbench_result)
 
         if config.prompt_suite_path and not config.skip_queries:
             prompt_result = _run_helper_script(

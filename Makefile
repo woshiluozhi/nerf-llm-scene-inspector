@@ -22,6 +22,10 @@ check:
 	$(PYTHON) scripts/analyze_prompt_sensitivity.py --help
 	$(PYTHON) scripts/analyze_scene_relations.py --help
 	$(PYTHON) scripts/evaluate_queries.py --help
+	$(PYTHON) scripts/create_annotation_template.py --help
+	$(PYTHON) scripts/create_annotation_workbench.py --help
+	$(PYTHON) scripts/validate_annotations.py --help
+	$(PYTHON) scripts/review_annotations.py --help
 	$(PYTHON) scripts/compare_runs.py --help
 	$(PYTHON) scripts/run_experiment_matrix.py --help
 	$(PYTHON) scripts/generate_research_report.py --help

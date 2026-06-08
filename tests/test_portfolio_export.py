@@ -79,6 +79,9 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["run_comparison"] == "run_comparison.md"
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
     assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
+    assert index["run_summary"]["artifacts"]["annotation_workbench"] == (
+        "run/evaluation/annotation_workbench/annotation_workbench.html"
+    )
     assert index["run_summary"]["artifacts"]["research_report"] == "run/research_report.md"
     assert index["run_summary"]["artifacts"]["real_run_plan"] == "run/real_run_plan/real_run_plan.md"
     assert index["run_summary"]["artifacts"]["submission_checklist"] == (
@@ -144,6 +147,16 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "evaluation" / "annotation_review.json").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_review.md").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_review_contact_sheet.png").exists()
+    assert (output_dir / "run" / "evaluation" / "annotation_workbench" / "annotation_workbench.html").exists()
+    assert (
+        output_dir
+        / "run"
+        / "evaluation"
+        / "annotation_workbench"
+        / "annotation_workbench_manifest.json"
+    ).exists()
+    assert (output_dir / "run" / "evaluation" / "annotation_workbench" / "annotation_seed.json").exists()
+    assert list((output_dir / "run" / "evaluation" / "annotation_workbench" / "assets").glob("*"))
     assert (output_dir / "run" / "evaluation" / "eval_summary.json").exists()
     assert (output_dir / "run" / "demo_assets" / "query_grid.png").exists()
     validation = validate_portfolio_pack(output_dir)

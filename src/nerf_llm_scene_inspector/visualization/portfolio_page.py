@@ -185,6 +185,7 @@ def _artifacts(root: Path) -> list[dict[str, str]]:
         "Evaluation table": "evaluation/eval_table.csv",
         "Annotation template": "annotation_template.json",
         "Annotation review": "evaluation/annotation_review.md",
+        "Annotation workbench": "evaluation/annotation_workbench/annotation_workbench.html",
         "Annotation review JSON": "evaluation/annotation_review.json",
         "Scene relation report": "scene_relations/scene_relations_report.md",
         "Scene relation edges": "scene_relations/scene_relations_edges.csv",

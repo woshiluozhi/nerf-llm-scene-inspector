@@ -79,6 +79,8 @@ reruns do not accidentally evaluate stale artifacts. Use `--no-clean-run` only w
 For a stricter reproducibility checklist, see `docs/real_run_reproducibility.md`.
 Use `results/pipeline_runs/desk_scene/annotation_template.json` as the starting point for manual
 2D localization annotations before reporting quantitative query metrics.
+Open `results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_workbench.html`
+to draw or adjust `bbox_2d` labels in a browser and export filled annotation JSON.
 Then open `results/pipeline_runs/desk_scene/evaluation/annotation_review.md` and the contact sheet
 to catch wrong view ids, shifted boxes, or qualitative-only labels before sharing scores.
 

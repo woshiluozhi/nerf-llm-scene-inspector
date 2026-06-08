@@ -60,6 +60,12 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "annotation_validation": _read_json(root / "evaluation" / "annotation_validation.json"),
         "annotation_review": _read_json(root / "evaluation" / "annotation_review.json"),
         "annotation_review_markdown": _read_text(root / "evaluation" / "annotation_review.md"),
+        "annotation_workbench": str(root / "evaluation" / "annotation_workbench" / "annotation_workbench.html")
+        if (root / "evaluation" / "annotation_workbench" / "annotation_workbench.html").exists()
+        else "",
+        "annotation_workbench_manifest": _read_json(
+            root / "evaluation" / "annotation_workbench" / "annotation_workbench_manifest.json"
+        ),
         "evaluation_summary": _read_json(root / "evaluation" / "eval_summary.json"),
         "evaluation_table": _read_csv(root / "evaluation" / "eval_table.csv"),
         "prompt_sensitivity": _read_json(
@@ -431,6 +437,11 @@ def _render_evaluation(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["annotation_review_markdown"])
             else:
                 st.json(bundle["annotation_review"])
+    if bundle["annotation_workbench"]:
+        st.markdown(f"[Open annotation workbench]({bundle['annotation_workbench']})")
+        if bundle["annotation_workbench_manifest"]:
+            with st.expander("Annotation Workbench Manifest", expanded=False):
+                st.json(bundle["annotation_workbench_manifest"])
     if bundle["annotation_template"]:
         st.json(bundle["annotation_template"])
     else:
@@ -520,6 +531,9 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "annotation_template.json",
         "evaluation/annotation_validation.json",
         "evaluation/eval_summary.json",
+        "evaluation/annotation_workbench/annotation_workbench.html",
+        "evaluation/annotation_workbench/annotation_workbench_manifest.json",
+        "evaluation/annotation_workbench/annotation_seed.json",
         "portfolio_page.html",
     ]
     if _step_succeeded(pipeline_summary, "review_annotations"):

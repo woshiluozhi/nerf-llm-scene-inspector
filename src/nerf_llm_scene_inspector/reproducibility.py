@@ -214,6 +214,18 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(
             [
                 "python",
+                "scripts/create_annotation_workbench.py",
+                "--annotations",
+                f"{run_dir}/annotation_template.json",
+                "--results",
+                f"{run_dir}/queries",
+                "--output",
+                f"{run_dir}/evaluation/annotation_workbench",
+            ]
+        ),
+        _format_command(
+            [
+                "python",
                 "scripts/review_annotations.py",
                 "--annotations",
                 f"{run_dir}/annotation_template.json",
@@ -308,6 +320,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             root / "evaluation" / "annotation_review_contact_sheet.png",
             "evaluation/annotation_review_contact_sheet.png",
             "Contact sheet of manual bbox annotations over rendered views.",
+        ),
+        (
+            "annotation_workbench",
+            root / "evaluation" / "annotation_workbench" / "annotation_workbench.html",
+            "evaluation/annotation_workbench/annotation_workbench.html",
+            "Offline browser workbench for drawing and exporting manual bbox annotations.",
         ),
         ("portfolio_card", root / "portfolio_result_card.md", "portfolio_result_card.md", "Short project-page result narrative."),
         ("command_logs", root / "logs", "logs", "Subprocess command stdout/stderr records."),

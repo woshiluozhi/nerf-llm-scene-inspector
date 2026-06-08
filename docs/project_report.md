@@ -51,6 +51,14 @@ with evidence score, prompt stability, relation-edge count, localization metrics
 to run-scoped artifacts. This is intended for reproducible comparison across variants, not as
 a benchmark claim.
 
+## Annotation Workbench
+
+Run `scripts/create_annotation_workbench.py --annotations results/pipeline_runs/<scene>/annotation_template.json
+--results results/pipeline_runs/<scene>/queries --output results/pipeline_runs/<scene>/evaluation/annotation_workbench`
+to generate an offline HTML bbox-labeling workspace. The workbench copies query render images,
+preloads candidate boxes, and exports filled annotation JSON for validation, visual review,
+and evaluation.
+
 ## Research Report
 
 Run `scripts/generate_research_report.py --run-dir results/pipeline_runs/<scene>` after a

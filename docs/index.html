@@ -136,6 +136,7 @@
         <article class="capability"><h3>Language fields</h3><p>LERF-first semantic query path with OpenNeRF as a secondary adapter.</p></article>
         <article class="capability"><h3>Query planning</h3><p>Deterministic local planner for object, affordance, material, and relation prompts.</p></article>
         <article class="capability"><h3>Scene relations</h3><p>Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags.</p></article>
+        <article class="capability"><h3>Annotation workbench</h3><p>Offline bbox labeling from query render images with exportable JSON for evaluation.</p></article>
         <article class="capability"><h3>Experiment matrix</h3><p>Ablation-style JSON, CSV, and Markdown summaries across variants and query sets.</p></article>
         <article class="capability"><h3>Research reports</h3><p>Paper-style run summaries that combine metrics, evidence, limitations, and next steps.</p></article>
         <article class="capability"><h3>Run result cards</h3><p>One-page reviewer summaries with a calibrated takeaway, evidence snapshot, limitations, and safe sharing language.</p></article>
@@ -157,6 +158,7 @@
       </div>
       <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
+python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene

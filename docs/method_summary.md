@@ -30,6 +30,10 @@ Each pipeline run can produce `research_report.md` and `research_report.json`, a
 
 Each run can also produce `run_result_card.md` and `run_result_card.json`, a one-page reviewer-facing summary. It turns the same artifacts into a primary takeaway, shareable blurb, evidence snapshot, metrics, caveats, safe claims to avoid, readiness checks, and next actions. This is meant to help a professor or recruiter quickly understand what the run demonstrates before opening the full research report.
 
+## Annotation Workbench
+
+The evaluation path includes an offline HTML annotation workbench generated from `annotation_template.json` and query render artifacts. It copies candidate images, preloads candidate boxes, lets a reviewer draw `bbox_2d` labels in the browser, and exports filled annotation JSON for `validate_annotations.py`, `review_annotations.py`, and `evaluate_queries.py`. This keeps quantitative metrics tied to explicit human-reviewed labels rather than hidden assumptions.
+
 ## Submission Packets
 
 The submission-packet step converts run evidence into a claim-calibrated sharing checklist. It records what can safely be said in a CV bullet or professor email, what must not be claimed, whether a validated portfolio pack exists, and which warnings still need review. This keeps dry-run demos, real trained-scene results, and portfolio-ready evidence clearly separated.
