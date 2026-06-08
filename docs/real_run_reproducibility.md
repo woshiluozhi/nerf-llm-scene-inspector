@@ -108,6 +108,7 @@ Refresh the multi-run index after manual edits or copied-in run folders:
 
 ```bash
 python scripts/index_runs.py --root results/pipeline_runs
+python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
 Share `results/portfolio_pack.zip` together with the GitHub repository link when sending a

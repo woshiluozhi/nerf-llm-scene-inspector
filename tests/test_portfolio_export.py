@@ -69,6 +69,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     )
     assert demo_log["command"][0] == "python"
     assert (output_dir / "run" / "pipeline_summary.json").exists()
+    assert (output_dir / "project" / "docs" / "index.html").exists()
     assert (output_dir / "run" / "preflight_report.json").exists()
     assert (output_dir / "run" / "preflight_report.md").exists()
     assert (output_dir / "run" / "evidence_scorecard.json").exists()

@@ -58,6 +58,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Evidence scorecards that rate a run's portfolio-readiness without claiming model performance superiority.
+- Static project-level portfolio site under `docs/index.html` for GitHub Pages or local review.
 - Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
 - Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
@@ -156,6 +157,7 @@ python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/index_runs.py --root results/pipeline_runs
+python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
 This writes a reproducible pipeline record to `results/pipeline_runs/desk_scene/pipeline_summary.json`.
@@ -282,6 +284,7 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
 - `results/pipeline_runs/run_index.json`
 - `results/pipeline_runs/run_index.md`
+- `docs/index.html`
 - `results/pipeline_runs/<scene>/logs/*.json`
 - `results/pipeline_runs/<scene>/project_report.md`
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
@@ -309,6 +312,7 @@ directories so query artifacts remain traceable across repeated runs.
 Portfolio-facing docs:
 
 - [Portfolio result card](docs/portfolio_result_card.md)
+- [Static project page](docs/index.html)
 - [CV bullets](docs/cv_bullets.md)
 - [Cold-email paragraphs](docs/cold_email_paragraph.md)
 - [Real scene capture checklist](docs/real_scene_capture_checklist.md)
@@ -346,6 +350,7 @@ python scripts/create_annotation_template.py --help
 python scripts/validate_annotations.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/generate_portfolio_page.py --help
+python scripts/generate_project_site.py --help
 python scripts/evaluate_queries.py --help
 python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help

@@ -163,7 +163,10 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
 def _artifacts(run_dir: Path) -> dict[str, str]:
     candidates = {
         "pipeline_summary": "pipeline_summary.json",
+        "portfolio_page": "portfolio_page.html",
+        "evidence_scorecard": "evidence_scorecard.md",
         "run_audit": "run_audit.md",
+        "run_recommendations": "run_recommendations.md",
         "project_report": "project_report.md",
         "portfolio_card": "portfolio_result_card.md",
         "query_grid": "demo_assets/query_grid.png",

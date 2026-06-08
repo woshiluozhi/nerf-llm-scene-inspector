@@ -10,7 +10,7 @@
 
 - Engineered a research-oriented NeRF/VLM scene understanding system that turns monocular captures into language-queryable scene artifacts using Nerfstudio and LERF-style backends.
 - Integrated open-vocabulary visual query expansion, relevancy rendering, typed QueryResult schemas, 2D/3D fallback spatial reasoning, and annotation-based evaluation tables.
-- Built CPU-safe reproducibility infrastructure including dry-run training/query simulation, CI checks, real-run preflight reports, processed-scene quality reports, evidence scorecards, static portfolio pages, run-scoped portfolio packs, and professor-facing documentation.
+- Built CPU-safe reproducibility infrastructure including dry-run training/query simulation, CI checks, real-run preflight reports, processed-scene quality reports, evidence scorecards, project/run-level static portfolio pages, run-scoped portfolio packs, and professor-facing documentation.
 
 ## Conservative No-Overclaim Version
 

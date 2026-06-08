@@ -50,6 +50,7 @@ jobs:
           python scripts/validate_annotations.py --help
           python scripts/generate_demo_assets.py --help
           python scripts/generate_portfolio_page.py --help
+          python scripts/generate_project_site.py --help
           python scripts/evaluate_queries.py --help
           python scripts/audit_run.py --help
           python scripts/recommend_next_steps.py --help
@@ -66,6 +67,9 @@ jobs:
 
       - name: Run practical pipeline dry-run
         run: python scripts/run_scene_pipeline.py --dry-run --query mug
+
+      - name: Generate project site
+        run: python scripts/generate_project_site.py --output results/project_site/index.html --run-index results/pipeline_runs/run_index.json
 
       - name: Export run-scoped portfolio pack
         run: python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip

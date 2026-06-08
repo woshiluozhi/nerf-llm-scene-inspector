@@ -74,6 +74,7 @@ def _copy_project_materials(
         (ROOT / "README.md", "project/README.md"),
         (ROOT / "LICENSE", "project/LICENSE"),
         (ROOT / "CITATION.cff", "project/CITATION.cff"),
+        (ROOT / "docs" / "index.html", "project/docs/index.html"),
         (ROOT / "docs" / "portfolio_result_card.md", "project/docs/portfolio_result_card.md"),
         (ROOT / "docs" / "project_report.md", "project/docs/project_report.md"),
         (ROOT / "docs" / "method_summary.md", "project/docs/method_summary.md"),

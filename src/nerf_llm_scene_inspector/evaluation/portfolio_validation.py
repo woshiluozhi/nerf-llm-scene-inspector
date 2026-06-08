@@ -16,6 +16,7 @@ PROJECT_REQUIRED_FILES = [
     "project/README.md",
     "project/LICENSE",
     "project/CITATION.cff",
+    "project/docs/index.html",
     "project/docs/portfolio_result_card.md",
     "project/docs/project_report.md",
     "project/docs/method_summary.md",
