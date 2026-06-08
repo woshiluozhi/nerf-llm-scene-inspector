@@ -37,6 +37,7 @@ from nerf_llm_scene_inspector.utils.env_check import build_env_report
 from nerf_llm_scene_inspector.utils.paths import project_root, slugify, utc_timestamp
 from nerf_llm_scene_inspector.utils.provenance import build_provenance
 from nerf_llm_scene_inspector.utils.shell import format_command, run_command
+from nerf_llm_scene_inspector.visualization.make_video import make_query_grid
 from nerf_llm_scene_inspector.visualization.portfolio_page import build_portfolio_page
 
 
@@ -1033,9 +1034,69 @@ def _run_queries(
         report = engine.run_task(query, task_dir)
         report_path = report.to_json(task_dir / "scene_query_report.json")
         report_md_path = report.to_markdown(task_dir / "scene_query_report.md")
-        outputs[slugify(query)] = str(report_path)
-        outputs[f"{slugify(query)}_markdown"] = str(report_md_path)
+        overlay_paths = _report_overlay_paths(report)
+        grid_path = make_query_grid(overlay_paths, task_dir / "query_grid.png")
+        visual_summary_path = _write_query_visual_summary(
+            task_dir=task_dir,
+            scene_name=config.scene_name,
+            task=query,
+            backend=config.backend,
+            report=report,
+            overlay_paths=overlay_paths,
+            grid_path=grid_path,
+        )
+        query_slug = slugify(query)
+        outputs[query_slug] = str(report_path)
+        outputs[f"{query_slug}_markdown"] = str(report_md_path)
+        outputs[f"{query_slug}_visual_summary"] = str(visual_summary_path)
+        if grid_path:
+            outputs[f"{query_slug}_grid"] = str(grid_path)
     return outputs
+
+
+def _report_overlay_paths(report: Any) -> list[Path]:
+    return [
+        Path(view.path)
+        for result in report.query_results
+        for view in result.rendered_images
+        if view.kind == "overlay"
+    ]
+
+
+def _write_query_visual_summary(
+    *,
+    task_dir: Path,
+    scene_name: str,
+    task: str,
+    backend: str,
+    report: Any,
+    overlay_paths: list[Path],
+    grid_path: Path | None,
+) -> Path:
+    path = task_dir / "query_visual_summary.json"
+    path.write_text(
+        json.dumps(
+            {
+                "scene_name": scene_name,
+                "task": task,
+                "backend": backend,
+                "num_overlay_images": len([overlay for overlay in overlay_paths if overlay.exists()]),
+                "scene_query_report": "scene_query_report.json",
+                "query_grid": _relative_to_task_dir(grid_path, task_dir) if grid_path else None,
+                "expanded_queries": [result.query for result in report.query_results],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _relative_to_task_dir(path: Path, task_dir: Path) -> str:
+    try:
+        return str(path.relative_to(task_dir)).replace("\\", "/")
+    except ValueError:
+        return str(path)
 
 
 def _write_run_queries_file(run_dir: Path, scene_name: str, queries: list[str]) -> Path:

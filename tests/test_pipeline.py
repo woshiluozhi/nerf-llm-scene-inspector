@@ -81,6 +81,27 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
         / "mug"
         / "scene_query_report.md"
     ).exists()
+    assert (
+        tmp_path
+        / "pipeline_runs"
+        / "unit_scene"
+        / "queries"
+        / "mug"
+        / "query_grid.png"
+    ).exists()
+    visual_summary = json.loads(
+        (
+            tmp_path
+            / "pipeline_runs"
+            / "unit_scene"
+            / "queries"
+            / "mug"
+            / "query_visual_summary.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert visual_summary["query_grid"] == "query_grid.png"
+    assert visual_summary["scene_query_report"] == "scene_query_report.json"
+    assert visual_summary["expanded_queries"] == ["mug"]
     report_payload = json.loads(
         (
             tmp_path
@@ -284,9 +305,14 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     query_step = next(step for step in summary.steps if step.name == "query_scene")
     assert query_step.summary["num_queries"] == 2
     assert query_step.outputs["mug_markdown"] == str(run_dir / "queries" / "mug" / "scene_query_report.md")
+    assert query_step.outputs["mug_grid"] == str(run_dir / "queries" / "mug" / "query_grid.png")
+    assert query_step.outputs["mug_visual_summary"] == str(
+        run_dir / "queries" / "mug" / "query_visual_summary.json"
+    )
     assert query_step.outputs["coffee_mug"] == str(
         run_dir / "queries" / "coffee_mug" / "scene_query_report.json"
     )
+    assert (run_dir / "queries" / "coffee_mug" / "query_grid.png").exists()
     prompt_step = next(step for step in summary.steps if step.name == "analyze_prompt_sensitivity")
     assert prompt_step.outputs["markdown"] == str(
         run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md"

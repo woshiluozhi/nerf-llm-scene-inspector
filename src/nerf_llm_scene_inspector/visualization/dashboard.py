@@ -110,6 +110,7 @@ def collect_run_images(run_dir: str | Path, *, limit: int = 40) -> list[dict[str
     for pattern in (
         "demo_assets/**/*overlay.png",
         "evaluation/annotation_review_images/*.png",
+        "queries/**/query_grid.png",
         "queries/**/*overlay.png",
         "queries/**/*relevancy.png",
         "queries/**/*rgb.png",

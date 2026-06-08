@@ -436,6 +436,8 @@ when a `--require-all` repair left required queries unresolved.
 - `results/pipeline_runs/<scene>/training/language_train_summary.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.md`
+- `results/pipeline_runs/<scene>/queries/<query>/query_grid.png`
+- `results/pipeline_runs/<scene>/queries/<query>/query_visual_summary.json`
 - `results/pipeline_runs/<scene>/queries/<query>/viewer_repair_summary.json` when manual viewer repair is used
 - `results/pipeline_runs/<scene>/queries/<query>/<expanded_query>/viewer_import_summary.json` when manual viewer outputs are imported
 - `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_summary.json`
