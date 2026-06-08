@@ -66,3 +66,17 @@ python scripts/import_viewer_outputs.py \
 
 The importer writes `query_result.json`, estimates image-space boxes from relevancy maps,
 and can be used by `create_annotation_template.py` and `evaluate_queries.py`.
+
+For a full `scene_query_report.json` created by `query_scene.py`, save each viewer prompt
+under a query-slugged directory such as `results/manual_viewer/mug/` or
+`results/manual_viewer/cup/`, then repair the report in place:
+
+```bash
+python scripts/repair_scene_query_from_viewer.py \
+  --report results/pipeline_runs/desk_scene/queries/mug/scene_query_report.json \
+  --viewer-root results/manual_viewer
+```
+
+This replaces only queries with matching manual viewer outputs, keeps the original plan,
+regenerates the natural-language answer, writes `viewer_repair_summary.json`, and refreshes
+the Markdown report.

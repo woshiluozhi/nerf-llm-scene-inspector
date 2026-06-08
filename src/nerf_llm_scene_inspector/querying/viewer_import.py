@@ -10,11 +10,19 @@ from typing import Literal
 
 from PIL import Image
 
-from nerf_llm_scene_inspector.backends.base import BoundingRegion, QueryResult, RenderedView
+from nerf_llm_scene_inspector.backends.base import (
+    BoundingRegion,
+    QueryResult,
+    RenderedView,
+    SceneQueryReport,
+)
+from nerf_llm_scene_inspector.querying.answer_synthesis import synthesize_scene_answer
 from nerf_llm_scene_inspector.querying.relevancy_extractor import (
     best_render_score,
     extract_bbox_from_heatmap,
 )
+from nerf_llm_scene_inspector.querying.spatial_reasoning import aggregate_multi_query_results
+from nerf_llm_scene_inspector.utils.paths import slugify
 from nerf_llm_scene_inspector.utils.paths import utc_timestamp
 from nerf_llm_scene_inspector.visualization.render_overlays import create_side_by_side_overlay
 
@@ -35,6 +43,37 @@ class ViewerImportSummary:
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
+
+    def to_json(self, path: str | Path) -> Path:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        return output_path
+
+
+@dataclass
+class SceneQueryRepairSummary:
+    """Summary for repairing a scene query report with manual viewer outputs."""
+
+    report_path: str
+    viewer_root: str
+    output_report_path: str
+    markdown_report_path: str
+    repaired_queries: list[str] = field(default_factory=list)
+    kept_queries: list[str] = field(default_factory=list)
+    missing_viewer_dirs: list[str] = field(default_factory=list)
+    missing_required_queries: list[str] = field(default_factory=list)
+    generated_files: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.missing_required_queries
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["ok"] = self.ok
+        return payload
 
     def to_json(self, path: str | Path) -> Path:
         output_path = Path(path)
@@ -153,6 +192,108 @@ def import_viewer_outputs(
     return result, summary
 
 
+def repair_scene_query_report_from_viewer_outputs(
+    *,
+    report_path: str | Path,
+    viewer_root: str | Path,
+    output_report_path: str | Path | None = None,
+    markdown_report_path: str | Path | None = None,
+    threshold_quantile: float = 0.9,
+    create_missing_overlays: bool = True,
+    require_all: bool = False,
+) -> tuple[SceneQueryReport, SceneQueryRepairSummary]:
+    """Replace query results in a scene report with manually saved viewer outputs."""
+
+    source_report = Path(report_path)
+    root = Path(viewer_root)
+    if not source_report.exists():
+        raise FileNotFoundError(f"Scene query report does not exist: {source_report}")
+    if not root.exists():
+        raise FileNotFoundError(f"Viewer output root does not exist: {root}")
+
+    raw = json.loads(source_report.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("Scene query report must be a JSON object.")
+
+    report_dir = source_report.parent
+    output_json = Path(output_report_path) if output_report_path else source_report
+    output_md = Path(markdown_report_path) if markdown_report_path else output_json.with_suffix(".md")
+    results = [QueryResult.from_dict(item) for item in raw.get("query_results") or [] if isinstance(item, dict)]
+    repaired: list[QueryResult] = []
+    repaired_queries: list[str] = []
+    kept_queries: list[str] = []
+    missing_dirs: list[str] = []
+    missing_required: list[str] = []
+    generated_files: list[str] = []
+    warnings: list[str] = []
+    used_slugs: dict[str, int] = {}
+
+    for index, result in enumerate(results):
+        query_dir = report_dir / _unique_query_slug(result.query, used_slugs)
+        manual_dir = _viewer_dir_for_query(root, result.query, index)
+        if manual_dir is None:
+            kept_queries.append(result.query)
+            missing_dirs.append(result.query)
+            if require_all:
+                missing_required.append(result.query)
+            elif _has_viewer_fallback(result):
+                warnings.append(
+                    f"No manual viewer output directory found for fallback query '{result.query}'."
+                )
+            repaired.append(result)
+            continue
+
+        imported, import_summary = import_viewer_outputs(
+            query=result.query,
+            config_path=result.config_path,
+            input_dir=manual_dir,
+            output_dir=query_dir,
+            backend_name=result.backend_name,
+            threshold_quantile=threshold_quantile,
+            create_missing_overlays=create_missing_overlays,
+        )
+        imported.provenance["repaired_scene_query_report"] = str(source_report)
+        imported.to_json(query_dir / "query_result.json")
+        repaired.append(imported)
+        repaired_queries.append(result.query)
+        generated_files.extend(import_summary.generated_files)
+        warnings.extend(import_summary.warnings)
+
+    aggregate = aggregate_multi_query_results(repaired)
+    plan = dict(raw.get("plan") or {})
+    answer = synthesize_scene_answer(
+        task=str(raw.get("task") or ""),
+        plan=plan,
+        results=repaired,
+    )
+    report_warnings = _dedupe(_plan_warnings(plan) + aggregate.warnings + warnings)
+    repaired_report = SceneQueryReport(
+        scene_name=str(raw.get("scene_name") or "unknown"),
+        task=str(raw.get("task") or ""),
+        plan=plan,
+        query_results=repaired,
+        answer=answer.answer,
+        answer_summary=answer.to_dict(),
+        warnings=report_warnings,
+    )
+    repaired_report.to_json(output_json)
+    repaired_report.to_markdown(output_md)
+    summary = SceneQueryRepairSummary(
+        report_path=str(source_report),
+        viewer_root=str(root),
+        output_report_path=str(output_json),
+        markdown_report_path=str(output_md),
+        repaired_queries=repaired_queries,
+        kept_queries=kept_queries,
+        missing_viewer_dirs=missing_dirs,
+        missing_required_queries=missing_required,
+        generated_files=generated_files,
+        warnings=report_warnings,
+    )
+    summary.to_json(output_json.with_name("viewer_repair_summary.json"))
+    return repaired_report, summary
+
+
 def _collect_view_groups(source_dir: Path) -> list[_ViewGroup]:
     groups: dict[str, _ViewGroup] = {}
     for path in sorted(source_dir.glob("*")):
@@ -233,3 +374,45 @@ def _view_from_file(path: Path, *, kind: str, query: str, view_id: str) -> Rende
         height=height,
         score=best_render_score(path) if kind == "relevancy" else None,
     )
+
+
+def _viewer_dir_for_query(root: Path, query: str, index: int) -> Path | None:
+    slug = slugify(query)
+    candidates = [
+        root / slug,
+        root / query,
+        root / f"{index:02d}_{slug}",
+        root / f"{index + 1:02d}_{slug}",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir() and _collect_view_groups(candidate):
+            return candidate
+    return None
+
+
+def _unique_query_slug(query: str, used_slugs: dict[str, int]) -> str:
+    base = slugify(query)
+    count = used_slugs.get(base, 0) + 1
+    used_slugs[base] = count
+    return base if count == 1 else f"{base}_{count}"
+
+
+def _has_viewer_fallback(result: QueryResult) -> bool:
+    if any(view.kind == "viewer_fallback" for view in result.rendered_images):
+        return True
+    return any("viewer fallback" in warning.lower() for warning in result.warnings)
+
+
+def _plan_warnings(plan: dict[str, object]) -> list[str]:
+    warnings = plan.get("warnings")
+    return [str(item) for item in warnings] if isinstance(warnings, list) else []
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        if item and item not in seen:
+            seen.add(item)
+            deduped.append(item)
+    return deduped

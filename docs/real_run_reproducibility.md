@@ -131,6 +131,19 @@ python scripts/import_viewer_outputs.py \
   --output results/pipeline_runs/desk_scene/queries/mug
 ```
 
+For a multi-query scene report, save one folder per query slug under `results/manual_viewer/`
+and repair the whole report before annotation:
+
+```bash
+python scripts/repair_scene_query_from_viewer.py \
+  --report results/pipeline_runs/desk_scene/queries/mug/scene_query_report.json \
+  --viewer-root results/manual_viewer \
+  --require-all
+```
+
+Use `--require-all` when every expanded prompt should have manually saved viewer evidence.
+Without it, missing query folders are kept as original results and recorded as warnings.
+
 ## Provenance Fields
 
 Each pipeline run stores a `provenance` block with:

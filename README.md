@@ -49,6 +49,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 
 - CPU-safe CLI wrappers for data preparation, baseline training, language-field training, querying, demo generation, evaluation, and environment checks.
 - LERF primary backend with dry-run multi-view artifacts, best-effort internal rendering, strict mode, and manual viewer fallback templates.
+- Manual viewer-output import and scene-query report repair for recovering structured evidence after interactive LERF fallback.
 - Optional OpenNeRF adapter scaffold.
 - Typed JSON artifacts for query results and scene reports.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
@@ -392,6 +393,17 @@ them back into the standard query schema:
 python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.yml --input results/manual_viewer/mug --output results/query_outputs/mug
 ```
 
+For a high-level task that expanded into multiple backend queries, put each saved viewer
+folder under `results/manual_viewer/<query_slug>/` and repair the full scene report:
+
+```bash
+python scripts/repair_scene_query_from_viewer.py --report results/pipeline_runs/desk_scene/queries/mug/scene_query_report.json --viewer-root results/manual_viewer
+```
+
+This updates `scene_query_report.json`, rewrites `scene_query_report.md`, and records
+`viewer_repair_summary.json` so annotation, evaluation, and portfolio reports can use the
+manual LERF evidence.
+
 ## Expected Outputs
 
 - `data/processed/<scene>/transforms.json`
@@ -535,6 +547,7 @@ python scripts/train_baseline_nerf.py --help
 python scripts/train_language_field.py --help
 python scripts/query_scene.py --help
 python scripts/import_viewer_outputs.py --help
+python scripts/repair_scene_query_from_viewer.py --help
 python scripts/create_annotation_template.py --help
 python scripts/create_annotation_workbench.py --help
 python scripts/merge_annotation_workbench.py --help

@@ -6,7 +6,9 @@ from pathlib import Path
 from PIL import Image
 
 from nerf_llm_scene_inspector.backends.base import QueryResult
+from nerf_llm_scene_inspector.backends.base import RenderedView, SceneQueryReport
 from nerf_llm_scene_inspector.querying.viewer_import import import_viewer_outputs
+from nerf_llm_scene_inspector.querying.viewer_import import repair_scene_query_report_from_viewer_outputs
 from nerf_llm_scene_inspector.visualization.render_overlays import create_mock_rgb_and_heatmap
 
 
@@ -107,3 +109,107 @@ def test_import_viewer_outputs_cli(tmp_path: Path) -> None:
     payload = json.loads((output / "query_result.json").read_text(encoding="utf-8"))
     assert payload["query"] == "mug"
     assert payload["provenance"]["manual_viewer_import"] is True
+
+
+def test_repair_scene_query_report_from_viewer_outputs(tmp_path: Path) -> None:
+    report_path = _write_scene_query_report(tmp_path / "scene_query_report.json")
+    viewer_root = tmp_path / "manual_viewer"
+    create_mock_rgb_and_heatmap(viewer_root / "mug", query="mug", view_id="view_0002")
+
+    report, summary = repair_scene_query_report_from_viewer_outputs(
+        report_path=report_path,
+        viewer_root=viewer_root,
+    )
+
+    assert summary.ok
+    assert summary.repaired_queries == ["mug"]
+    assert summary.kept_queries == ["bottle"]
+    assert (tmp_path / "mug" / "query_result.json").exists()
+    assert (tmp_path / "viewer_repair_summary.json").exists()
+    assert (tmp_path / "scene_query_report.md").exists()
+    repaired_result = report.query_results[0]
+    assert repaired_result.query == "mug"
+    assert repaired_result.bounding_regions
+    assert repaired_result.provenance["manual_viewer_import"] is True
+    assert not any(view.kind == "viewer_fallback" for view in repaired_result.rendered_images)
+    assert report.answer_summary["support_level"] == "2d_relevancy_fallback"
+
+
+def test_repair_scene_query_report_cli_requires_all(tmp_path: Path) -> None:
+    report_path = _write_scene_query_report(tmp_path / "scene_query_report.json")
+    viewer_root = tmp_path / "manual_viewer"
+    create_mock_rgb_and_heatmap(viewer_root / "mug", query="mug", view_id="view_0002")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "repair_scene_query_from_viewer.py"),
+            "--report",
+            str(report_path),
+            "--viewer-root",
+            str(viewer_root),
+            "--require-all",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    summary = json.loads((tmp_path / "viewer_repair_summary.json").read_text(encoding="utf-8"))
+    assert summary["repaired_queries"] == ["mug"]
+    assert summary["missing_required_queries"] == ["bottle"]
+
+
+def test_repair_scene_query_report_cli_help() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "repair_scene_query_from_viewer.py"),
+            "--help",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "--viewer-root" in result.stdout
+
+
+def _write_scene_query_report(path: Path) -> Path:
+    report = SceneQueryReport(
+        scene_name="desk_scene",
+        task="Find objects that can hold water.",
+        plan={
+            "planner_name": "local_rules",
+            "final_answer_template": "Likely relevant scene regions are {items}.",
+            "primary_visual_queries": ["mug", "bottle"],
+        },
+        query_results=[
+            QueryResult(
+                query="mug",
+                backend_name="lerf",
+                config_path="config.yml",
+                rendered_images=[
+                    RenderedView(
+                        path="interactive_viewer_workflow.md",
+                        kind="viewer_fallback",
+                        query="mug",
+                    )
+                ],
+                warnings=["Automated LERF rendering failed; wrote viewer fallback instructions."],
+            ),
+            QueryResult(
+                query="bottle",
+                backend_name="lerf",
+                config_path="config.yml",
+                confidence=0.2,
+            ),
+        ],
+        answer="Previous fallback answer.",
+        warnings=["Automated LERF rendering failed; wrote viewer fallback instructions."],
+    )
+    return report.to_json(path)

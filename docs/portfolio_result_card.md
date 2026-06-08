@@ -21,6 +21,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
 - Failure-diagnostics report generation that classifies CUDA, LERF registration, COLMAP/FFmpeg, missing-config, and viewer-fallback issues from saved logs.
+- Manual viewer-output import and full scene-query repair for recovering structured evidence when automated LERF rendering falls back to the interactive viewer.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
 - Multi-run comparison report for ranking repeated captures or training attempts before selecting a portfolio candidate.
 - Experiment-matrix runner for small backend/query/variant ablations with CSV/Markdown summaries, candidate status, readiness gates, diagnostics, and blocking reasons.

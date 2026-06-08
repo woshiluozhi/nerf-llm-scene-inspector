@@ -42,6 +42,8 @@ Each pipeline run can produce `research_report.md` and `research_report.json`, a
 
 Each run can also produce `run_result_card.md` and `run_result_card.json`, a one-page reviewer-facing summary. It turns the same artifacts into a primary takeaway, shareable blurb, evidence snapshot, metrics, caveats, safe claims to avoid, readiness checks, and next actions. This is meant to help a professor or recruiter quickly understand what the run demonstrates before opening the full research report.
 
+When upstream LERF automation falls back to the interactive Nerfstudio viewer, the project keeps the run recoverable. Single-query viewer renders can be imported into `QueryResult` artifacts, and full scene-query reports can be repaired from a directory of manually saved viewer outputs. The repair step preserves the original query plan, replaces matching backend results, regenerates the answer and Markdown report, and records a summary for auditability.
+
 ## Annotation Workbench
 
 The evaluation path includes an offline HTML annotation workbench generated from `annotation_template.json` and query render artifacts. It copies candidate images, preloads candidate boxes, and lets a reviewer draw `bbox_2d` labels in the browser. The downloaded JSON is merged back into a clean evaluation annotation file, validated, visually reviewed, and evaluated. In normal run-scoped usage, `finalize_annotations.py` orchestrates those lower-level steps so quantitative metrics stay tied to explicit human-reviewed labels rather than hidden assumptions.

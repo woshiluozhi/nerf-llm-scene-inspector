@@ -44,6 +44,7 @@ jobs:
           python scripts/train_language_field.py --help
           python scripts/query_scene.py --help
           python scripts/import_viewer_outputs.py --help
+          python scripts/repair_scene_query_from_viewer.py --help
           python scripts/create_annotation_template.py --help
           python scripts/create_annotation_workbench.py --help
           python scripts/merge_annotation_workbench.py --help
