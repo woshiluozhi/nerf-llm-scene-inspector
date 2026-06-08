@@ -55,14 +55,17 @@ def main() -> int:
         "run_dir": _display_source_path(run_dir) if run_dir else None,
         "run_summary": run_summary,
         "archive": _display_source_path(Path(archive_path)) if archive_path else None,
+        "review_checklist": "professor_review_checklist.md",
         "recommended_demo_command": "python scripts/run_scene_pipeline.py --dry-run --query mug",
     }
+    _write_professor_review_checklist(output, index, copied)
     _write_pack_readme(output, index, copied)
     _add_artifact_digests(output, copied)
     (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     if args.zip:
         archive_path = Path(shutil.make_archive(str(output), "zip", output))
         index["archive"] = _display_source_path(archive_path)
+        _write_professor_review_checklist(output, index, copied, replace_existing=True)
         _write_pack_readme(output, index, copied, replace_existing=True)
         _add_artifact_digests(output, copied)
         (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
@@ -466,6 +469,24 @@ def _write_pack_readme(
     copied.append({"source": "generated", "destination": "README.md"})
 
 
+def _write_professor_review_checklist(
+    output: Path,
+    index: dict[str, Any],
+    copied: list[dict[str, Any]],
+    *,
+    replace_existing: bool = False,
+) -> None:
+    checklist = output / "professor_review_checklist.md"
+    checklist.write_text(_professor_review_checklist_text(index), encoding="utf-8")
+    existing = next((item for item in copied if item.get("destination") == "professor_review_checklist.md"), None)
+    if existing is not None:
+        if replace_existing:
+            existing.pop("size_bytes", None)
+            existing.pop("sha256", None)
+        return
+    copied.append({"source": "generated", "destination": "professor_review_checklist.md"})
+
+
 def _pack_readme_text(index: dict[str, Any]) -> str:
     run_summary = index.get("run_summary") if isinstance(index.get("run_summary"), dict) else {}
     artifacts = run_summary.get("artifacts") if isinstance(run_summary.get("artifacts"), dict) else {}
@@ -503,6 +524,7 @@ def _pack_readme_text(index: dict[str, Any]) -> str:
         "- `run/run_result_card.md`: concise run outcome and evidence level.",
         "- `run/research_report.md`: method-oriented run report.",
         "- `run/submission_packet/submission_checklist.md`: external-sharing checklist and calibrated claims.",
+        "- `professor_review_checklist.md`: one-page checklist for external technical review.",
         "- `portfolio_pack_index.json`: machine-readable manifest with artifact digests.",
         "",
         "## Evidence Notes",
@@ -549,6 +571,117 @@ def _pack_readme_text(index: dict[str, Any]) -> str:
         lines.extend(f"- `{item}`" for item in optional_missing[:20])
     lines.append("")
     return "\n".join(lines)
+
+
+def _professor_review_checklist_text(index: dict[str, Any]) -> str:
+    run_summary = index.get("run_summary") if isinstance(index.get("run_summary"), dict) else {}
+    artifacts = run_summary.get("artifacts") if isinstance(run_summary.get("artifacts"), dict) else {}
+    dry_run = run_summary.get("dry_run")
+    evidence_mode = "CPU dry-run smoke demo" if dry_run is True else "real-scene run" if dry_run is False else "project export"
+    scene_name = run_summary.get("scene_name") or "project-only export"
+    backend = run_summary.get("backend") or "not recorded"
+    github = index.get("github") or "not recorded"
+    archive = index.get("archive") or "not generated"
+    missing = index.get("missing") if isinstance(index.get("missing"), list) else []
+    optional_missing = index.get("optional_missing") if isinstance(index.get("optional_missing"), list) else []
+    recommended = index.get("recommended_demo_command") or "python scripts/run_scene_pipeline.py --dry-run --query mug"
+
+    lines = [
+        "# Professor Review Checklist",
+        "",
+        "Use this one-page checklist to review the project without digging through every artifact first.",
+        "",
+        "## Packet Summary",
+        "",
+        f"- Scene: `{scene_name}`",
+        f"- Evidence mode: `{evidence_mode}`",
+        f"- Backend: `{backend}`",
+        f"- Repository: {github}",
+        f"- Archive: `{archive}`",
+        f"- Missing required files: {len(missing)}",
+        f"- Missing optional files: {len(optional_missing)}",
+        "",
+        "## Five-Minute Review Path",
+        "",
+        "- [ ] Open `project/docs/index.html` for the project narrative and visual preview.",
+        "- [ ] Read `run/run_result_card.md` for the run outcome and evidence level.",
+        "- [ ] Check `run/submission_packet/submission_checklist.md` for calibrated external claims.",
+        "- [ ] Inspect `run/quality_gate.md` and `run/claim_audit.md` before trusting the packet.",
+        "- [ ] Open `run/portfolio_page.html` and `run/demo_assets/query_grid.png` for visual evidence.",
+        "- [ ] Confirm `portfolio_pack_index.json` contains digests for copied artifacts.",
+        "",
+        "## Technical Evidence To Check",
+        "",
+        "- [ ] Reconstruction/data path is documented in `run/capture_manifest.md` and `run/scene_data_inspection.md`.",
+        "- [ ] Training or dry-run mode is explicit in `run/pipeline_summary.json`.",
+        "- [ ] Language-query artifacts are present under `run/queries/`.",
+        "- [ ] Evaluation and annotation artifacts are present under `run/evaluation/`.",
+        "- [ ] Reproduction instructions are present in `run/reproduction_report.md` and `run/reproduce_run.sh`.",
+        "- [ ] Real-run upgrade plan is present in `run/real_run_plan/real_run_plan.md`.",
+        "",
+        "## Claim Calibration",
+        "",
+        "- [ ] Treat this as a research engineering project built on Nerfstudio and LERF-style language fields.",
+        "- [ ] Do not interpret this packet as a new NeRF architecture claim.",
+        "- [ ] Do not interpret single-scene or dry-run evidence as state-of-the-art benchmark performance.",
+        "- [ ] Do not interpret the system as production robotics manipulation software.",
+    ]
+    if dry_run is True:
+        lines.extend(
+            [
+                "- [ ] Dry-run visual artifacts are pipeline smoke evidence, not trained LERF outputs from a real scene.",
+                "- [ ] A CUDA-backed Nerfstudio/LERF run is still required before claiming real-scene performance.",
+            ]
+        )
+    elif dry_run is False:
+        lines.extend(
+            [
+                "- [ ] Real-scene claims should cite the quality gate, annotation review, and evaluation summary.",
+                "- [ ] Any quantitative result should be described as scene-specific unless broader evaluation is added.",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Reproduction Checks",
+            "",
+            f"- [ ] Smoke command is recorded: `{recommended}`",
+            "- [ ] Validate directory pack with `python scripts/validate_portfolio_pack.py --pack results/portfolio_pack`.",
+            "- [ ] Validate zip pack with `python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip`.",
+            "- [ ] Inspect warnings in `portfolio_pack_validation.json` before forwarding the pack.",
+        ]
+    )
+    if artifacts:
+        lines.extend(["", "## High-Value Artifact Links", ""])
+        for key in _review_artifact_keys():
+            value = artifacts.get(key)
+            if isinstance(value, str) and value:
+                lines.append(f"- `{key}`: `{value}`")
+    if missing:
+        lines.extend(["", "## Required Files Missing", ""])
+        lines.extend(f"- `{item}`" for item in missing[:20])
+    if optional_missing:
+        lines.extend(["", "## Optional Files Missing", ""])
+        lines.extend(f"- `{item}`" for item in optional_missing[:20])
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _review_artifact_keys() -> list[str]:
+    return [
+        "portfolio_page",
+        "run_result_card",
+        "research_report",
+        "quality_gate",
+        "claim_audit",
+        "submission_checklist",
+        "reproduction_report",
+        "real_run_plan",
+        "query_reports",
+        "annotation_review",
+        "evaluation_summary",
+        "demo_grid",
+    ]
 
 
 def _sha256(path: Path) -> str:

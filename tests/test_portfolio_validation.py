@@ -34,6 +34,17 @@ def test_validate_portfolio_pack_fails_missing_artifact(tmp_path: Path) -> None:
     assert any("demo_grid" in issue for issue in report.artifact_issues)
 
 
+def test_validate_portfolio_pack_fails_missing_review_checklist(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "professor_review_checklist.md").unlink()
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "professor_review_checklist.md" in report.missing_files
+    assert any("review_checklist" in issue for issue in report.artifact_issues)
+
+
 def test_validate_portfolio_pack_fails_path_leak(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     (pack / "run" / "pipeline_summary.json").write_text(
@@ -209,6 +220,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
     pack = tmp_path / "portfolio_pack"
     files = [
         "README.md",
+        "professor_review_checklist.md",
         "project/README.md",
         "project/LICENSE",
         "project/CITATION.cff",
@@ -291,6 +303,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "optional_missing": [],
         "github": "https://github.com/woshiluozhi/nerf-llm-scene-inspector",
         "run_dir": "results/pipeline_runs/desk_scene",
+        "review_checklist": "professor_review_checklist.md",
         "run_summary": {
             "scene_name": "desk_scene",
             "success": True,

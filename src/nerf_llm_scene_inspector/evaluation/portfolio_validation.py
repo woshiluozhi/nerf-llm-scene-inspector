@@ -16,6 +16,7 @@ from nerf_llm_scene_inspector.utils.paths import utc_timestamp
 
 PROJECT_REQUIRED_FILES = [
     "README.md",
+    "professor_review_checklist.md",
     "portfolio_pack_index.json",
     "project/README.md",
     "project/LICENSE",
@@ -310,6 +311,17 @@ def _check_index(
     optional_missing = index.get("optional_missing") or []
     if optional_missing:
         warnings.append("Optional files were not exported: " + ", ".join(map(str, optional_missing)))
+
+    review_checklist = index.get("review_checklist")
+    if not isinstance(review_checklist, str) or not review_checklist:
+        artifact_issues.append("portfolio_pack_index.json field 'review_checklist' must be a non-empty relative path.")
+    else:
+        _check_relative_artifact(
+            pack_path,
+            review_checklist,
+            artifact_issues,
+            label="portfolio_pack_index.json review_checklist",
+        )
 
     for item in index.get("copied") or []:
         if not isinstance(item, dict):
