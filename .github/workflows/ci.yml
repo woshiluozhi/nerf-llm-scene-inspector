@@ -62,6 +62,7 @@ jobs:
           python scripts/check_run_quality.py --help
           python scripts/create_reproduction_bundle.py --help
           python scripts/generate_research_report.py --help
+          python scripts/create_submission_packet.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help
           python scripts/run_experiment_matrix.py --help
@@ -87,3 +88,6 @@ jobs:
 
       - name: Validate portfolio pack
         run: python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+
+      - name: Create submission packet
+        run: python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector

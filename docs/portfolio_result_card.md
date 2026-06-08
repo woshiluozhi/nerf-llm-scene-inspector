@@ -21,6 +21,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Multi-run comparison report for ranking repeated captures or training attempts before selecting a portfolio candidate.
 - Experiment-matrix runner for small backend/query/variant ablations with CSV and Markdown summaries.
 - Paper-style research report generation from run artifacts, metrics, limitations, and next steps.
+- Submission packet generation for claim-calibrated CV, portfolio, and professor-outreach sharing.
 - Static project-level portfolio site for GitHub Pages or local review.
 - Static HTML portfolio page with evidence score, metrics, visual artifacts, and artifact links.
 
@@ -34,6 +35,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Run-scoped pipeline artifacts avoid stale query/evaluation results across reruns.
 - Shareable preflight, audit, recommendation, and reproduction artifacts for portfolio review.
 - Research report artifacts summarize evidence, limitations, and next steps in a paper-style format.
+- Submission checklist records allowed claims, claims to avoid, pack validation status, and next actions.
 - Run evidence scorecard summarizes capture readiness, query artifacts, overlays, annotation coverage, evaluation metrics, and reproducibility files.
 
 ## Dry-Run vs Real GPU Mode
@@ -53,6 +55,7 @@ python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
 ```
 
 ## Outputs
@@ -67,6 +70,7 @@ python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_sce
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
 - Evidence scorecard: `results/pipeline_runs/desk_scene/evidence_scorecard.md`
 - Research report: `results/pipeline_runs/desk_scene/research_report.md`
+- Submission checklist: `results/pipeline_runs/desk_scene/submission_packet/submission_checklist.md`
 - Static portfolio page: `results/pipeline_runs/desk_scene/portfolio_page.html`
 - Annotation review: `results/pipeline_runs/desk_scene/evaluation/annotation_review.md`
 - Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`

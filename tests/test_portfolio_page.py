@@ -20,6 +20,7 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "demo_assets/query_grid.png" in html
     assert "quality_gate.md" in html
     assert "research_report.md" in html
+    assert "submission_packet/submission_checklist.md" in html
     assert str(tmp_path) not in html
     assert "C:\\Users" not in html
 
@@ -88,6 +89,7 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "run_recommendations.md", "# Recommendations\n")
     _write_text(run_dir / "scene_data_inspection.md", "# Scene\n")
     _write_text(run_dir / "research_report.md", "# Research Report\n")
+    _write_text(run_dir / "submission_packet" / "submission_checklist.md", "# Submission\n")
     _write_text(run_dir / "portfolio_result_card.md", "# Card\n")
     return run_dir
 

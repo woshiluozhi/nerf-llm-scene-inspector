@@ -87,6 +87,7 @@ class ProjectPortfolioSite:
                 _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
                 _capability("Experiment matrix", "Ablation-style JSON, CSV, and Markdown summaries across variants and query sets."),
                 _capability("Research reports", "Paper-style run summaries that combine metrics, evidence, limitations, and next steps."),
+                _capability("Submission packets", "Claim-calibrated CV and outreach checklists for sharing without overclaiming."),
                 _capability(
                     "Evidence packaging",
                     "Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.",
@@ -326,7 +327,8 @@ python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
-python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></pre>"""
+python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet</code></pre>"""
 
 
 def _run_comparison_link(run_index_path: str | Path | None, output_dir: Path) -> str:

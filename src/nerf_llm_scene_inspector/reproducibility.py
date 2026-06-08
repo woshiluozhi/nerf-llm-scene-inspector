@@ -181,6 +181,7 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(["python", "scripts/check_run_quality.py", "--run-dir", run_dir, "--profile", "smoke"]),
         _format_command(["python", "scripts/generate_research_report.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/create_submission_packet.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/compare_runs.py", "--root", runs_root]),
         _format_command(
             [
@@ -264,6 +265,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         ("quality_gate", root / "quality_gate.md", "quality_gate.md", "Pass/warn/fail run quality gate report."),
         ("portfolio_page", root / "portfolio_page.html", "portfolio_page.html", "Static HTML page for sharing run evidence."),
         ("research_report", root / "research_report.md", "research_report.md", "Paper-style report summarizing method, evidence, limitations, and next steps."),
+        (
+            "submission_checklist",
+            root / "submission_packet" / "submission_checklist.md",
+            "submission_packet/submission_checklist.md",
+            "Claim-calibrated checklist for CV, portfolio, and professor outreach.",
+        ),
         (
             "run_comparison",
             root.parent / "run_comparison.md",

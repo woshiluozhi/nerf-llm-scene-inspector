@@ -78,6 +78,9 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
     assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
     assert index["run_summary"]["artifacts"]["research_report"] == "run/research_report.md"
+    assert index["run_summary"]["artifacts"]["submission_checklist"] == (
+        "run/submission_packet/submission_checklist.md"
+    )
     assert index["run_summary"]["scene_name"] == "export_scene"
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
@@ -115,6 +118,10 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "reproduce_run.sh").exists()
     assert (output_dir / "run" / "research_report.json").exists()
     assert (output_dir / "run" / "research_report.md").exists()
+    assert (output_dir / "run" / "submission_packet" / "submission_packet.json").exists()
+    assert (output_dir / "run" / "submission_packet" / "submission_checklist.md").exists()
+    assert (output_dir / "run" / "submission_packet" / "cv_project_entry.md").exists()
+    assert (output_dir / "run" / "submission_packet" / "professor_email_brief.md").exists()
     assert (output_dir / "run" / "annotation_template.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.md").exists()

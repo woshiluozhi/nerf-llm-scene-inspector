@@ -158,6 +158,13 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "reproduce_run.sh").exists()
     assert (run_dir / "research_report.json").exists()
     assert (run_dir / "research_report.md").exists()
+    assert (run_dir / "submission_packet" / "submission_packet.json").exists()
+    assert (run_dir / "submission_packet" / "submission_checklist.md").exists()
+    assert (run_dir / "submission_packet" / "cv_project_entry.md").exists()
+    assert (run_dir / "submission_packet" / "professor_email_brief.md").exists()
+    assert "submission_packet/submission_checklist.md" in (
+        run_dir / "portfolio_page.html"
+    ).read_text(encoding="utf-8")
     run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
@@ -228,6 +235,14 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
     research_step = next(step for step in summary.steps if step.name == "generate_research_report")
     assert research_step.outputs["markdown"] == str(run_dir / "research_report.md")
+    submission_step = next(step for step in summary.steps if step.name == "create_submission_packet")
+    assert submission_step.outputs["markdown"] == str(
+        run_dir / "submission_packet" / "submission_checklist.md"
+    )
+    submission_payload = json.loads(
+        (run_dir / "submission_packet" / "submission_packet.json").read_text(encoding="utf-8")
+    )
+    assert submission_payload["readiness_level"] == "needs_pack_validation"
     comparison_step = next(step for step in summary.steps if step.name == "compare_runs")
     assert comparison_step.outputs["json"] == str(tmp_path / "pipeline_runs" / "run_comparison.json")
 

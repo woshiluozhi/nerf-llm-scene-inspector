@@ -171,6 +171,7 @@ def _artifacts(run_dir: Path) -> dict[str, str]:
         "run_recommendations": "run_recommendations.md",
         "project_report": "project_report.md",
         "portfolio_card": "portfolio_result_card.md",
+        "submission_checklist": "submission_packet/submission_checklist.md",
         "query_grid": "demo_assets/query_grid.png",
         "evaluation_summary": "evaluation/eval_summary.json",
         "annotation_validation": "evaluation/annotation_validation.json",

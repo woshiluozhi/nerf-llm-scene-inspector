@@ -25,6 +25,7 @@ check:
 	$(PYTHON) scripts/compare_runs.py --help
 	$(PYTHON) scripts/run_experiment_matrix.py --help
 	$(PYTHON) scripts/generate_research_report.py --help
+	$(PYTHON) scripts/create_submission_packet.py --help
 	$(PYTHON) scripts/run_scene_pipeline.py --help
 	$(PYTHON) scripts/run_dry_run_demo.py --help
 	$(PYTHON) -m pytest
@@ -40,6 +41,8 @@ experiment-matrix:
 
 portfolio-pack:
 	$(PYTHON) scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+	$(PYTHON) scripts/validate_portfolio_pack.py --pack results/portfolio_pack
+	$(PYTHON) scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
 
 clean-generated:
 	rm -rf data runs outputs viewer_logs wandb

@@ -41,6 +41,10 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "reproduction_report": _read_text(root / "reproduction_report.md"),
         "research_report": _read_json(root / "research_report.json"),
         "research_report_markdown": _read_text(root / "research_report.md"),
+        "submission_packet": _read_json(root / "submission_packet" / "submission_packet.json"),
+        "submission_checklist": _read_text(root / "submission_packet" / "submission_checklist.md"),
+        "submission_cv_entry": _read_text(root / "submission_packet" / "cv_project_entry.md"),
+        "submission_email_brief": _read_text(root / "submission_packet" / "professor_email_brief.md"),
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
         "training_summaries": {
@@ -287,6 +291,18 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
     elif bundle["research_report"]:
         with st.expander("Research Report", expanded=False):
             st.json(bundle["research_report"])
+    if bundle["submission_checklist"]:
+        with st.expander("Submission Checklist", expanded=False):
+            st.markdown(bundle["submission_checklist"])
+            if bundle["submission_cv_entry"]:
+                st.markdown("### CV Entry")
+                st.markdown(bundle["submission_cv_entry"])
+            if bundle["submission_email_brief"]:
+                st.markdown("### Outreach Brief")
+                st.markdown(bundle["submission_email_brief"])
+    elif bundle["submission_packet"]:
+        with st.expander("Submission Packet", expanded=False):
+            st.json(bundle["submission_packet"])
 
     st.subheader("Step Status")
     rows = [
@@ -461,6 +477,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "run_recommendations.json",
         "reproduction_manifest.json",
         "research_report.json",
+        "submission_packet/submission_packet.json",
         "environment_report.json",
         "scene_data_inspection.json",
         "annotation_template.json",
@@ -496,6 +513,14 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("training/language_train_summary.json")
     if _step_succeeded(pipeline_summary, "generate_research_report"):
         expected.append("research_report.md")
+    if _step_succeeded(pipeline_summary, "create_submission_packet"):
+        expected.extend(
+            [
+                "submission_packet/submission_checklist.md",
+                "submission_packet/cv_project_entry.md",
+                "submission_packet/professor_email_brief.md",
+            ]
+        )
     return [relative for relative in expected if not (run_dir / relative).exists()]
 
 

@@ -28,6 +28,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "analyze_scene_relations", "status": "success"},
                 {"name": "review_annotations", "status": "success"},
                 {"name": "generate_research_report", "status": "success"},
+                {"name": "create_submission_packet", "status": "success"},
             ],
             "provenance": {"git_commit": "abc123"},
         },
@@ -76,6 +77,19 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     (run_dir / "reproduction_report.md").write_text("# Reproduction Report\n", encoding="utf-8")
     _write_json(run_dir / "research_report.json", {"scene_name": "run", "title": "Research"})
     (run_dir / "research_report.md").write_text("# Research Report\n", encoding="utf-8")
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {"readiness_level": "shareable_smoke_demo"},
+    )
+    (run_dir / "submission_packet" / "submission_checklist.md").write_text(
+        "# Submission Checklist\n",
+        encoding="utf-8",
+    )
+    (run_dir / "submission_packet" / "cv_project_entry.md").write_text("# CV\n", encoding="utf-8")
+    (run_dir / "submission_packet" / "professor_email_brief.md").write_text(
+        "# Email\n",
+        encoding="utf-8",
+    )
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
     _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
@@ -145,6 +159,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Reproduction Report" in bundle["reproduction_report"]
     assert bundle["research_report"]["scene_name"] == "run"
     assert "# Research Report" in bundle["research_report_markdown"]
+    assert bundle["submission_packet"]["readiness_level"] == "shareable_smoke_demo"
+    assert "# Submission Checklist" in bundle["submission_checklist"]
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["annotation_review"]["ok"] is True
     assert "# Annotation Review" in bundle["annotation_review_markdown"]

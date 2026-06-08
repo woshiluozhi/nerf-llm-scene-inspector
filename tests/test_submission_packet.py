@@ -1,0 +1,131 @@
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from nerf_llm_scene_inspector.evaluation.submission_packet import (
+    build_submission_packet,
+    write_submission_packet,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    validation = tmp_path / "portfolio_pack_validation.json"
+    _write_json(
+        validation,
+        {
+            "ok": True,
+            "warnings": ["dry-run pack warning"],
+            "errors": [],
+            "path_leaks": [],
+        },
+    )
+
+    packet = build_submission_packet(
+        run_dir,
+        pack_validation_path=validation,
+        repo_url="https://github.com/example/repo",
+        ci_url="https://github.com/example/repo/actions/runs/1",
+    )
+
+    assert packet.readiness_level == "shareable_smoke_demo"
+    assert packet.pack_ok is True
+    assert any("CPU-safe pipeline wiring" in claim for claim in packet.allowed_claims)
+    assert any("trained LERF outputs" in claim for claim in packet.avoid_claims)
+    assert any(item.name == "path_leaks" and item.status == "pass" for item in packet.checklist)
+
+
+def test_write_submission_packet_outputs_markdown_and_briefs(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    output_dir = tmp_path / "packet"
+
+    packet = write_submission_packet(run_dir, output_dir=output_dir)
+
+    assert packet.readiness_level == "needs_pack_validation"
+    assert (output_dir / "submission_packet.json").exists()
+    assert (output_dir / "submission_checklist.md").exists()
+    assert (output_dir / "cv_project_entry.md").exists()
+    assert (output_dir / "professor_email_brief.md").exists()
+    assert "# Submission Checklist" in (output_dir / "submission_checklist.md").read_text(encoding="utf-8")
+    assert "dry-run smoke demo" in (output_dir / "professor_email_brief.md").read_text(encoding="utf-8")
+
+
+def test_create_submission_packet_cli(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    output_dir = tmp_path / "packet"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "create_submission_packet.py"),
+            "--run-dir",
+            str(run_dir),
+            "--output",
+            str(output_dir),
+            "--repo-url",
+            "https://github.com/example/repo",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads((output_dir / "submission_packet.json").read_text(encoding="utf-8"))
+    assert payload["repo_url"] == "https://github.com/example/repo"
+    assert payload["readiness_level"] == "needs_pack_validation"
+
+
+def _write_run(run_dir: Path, *, dry_run: bool) -> Path:
+    _write_json(
+        run_dir / "pipeline_summary.json",
+        {
+            "scene_name": "desk_scene",
+            "success": True,
+            "dry_run": dry_run,
+            "backend": "lerf",
+            "queries": ["mug"],
+        },
+    )
+    _write_json(
+        run_dir / "evidence_scorecard.json",
+        {
+            "scene_name": "desk_scene",
+            "dry_run": dry_run,
+            "backend": "lerf",
+            "evidence_level": "dry_run_demo_ready" if dry_run else "portfolio_ready_real_run",
+            "score": 85,
+            "max_score": 100,
+        },
+    )
+    _write_json(
+        run_dir / "quality_gate.json",
+        {"profile": "smoke" if dry_run else "portfolio", "status": "warn", "passed": True},
+    )
+    _write_json(run_dir / "run_audit.json", {"status": "needs_review", "score": 70})
+    _write_json(
+        run_dir / "run_recommendations.json",
+        {"recommendations": [{"action": "Run a real CUDA-backed scene."}]},
+    )
+    _write_json(run_dir / "evaluation" / "annotation_validation.json", {"ok": True, "warnings": []})
+    _write_json(run_dir / "research_report.json", {"backend": "lerf"})
+    _write_text(run_dir / "research_report.md", "# Research\n")
+    _write_text(run_dir / "portfolio_page.html", "<!doctype html>\n")
+    _write_json(run_dir / "reproduction_manifest.json", {"scene_name": "desk_scene"})
+    _write_text(run_dir / "reproduction_report.md", "# Reproduction\n")
+    return run_dir
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")

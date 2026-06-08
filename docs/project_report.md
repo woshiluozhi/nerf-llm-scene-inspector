@@ -59,6 +59,13 @@ the evidence scorecard, evaluation metrics, prompt-sensitivity diagnostics, scen
 analysis, reproducibility artifacts, limitations, and next steps into a paper-style project
 summary suitable for portfolio review.
 
+## Submission Packet
+
+Run `scripts/create_submission_packet.py --run-dir results/pipeline_runs/<scene> --pack
+results/portfolio_pack` after validating a portfolio pack. The output records share readiness,
+allowed claims, claims to avoid, recommended links, and next actions for CV or professor-outreach
+use. Dry-run packets explicitly mark the run as smoke-demo evidence only.
+
 ## Notes
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.

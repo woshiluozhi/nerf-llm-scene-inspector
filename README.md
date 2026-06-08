@@ -68,6 +68,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
 - Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
+- Submission packets that turn a validated run into a claim-calibrated CV/professor-outreach checklist with allowed claims, claims to avoid, and next actions.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
 
 ## Not Claimed
@@ -174,6 +175,7 @@ python scripts/index_runs.py --root results/pipeline_runs
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
+python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
@@ -228,6 +230,7 @@ Export the latest run into a shareable portfolio package:
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
+python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
 ```
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
@@ -371,6 +374,10 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/portfolio_page.html`
 - `results/pipeline_runs/<scene>/research_report.json`
 - `results/pipeline_runs/<scene>/research_report.md`
+- `results/pipeline_runs/<scene>/submission_packet/submission_packet.json`
+- `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md`
+- `results/pipeline_runs/<scene>/submission_packet/cv_project_entry.md`
+- `results/pipeline_runs/<scene>/submission_packet/professor_email_brief.md`
 - `results/pipeline_runs/<scene>/reproduction_manifest.json`
 - `results/pipeline_runs/<scene>/reproduction_report.md`
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
@@ -462,6 +469,7 @@ python scripts/recommend_next_steps.py --help
 python scripts/create_evidence_scorecard.py --help
 python scripts/create_reproduction_bundle.py --help
 python scripts/generate_research_report.py --help
+python scripts/create_submission_packet.py --help
 python scripts/index_runs.py --help
 python scripts/compare_runs.py --help
 python scripts/run_experiment_matrix.py --help

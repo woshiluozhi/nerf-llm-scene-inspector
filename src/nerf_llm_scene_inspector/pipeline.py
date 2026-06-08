@@ -22,6 +22,7 @@ from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
 from nerf_llm_scene_inspector.evaluation.research_report import write_research_report
+from nerf_llm_scene_inspector.evaluation.submission_packet import write_submission_packet
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 from nerf_llm_scene_inspector.reproducibility import build_reproduction_bundle
@@ -209,6 +210,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "reproduce_script": str(run_dir / "reproduce_run.sh"),
         "research_report_json": str(run_dir / "research_report.json"),
         "research_report_markdown": str(run_dir / "research_report.md"),
+        "submission_packet": str(run_dir / "submission_packet"),
         "project_report": str(run_dir / "project_report.md"),
         "portfolio_card": str(run_dir / "portfolio_result_card.md"),
     }
@@ -770,7 +772,27 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
+    submission = write_submission_packet(run_dir)
+    steps.append(
+        PipelineStep(
+            "create_submission_packet",
+            "success" if submission.readiness_level != "blocked" else "warning",
+            summary={
+                "readiness_level": submission.readiness_level,
+                "share_decision": submission.share_decision,
+                "pack_ok": submission.pack_ok,
+            },
+            outputs={
+                "json": str(run_dir / "submission_packet" / "submission_packet.json"),
+                "markdown": str(run_dir / "submission_packet" / "submission_checklist.md"),
+                "cv_entry": str(run_dir / "submission_packet" / "cv_project_entry.md"),
+                "email_brief": str(run_dir / "submission_packet" / "professor_email_brief.md"),
+            },
+        )
+    )
+    summary.to_json(summary_path)
     write_research_report(run_dir)
+    build_portfolio_page(run_dir).write_html(run_dir / "portfolio_page.html")
     summary.to_json(summary_path)
     return summary
 
