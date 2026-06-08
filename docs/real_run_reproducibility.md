@@ -50,6 +50,15 @@ python scripts/run_scene_pipeline.py \
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
 
+You can inspect these files in one place with the Streamlit dashboard:
+
+```bash
+python -m pip install -e ".[dashboard]"
+streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
+```
+
+Set the dashboard's pipeline run directory to `results/pipeline_runs/desk_scene`.
+
 ## Provenance Fields
 
 Each pipeline run stores a `provenance` block with:

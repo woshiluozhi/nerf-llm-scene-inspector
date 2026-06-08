@@ -183,6 +183,15 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
 ```
 
+The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
+starting a new query. It shows pipeline status, provenance, scene data inspection, visual
+artifacts, query reports, annotation templates, and evaluation metrics. Install it with:
+
+```bash
+python -m pip install -e ".[dashboard]"
+streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
+```
+
 One-command real-scene pipeline after upstream tools are installed:
 
 ```bash
@@ -273,6 +282,7 @@ python scripts/inspect_scene_data.py --help
 python scripts/train_baseline_nerf.py --help
 python scripts/train_language_field.py --help
 python scripts/query_scene.py --help
+python scripts/create_annotation_template.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
 python scripts/export_portfolio_pack.py --help
