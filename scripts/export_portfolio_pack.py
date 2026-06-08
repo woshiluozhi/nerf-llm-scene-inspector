@@ -233,7 +233,12 @@ def _copy_run_materials(
             copied,
             missing,
         )
-    return _run_summary_excerpt(run_summary)
+    for source, relative_destination in (
+        (run_dir / "annotations_merged.json", "run/annotations_merged.json"),
+        (run_dir / "annotation_merge_report.json", "run/annotation_merge_report.json"),
+    ):
+        _copy_share_safe_file(source, output / relative_destination, output, copied, optional_missing, run_dir)
+    return _run_summary_excerpt(run_summary, run_dir)
 
 
 def _copy_run_index(
@@ -425,7 +430,7 @@ def _is_text_like(path: Path) -> bool:
     return path.suffix.lower() in TEXT_SUFFIXES or path.name in TEXT_NAMES
 
 
-def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | None:
+def _run_summary_excerpt(summary: dict[str, Any] | None, run_dir: Path | None = None) -> dict[str, Any] | None:
     if not summary:
         return None
     artifacts = {
@@ -462,6 +467,10 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "demo_grid": "run/demo_assets/query_grid.png",
         "demo_montage": "run/demo_assets/demo_montage.gif",
     }
+    if run_dir is not None and (run_dir / "annotations_merged.json").exists():
+        artifacts["annotations_merged"] = "run/annotations_merged.json"
+    if run_dir is not None and (run_dir / "annotation_merge_report.json").exists():
+        artifacts["annotation_merge_report"] = "run/annotation_merge_report.json"
     if _step_succeeded(summary, "train_baseline_nerf"):
         artifacts["baseline_train_summary"] = "run/training/baseline_train_summary.json"
     if _step_succeeded(summary, "train_language_field"):

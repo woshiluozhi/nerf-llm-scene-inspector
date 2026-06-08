@@ -15,6 +15,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
 - Annotation review contact sheets for checking manual `bbox_2d` labels before reporting metrics.
 - Offline annotation workbench for drawing bbox labels from query render artifacts and exporting filled JSON.
+- Workbench-merge tooling for converting filled browser annotations into validated evaluation JSON.
 - Capture manifests for device, lighting, camera motion, overlap, static-scene, and privacy metadata, with validation surfaced in run audit and evidence scoring.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
@@ -59,6 +60,7 @@ python scripts/run_scene_pipeline.py --dry-run
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
+python scripts/merge_annotation_workbench.py --template results/pipeline_runs/desk_scene/annotation_template.json --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --output results/pipeline_runs/desk_scene/annotations_merged.json --overwrite
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json

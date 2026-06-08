@@ -226,9 +226,28 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(
             [
                 "python",
+                "scripts/merge_annotation_workbench.py",
+                "--template",
+                f"{run_dir}/annotation_template.json",
+                "--filled",
+                f"{run_dir}/evaluation/annotation_workbench/annotation_seed.json",
+                "--output",
+                f"{run_dir}/annotations_merged.json",
+                "--queries",
+                f"{run_dir}/queries.yaml",
+                "--results",
+                f"{run_dir}/queries",
+                "--report-output",
+                f"{run_dir}/annotation_merge_report.json",
+                "--overwrite",
+            ]
+        ),
+        _format_command(
+            [
+                "python",
                 "scripts/review_annotations.py",
                 "--annotations",
-                f"{run_dir}/annotation_template.json",
+                f"{run_dir}/annotations_merged.json",
                 "--results",
                 f"{run_dir}/queries",
                 "--output",
@@ -326,6 +345,18 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             root / "evaluation" / "annotation_workbench" / "annotation_workbench.html",
             "evaluation/annotation_workbench/annotation_workbench.html",
             "Offline browser workbench for drawing and exporting manual bbox annotations.",
+        ),
+        (
+            "annotations_merged",
+            root / "annotations_merged.json",
+            "annotations_merged.json",
+            "Clean evaluation annotation JSON merged from a filled workbench export.",
+        ),
+        (
+            "annotation_merge_report",
+            root / "annotation_merge_report.json",
+            "annotation_merge_report.json",
+            "Structured report for changed fields, missing queries, invalid boxes, and validation results.",
         ),
         ("portfolio_card", root / "portfolio_result_card.md", "portfolio_result_card.md", "Short project-page result narrative."),
         ("command_logs", root / "logs", "logs", "Subprocess command stdout/stderr records."),

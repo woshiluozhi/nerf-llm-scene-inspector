@@ -81,6 +81,12 @@ Use `results/pipeline_runs/desk_scene/annotation_template.json` as the starting 
 2D localization annotations before reporting quantitative query metrics.
 Open `results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_workbench.html`
 to draw or adjust `bbox_2d` labels in a browser and export filled annotation JSON.
+Merge that export before evaluation:
+
+```bash
+python scripts/merge_annotation_workbench.py --template results/pipeline_runs/desk_scene/annotation_template.json --filled path/to/annotations_filled.json --output results/pipeline_runs/desk_scene/annotations_merged.json --queries results/pipeline_runs/desk_scene/queries.yaml --results results/pipeline_runs/desk_scene/queries --overwrite
+```
+
 Then open `results/pipeline_runs/desk_scene/evaluation/annotation_review.md` and the contact sheet
 to catch wrong view ids, shifted boxes, or qualitative-only labels before sharing scores.
 

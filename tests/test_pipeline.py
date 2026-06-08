@@ -290,6 +290,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert plan_step.outputs["markdown"] == str(run_dir / "real_run_plan" / "real_run_plan.md")
     plan_payload = json.loads((run_dir / "real_run_plan" / "real_run_plan.json").read_text(encoding="utf-8"))
     assert plan_payload["current_mode"] == "dry-run smoke demo"
+    assert any(command["name"] == "merge_annotation_workbench_export" for command in plan_payload["commands"])
     claim_step = next(step for step in summary.steps if step.name == "audit_claims")
     assert claim_step.outputs["markdown"] == str(run_dir / "claim_audit.md")
     claim_payload = json.loads((run_dir / "claim_audit.json").read_text(encoding="utf-8"))

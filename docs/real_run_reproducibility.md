@@ -66,7 +66,8 @@ python scripts/run_scene_pipeline.py \
 - `scene_relations/scene_relations_edges.csv`: relation edge table for support/proximity/containment/layout review.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `evaluation/annotation_workbench/annotation_workbench.html`: offline browser workbench for drawing and exporting manual `bbox_2d` labels.
-- `evaluation/annotation_workbench/annotation_seed.json`: seed annotation JSON generated for the workbench.
+- `evaluation/annotation_workbench/annotation_seed.json`: seed annotation JSON generated for the workbench; use browser-downloaded filled JSON for final labels.
+- `annotations_merged.json`: clean annotation schema produced by merging filled workbench JSON back into the template.
 - `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
 - `evaluation/annotation_review.md`: visual QA table for manual bbox annotations.
 - `evaluation/annotation_review_contact_sheet.png`: contact sheet with bboxes drawn over rendered views.
@@ -162,32 +163,41 @@ run a larger annotated evaluation.
 
 ## Manual Annotation Loop
 
-After a real query run, open `annotation_template.json` and inspect the overlay images. For
-each query, fill:
+After a real query run, open `evaluation/annotation_workbench/annotation_workbench.html` and inspect the overlay images. For
+each query, fill or adjust:
 
 - `target_description`: what the correct object or region is
 - `acceptable_views`: view ids where the target is visible, such as `view_0000`
 - `bbox_2d`: `[x1, y1, x2, y2]` in the selected rendered view
 - `notes`: uncertainty, ambiguity, or qualitative-only rationale
 
-Then rerun:
+Download the filled JSON from the workbench, then merge and rerun:
 
 ```bash
+python scripts/merge_annotation_workbench.py \
+  --template results/pipeline_runs/desk_scene/annotation_template.json \
+  --filled path/to/annotations_filled.json \
+  --output results/pipeline_runs/desk_scene/annotations_merged.json \
+  --queries results/pipeline_runs/desk_scene/queries.yaml \
+  --results results/pipeline_runs/desk_scene/queries \
+  --report-output results/pipeline_runs/desk_scene/annotation_merge_report.json \
+  --overwrite
+
 python scripts/validate_annotations.py \
   --queries results/pipeline_runs/desk_scene/queries.yaml \
-  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --annotations results/pipeline_runs/desk_scene/annotations_merged.json \
   --results results/pipeline_runs/desk_scene/queries \
   --output results/pipeline_runs/desk_scene/evaluation/annotation_validation.json
 
 python scripts/review_annotations.py \
-  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --annotations results/pipeline_runs/desk_scene/annotations_merged.json \
   --results results/pipeline_runs/desk_scene/queries \
   --output results/pipeline_runs/desk_scene/evaluation \
   --allow-warnings
 
 python scripts/evaluate_queries.py \
   --queries results/pipeline_runs/desk_scene/queries.yaml \
-  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --annotations results/pipeline_runs/desk_scene/annotations_merged.json \
   --results results/pipeline_runs/desk_scene/queries \
   --output results/pipeline_runs/desk_scene/evaluation \
   --report-output results/pipeline_runs/desk_scene/project_report.md

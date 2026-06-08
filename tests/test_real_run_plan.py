@@ -31,6 +31,8 @@ def test_build_real_run_plan_from_dry_run_artifacts(tmp_path: Path) -> None:
     assert plan.query_count == 1
     assert any(issue.category == "run_mode" for issue in plan.issues)
     assert any(command.name == "train_language_pipeline" for command in plan.commands)
+    assert any(command.name == "merge_annotation_workbench_export" for command in plan.commands)
+    assert any("scripts/merge_annotation_workbench.py" in command.command for command in plan.commands)
     assert any("scripts/run_scene_pipeline.py" in command.command for command in plan.commands)
     assert any("without --dry-run" in item for item in plan.claim_upgrade_path)
 

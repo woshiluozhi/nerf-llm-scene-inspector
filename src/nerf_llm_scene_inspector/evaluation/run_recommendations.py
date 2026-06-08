@@ -321,10 +321,17 @@ def _add_annotation_actions(
             RecommendationItem(
                 severity="medium",
                 category="evaluation",
-                action="Add manual bbox_2d annotations for at least a few core queries and rerun evaluation.",
+                action="Add manual bbox_2d annotations with the workbench, merge the filled export, and rerun evaluation.",
                 rationale="No bbox-annotated queries were evaluated quantitatively.",
-                command="python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite",
-                artifact="annotation_template.json",
+                command=(
+                    "python scripts/create_annotation_template.py --queries examples/queries_demo.yaml "
+                    "--results results/query_outputs --output results/annotations_template.json --overwrite && "
+                    "python scripts/create_annotation_workbench.py --annotations results/annotations_template.json "
+                    "--results results/query_outputs --output results/annotation_workbench && "
+                    "python scripts/merge_annotation_workbench.py --template results/annotations_template.json "
+                    "--filled path/to/annotations_filled.json --output results/annotations_merged.json --overwrite"
+                ),
+                artifact="results/annotations_merged.json",
             )
         )
 

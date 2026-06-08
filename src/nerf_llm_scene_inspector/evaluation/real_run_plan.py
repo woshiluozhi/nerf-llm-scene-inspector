@@ -527,13 +527,79 @@ def _commands(
         ),
         RealRunCommand(
             "review",
-            "review_annotations",
+            "create_annotation_workbench",
+            _cmd(
+                [
+                    "python",
+                    "scripts/create_annotation_workbench.py",
+                    "--annotations",
+                    f"{run_dir}/annotation_template.json",
+                    "--results",
+                    f"{run_dir}/queries",
+                    "--output",
+                    f"{run_dir}/evaluation/annotation_workbench",
+                ]
+            ),
+            "Create the offline browser workbench used to draw or adjust manual bbox labels.",
+            "ready",
+            [f"{run_dir}/evaluation/annotation_workbench/annotation_workbench.html"],
+        ),
+        RealRunCommand(
+            "review",
+            "merge_annotation_workbench_export",
+            _cmd(
+                [
+                    "python",
+                    "scripts/merge_annotation_workbench.py",
+                    "--template",
+                    f"{run_dir}/annotation_template.json",
+                    "--filled",
+                    "path/to/annotations_filled.json",
+                    "--output",
+                    f"{run_dir}/annotations_merged.json",
+                    "--queries",
+                    f"{run_dir}/queries.yaml",
+                    "--results",
+                    f"{run_dir}/queries",
+                    "--report-output",
+                    f"{run_dir}/annotation_merge_report.json",
+                    "--overwrite",
+                ]
+            ),
+            "Merge browser-edited annotations into a clean evaluation JSON file with a structured merge report.",
+            "needs_input",
+            [f"{run_dir}/annotations_merged.json", f"{run_dir}/annotation_merge_report.json"],
+        ),
+        RealRunCommand(
+            "review",
+            "validate_merged_annotations",
+            _cmd(
+                [
+                    "python",
+                    "scripts/validate_annotations.py",
+                    "--annotations",
+                    f"{run_dir}/annotations_merged.json",
+                    "--queries",
+                    f"{run_dir}/queries.yaml",
+                    "--results",
+                    f"{run_dir}/queries",
+                    "--output",
+                    f"{run_dir}/evaluation/annotation_validation.json",
+                ]
+            ),
+            "Check annotation coverage, duplicate queries, bbox validity, and view ids before computing metrics.",
+            "ready",
+            [f"{run_dir}/evaluation/annotation_validation.json"],
+        ),
+        RealRunCommand(
+            "review",
+            "review_merged_annotations",
             _cmd(
                 [
                     "python",
                     "scripts/review_annotations.py",
                     "--annotations",
-                    f"{run_dir}/annotation_template.json",
+                    f"{run_dir}/annotations_merged.json",
                     "--results",
                     f"{run_dir}/queries",
                     "--output",
@@ -544,6 +610,29 @@ def _commands(
             "Inspect query overlays and manual boxes before presenting localization metrics.",
             "ready",
             [f"{run_dir}/evaluation/annotation_review.md", f"{run_dir}/evaluation/annotation_review_contact_sheet.png"],
+        ),
+        RealRunCommand(
+            "review",
+            "evaluate_merged_annotations",
+            _cmd(
+                [
+                    "python",
+                    "scripts/evaluate_queries.py",
+                    "--queries",
+                    f"{run_dir}/queries.yaml",
+                    "--annotations",
+                    f"{run_dir}/annotations_merged.json",
+                    "--results",
+                    f"{run_dir}/queries",
+                    "--output",
+                    f"{run_dir}/evaluation",
+                    "--report-output",
+                    f"{run_dir}/project_report.md",
+                ]
+            ),
+            "Recompute localization and qualitative evaluation from the reviewed annotation file.",
+            "ready",
+            [f"{run_dir}/evaluation/eval_summary.json", f"{run_dir}/evaluation/eval_table.csv"],
         ),
         RealRunCommand(
             "review",

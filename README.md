@@ -54,7 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Scene-relation graph analysis that converts saved query regions/points into entity lists, relation edges, CSV tables, and Markdown reports with explicit `2d_fallback` or `3d` evidence tags.
-- Annotation templates, an offline bbox annotation workbench, and review artifacts for QA before reporting metrics.
+- Annotation templates, an offline bbox annotation workbench, merge tooling for filled workbench exports, and review artifacts for QA before reporting metrics.
 - Prompt-sensitivity analysis that checks whether wording variants retrieve consistent regions, views, and relevancy scores.
 - Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
@@ -265,6 +265,7 @@ python scripts/analyze_scene_relations.py --results results/query_outputs --outp
 python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/create_annotation_workbench.py --annotations results/annotations_template.json --results results/query_outputs --output results/annotation_workbench
+python scripts/merge_annotation_workbench.py --template results/annotations_template.json --filled results/annotation_workbench/annotation_seed.json --output results/annotations_merged.json --overwrite
 python scripts/validate_annotations.py --annotations examples/annotations_example.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations examples/annotations_example.json --results results/query_outputs --output results/evaluation --allow-warnings
 python scripts/generate_demo_assets.py --config runs/language_desk_scene/config.yml --backend lerf --dry-run
@@ -285,10 +286,11 @@ python scripts/query_scene.py --config path/to/config.yml --backend lerf --query
 python scripts/analyze_scene_relations.py --results results/query_outputs --output results/scene_relations --scene-name desk_scene
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/create_annotation_workbench.py --annotations results/annotations_template.json --results results/query_outputs --output results/annotation_workbench
-python scripts/validate_annotations.py --annotations results/annotations_template.json --queries examples/queries_demo.yaml --results results/query_outputs
-python scripts/review_annotations.py --annotations results/annotations_template.json --results results/query_outputs --output results/evaluation --allow-warnings
+python scripts/merge_annotation_workbench.py --template results/annotations_template.json --filled path/to/annotations_filled.json --output results/annotations_merged.json --queries examples/queries_demo.yaml --results results/query_outputs --overwrite
+python scripts/validate_annotations.py --annotations results/annotations_merged.json --queries examples/queries_demo.yaml --results results/query_outputs
+python scripts/review_annotations.py --annotations results/annotations_merged.json --results results/query_outputs --output results/evaluation --allow-warnings
 streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
-python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
+python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations results/annotations_merged.json --results results/query_outputs
 ```
 
 Localization metrics such as `top_k_hit_rate` and `mean_iou_2d` are computed only for
@@ -296,6 +298,9 @@ queries with manual `bbox_2d` annotations. Queries without bbox annotations are 
 the qualitative table as `unannotated` or `qualitative_only_no_bbox` instead of being counted
 as localization failures. If the same visual prompt appears in multiple expanded tasks, the
 CSV keeps all rows while summary metrics use the best row per unique query.
+The annotation workbench's downloaded JSON can be merged back into the evaluation schema with
+`merge_annotation_workbench.py`; the merge report records changed fields, missing template
+queries, duplicate filled queries, invalid boxes, and optional validation results.
 
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
@@ -476,6 +481,7 @@ python scripts/query_scene.py --help
 python scripts/import_viewer_outputs.py --help
 python scripts/create_annotation_template.py --help
 python scripts/create_annotation_workbench.py --help
+python scripts/merge_annotation_workbench.py --help
 python scripts/validate_annotations.py --help
 python scripts/review_annotations.py --help
 python scripts/generate_demo_assets.py --help
