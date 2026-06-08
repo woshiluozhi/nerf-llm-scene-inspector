@@ -31,6 +31,8 @@ RUN_CLAIM_FILES = [
     "portfolio_result_card.md",
     "portfolio_page.html",
     "research_report.md",
+    "run_result_card.md",
+    "run_result_card.json",
     "reproduction_report.md",
     "real_run_plan/real_run_plan.md",
     "submission_packet/submission_checklist.md",

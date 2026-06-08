@@ -25,6 +25,7 @@ check:
 	$(PYTHON) scripts/compare_runs.py --help
 	$(PYTHON) scripts/run_experiment_matrix.py --help
 	$(PYTHON) scripts/generate_research_report.py --help
+	$(PYTHON) scripts/create_run_result_card.py --help
 	$(PYTHON) scripts/create_submission_packet.py --help
 	$(PYTHON) scripts/create_real_run_plan.py --help
 	$(PYTHON) scripts/audit_claims.py --help

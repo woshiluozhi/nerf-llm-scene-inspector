@@ -73,6 +73,7 @@ python scripts/run_scene_pipeline.py \
 - `evidence_scorecard.md`: conservative multi-criterion scorecard for whether the run is strong enough to share, including capture/privacy metadata readiness.
 - `quality_gate.md`: pass/warn/fail gate for smoke, real-run, or final portfolio sharing profiles.
 - `claim_audit.md`: scan of README/docs/run-facing text for unsupported SOTA, novelty, production, benchmark, or robotics-policy claims.
+- `run_result_card.md`: concise reviewer-facing takeaway, evidence snapshot, limitations, and safe sharing language for the run.
 - `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
 - `research_report.md`: paper-style summary of run evidence, limitations, reproducibility artifacts, and next steps.
 - `research_report.json`: machine-readable version of the same research report.
@@ -216,6 +217,9 @@ python scripts/check_run_quality.py \
   --profile smoke
 
 python scripts/generate_research_report.py \
+  --run-dir results/pipeline_runs/desk_scene
+
+python scripts/create_run_result_card.py \
   --run-dir results/pipeline_runs/desk_scene
 
 python scripts/generate_portfolio_page.py \

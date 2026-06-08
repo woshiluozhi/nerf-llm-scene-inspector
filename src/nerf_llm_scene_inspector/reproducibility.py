@@ -180,6 +180,7 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(["python", "scripts/create_evidence_scorecard.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/check_run_quality.py", "--run-dir", run_dir, "--profile", "smoke"]),
         _format_command(["python", "scripts/generate_research_report.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/create_run_result_card.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/generate_portfolio_page.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_submission_packet.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/create_real_run_plan.py", "--run-dir", run_dir]),
@@ -266,6 +267,7 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         ("evidence_scorecard", root / "evidence_scorecard.md", "evidence_scorecard.md", "Portfolio evidence quality scorecard."),
         ("quality_gate", root / "quality_gate.md", "quality_gate.md", "Pass/warn/fail run quality gate report."),
         ("claim_audit", root / "claim_audit.md", "claim_audit.md", "Audit report for avoiding unsupported external-facing claims."),
+        ("run_result_card", root / "run_result_card.md", "run_result_card.md", "One-page reviewer-facing summary of what this run proves and does not prove."),
         ("portfolio_page", root / "portfolio_page.html", "portfolio_page.html", "Static HTML page for sharing run evidence."),
         (
             "real_run_plan",

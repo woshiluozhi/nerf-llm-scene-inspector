@@ -42,6 +42,8 @@ RUN_REQUIRED_FILES = [
     "run/quality_gate.md",
     "run/claim_audit.json",
     "run/claim_audit.md",
+    "run/run_result_card.json",
+    "run/run_result_card.md",
     "run/run_audit.json",
     "run/run_audit.md",
     "run/run_recommendations.json",
@@ -165,6 +167,7 @@ def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
         _check_evidence_scorecard(pack_path, warnings, errors)
         _check_quality_gate(pack_path, warnings, errors)
         _check_claim_audit(pack_path, warnings, errors)
+        _check_run_result_card(pack_path, warnings, errors)
         _check_annotation_validation(pack_path, warnings, errors)
     else:
         warnings.append("No run/ directory found; pack includes project materials but no run-scoped evidence.")
@@ -365,6 +368,21 @@ def _check_claim_audit(pack_path: Path, warnings: list[str], errors: list[str]) 
         warnings.append("claim_audit.json status is warn; inspect claim_audit.md before sharing.")
     elif status and status != "pass":
         warnings.append(f"claim_audit.json has unrecognized status: {status}")
+
+
+def _check_run_result_card(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    card = _read_json(pack_path / "run" / "run_result_card.json", errors)
+    if not isinstance(card, dict):
+        return
+    status = str(card.get("result_status") or "")
+    if status == "blocked":
+        errors.append("run_result_card.json result_status is blocked.")
+    elif status in {"shareable_smoke_demo", "dry_run_smoke_demo"}:
+        warnings.append("run_result_card.json marks this as smoke evidence, not a real trained-scene result.")
+    elif status in {"needs_evidence", "real_run_review_ready"}:
+        warnings.append(f"run_result_card.json result_status is {status}; inspect before sharing.")
+    elif status and status != "portfolio_ready":
+        warnings.append(f"run_result_card.json has unrecognized result_status: {status}")
 
 
 def _check_annotation_validation(pack_path: Path, warnings: list[str], errors: list[str]) -> None:

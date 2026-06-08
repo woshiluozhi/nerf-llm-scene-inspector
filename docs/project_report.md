@@ -59,6 +59,13 @@ the evidence scorecard, evaluation metrics, prompt-sensitivity diagnostics, scen
 analysis, reproducibility artifacts, limitations, and next steps into a paper-style project
 summary suitable for portfolio review.
 
+## Run Result Card
+
+Run `scripts/create_run_result_card.py --run-dir results/pipeline_runs/<scene>` to generate
+`run_result_card.md` and `run_result_card.json`. This one-page card gives a reviewer-facing
+takeaway, shareable blurb, evidence snapshot, metrics, limitations, checks, and next actions
+without claiming more than the run artifacts support.
+
 ## Submission Packet
 
 Run `scripts/create_submission_packet.py --run-dir results/pipeline_runs/<scene> --pack

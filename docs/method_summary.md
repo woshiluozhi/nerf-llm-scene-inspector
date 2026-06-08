@@ -28,6 +28,8 @@ The experiment-matrix runner makes the project easier to treat like a small rese
 
 Each pipeline run can produce `research_report.md` and `research_report.json`, a paper-style summary that pulls together the scene, backend, evidence scorecard, evaluation metrics, prompt-sensitivity diagnostics, scene-relation graph, reproducibility artifacts, limitations, and next steps. The report is intended for portfolio review and professor outreach, while still separating dry-run smoke evidence from real trained-scene claims.
 
+Each run can also produce `run_result_card.md` and `run_result_card.json`, a one-page reviewer-facing summary. It turns the same artifacts into a primary takeaway, shareable blurb, evidence snapshot, metrics, caveats, safe claims to avoid, readiness checks, and next actions. This is meant to help a professor or recruiter quickly understand what the run demonstrates before opening the full research report.
+
 ## Submission Packets
 
 The submission-packet step converts run evidence into a claim-calibrated sharing checklist. It records what can safely be said in a CV bullet or professor email, what must not be claimed, whether a validated portfolio pack exists, and which warnings still need review. This keeps dry-run demos, real trained-scene results, and portfolio-ready evidence clearly separated.

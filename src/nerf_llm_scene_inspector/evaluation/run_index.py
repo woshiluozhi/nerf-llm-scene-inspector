@@ -168,6 +168,7 @@ def _artifacts(run_dir: Path) -> dict[str, str]:
         "portfolio_page": "portfolio_page.html",
         "evidence_scorecard": "evidence_scorecard.md",
         "claim_audit": "claim_audit.md",
+        "run_result_card": "run_result_card.md",
         "run_audit": "run_audit.md",
         "run_recommendations": "run_recommendations.md",
         "project_report": "project_report.md",

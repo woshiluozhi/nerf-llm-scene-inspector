@@ -24,6 +24,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert "python scripts/create_real_run_plan.py --run-dir run" in bundle.verification_commands
     assert "python scripts/audit_claims.py --run-dir run" in bundle.verification_commands
     assert "python scripts/generate_research_report.py --run-dir run" in bundle.verification_commands
+    assert "python scripts/create_run_result_card.py --run-dir run" in bundle.verification_commands
     assert "python scripts/compare_runs.py --root ." in bundle.verification_commands
     assert "python scripts/check_run_quality.py --run-dir run --profile smoke" in bundle.verification_commands
     assert any("python scripts/analyze_prompt_sensitivity.py" in command for command in bundle.verification_commands)
@@ -35,6 +36,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert any(artifact.name == "evidence_scorecard" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "quality_gate" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "claim_audit" and artifact.exists for artifact in bundle.artifacts)
+    assert any(artifact.name == "run_result_card" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "portfolio_page" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "real_run_plan" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "research_report" and artifact.exists for artifact in bundle.artifacts)
@@ -63,6 +65,7 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     assert "python scripts/run_scene_pipeline.py --dry-run --query mug" in script_text
     assert "python scripts/create_real_run_plan.py --run-dir run" in script_text
     assert "python scripts/audit_claims.py --run-dir run" in script_text
+    assert "python scripts/create_run_result_card.py --run-dir run" in script_text
     assert "python scripts/compare_runs.py --root ." in script_text
     assert "python scripts/check_run_quality.py --run-dir run --profile smoke" in script_text
 
@@ -120,6 +123,7 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "quality_gate.md", "# Quality Gate\n")
     _write_text(run_dir / "claim_audit.md", "# Claim Audit\n")
+    _write_text(run_dir / "run_result_card.md", "# Run Result Card\n")
     _write_text(run_dir / "portfolio_page.html", "<!doctype html>\n")
     _write_text(run_dir / "real_run_plan" / "real_run_plan.md", "# Real-Run Action Plan\n")
     _write_text(run_dir / "research_report.md", "# Research Report\n")

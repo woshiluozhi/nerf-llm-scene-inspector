@@ -38,6 +38,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.md").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_result_card.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_result_card.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "portfolio_page.html").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.json").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
@@ -138,9 +140,12 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "quality_gate.md").exists()
     assert (run_dir / "claim_audit.json").exists()
     assert (run_dir / "claim_audit.md").exists()
+    assert (run_dir / "run_result_card.json").exists()
+    assert (run_dir / "run_result_card.md").exists()
     assert (run_dir / "portfolio_page.html").exists()
     assert "research_report.md" in (run_dir / "portfolio_page.html").read_text(encoding="utf-8")
     assert "claim_audit.md" in (run_dir / "portfolio_page.html").read_text(encoding="utf-8")
+    assert "run_result_card.md" in (run_dir / "portfolio_page.html").read_text(encoding="utf-8")
     assert (run_dir / "annotation_template.json").exists()
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
     assert (run_dir / "demo_assets" / "query_grid.png").exists()
@@ -181,6 +186,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
     assert run_index["entries"][0]["artifacts"]["claim_audit"] == "claim_audit.md"
+    assert run_index["entries"][0]["artifacts"]["run_result_card"] == "run_result_card.md"
     assert run_index["entries"][0]["artifacts"]["real_run_plan"] == "real_run_plan/real_run_plan.md"
     run_comparison = json.loads(
         (tmp_path / "pipeline_runs" / "run_comparison.json").read_text(encoding="utf-8")
@@ -249,6 +255,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
     assert any(artifact["name"] == "real_run_plan" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "claim_audit" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
+    assert any(artifact["name"] == "run_result_card" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     research_step = next(step for step in summary.steps if step.name == "generate_research_report")
     assert research_step.outputs["markdown"] == str(run_dir / "research_report.md")
     submission_step = next(step for step in summary.steps if step.name == "create_submission_packet")
@@ -267,6 +274,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert claim_step.outputs["markdown"] == str(run_dir / "claim_audit.md")
     claim_payload = json.loads((run_dir / "claim_audit.json").read_text(encoding="utf-8"))
     assert claim_payload["status"] in {"pass", "warn"}
+    result_card_step = next(step for step in summary.steps if step.name == "create_run_result_card")
+    assert result_card_step.outputs["markdown"] == str(run_dir / "run_result_card.md")
+    result_card_payload = json.loads((run_dir / "run_result_card.json").read_text(encoding="utf-8"))
+    assert result_card_payload["result_status"] in {"shareable_smoke_demo", "dry_run_smoke_demo"}
     comparison_step = next(step for step in summary.steps if step.name == "compare_runs")
     assert comparison_step.outputs["json"] == str(tmp_path / "pipeline_runs" / "run_comparison.json")
 

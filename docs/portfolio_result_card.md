@@ -22,6 +22,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Experiment-matrix runner for small backend/query/variant ablations with CSV and Markdown summaries.
 - Paper-style research report generation from run artifacts, metrics, limitations, and next steps.
 - Submission packet generation for claim-calibrated CV, portfolio, and professor-outreach sharing.
+- Run result-card generation that summarizes one run into a concise takeaway, evidence snapshot, safe blurb, limitations, and next actions.
 - Real-run action-plan generation that lists capture, CUDA/LERF training, annotation review, quality-gate, pack validation, and sharing commands.
 - Claim-audit generation that checks external-facing text for unsupported SOTA, novelty, production, benchmark, or robotics-policy claims.
 - Static project-level portfolio site for GitHub Pages or local review.
@@ -57,6 +58,7 @@ python scripts/run_scene_pipeline.py --dry-run
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml --dry-run --limit 1
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
+python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack --output results/submission_packet
@@ -76,6 +78,7 @@ python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
 - Evidence scorecard: `results/pipeline_runs/desk_scene/evidence_scorecard.md`
 - Claim audit: `results/pipeline_runs/desk_scene/claim_audit.md`
+- Run result card: `results/pipeline_runs/desk_scene/run_result_card.md`
 - Research report: `results/pipeline_runs/desk_scene/research_report.md`
 - Real-run action plan: `results/pipeline_runs/desk_scene/real_run_plan/real_run_plan.md`
 - Submission checklist: `results/pipeline_runs/desk_scene/submission_packet/submission_checklist.md`

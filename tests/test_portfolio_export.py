@@ -72,6 +72,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
     assert index["run_summary"]["artifacts"]["quality_gate"] == "run/quality_gate.md"
     assert index["run_summary"]["artifacts"]["claim_audit"] == "run/claim_audit.md"
+    assert index["run_summary"]["artifacts"]["run_result_card"] == "run/run_result_card.md"
     assert index["run_summary"]["artifacts"]["query_reports"] == "run/queries/"
     assert index["run_summary"]["artifacts"]["prompt_sensitivity"] == "run/prompt_sensitivity/"
     assert index["run_summary"]["artifacts"]["scene_relations"] == "run/scene_relations/"
@@ -105,6 +106,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "quality_gate.md").exists()
     assert (output_dir / "run" / "claim_audit.json").exists()
     assert (output_dir / "run" / "claim_audit.md").exists()
+    assert (output_dir / "run" / "run_result_card.json").exists()
+    assert (output_dir / "run" / "run_result_card.md").exists()
     assert (output_dir / "run" / "portfolio_page.html").exists()
     assert str(tmp_path) not in (output_dir / "run" / "portfolio_page.html").read_text(encoding="utf-8")
     assert (output_dir / "run_index.json").exists()

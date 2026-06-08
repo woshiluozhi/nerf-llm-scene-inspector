@@ -551,6 +551,7 @@ def _recommended_links(
 ) -> dict[str, str]:
     links = {
         "research_report": _display_path(root / "research_report.md"),
+        "run_result_card": _display_path(root / "run_result_card.md"),
         "portfolio_page": _display_path(root / "portfolio_page.html"),
         "reproduction_report": _display_path(root / "reproduction_report.md"),
         "evidence_scorecard": _display_path(root / "evidence_scorecard.md"),

@@ -30,6 +30,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "generate_research_report", "status": "success"},
                 {"name": "create_real_run_plan", "status": "success"},
                 {"name": "audit_claims", "status": "success"},
+                {"name": "create_run_result_card", "status": "success"},
                 {"name": "create_submission_packet", "status": "success"},
             ],
             "provenance": {"git_commit": "abc123"},
@@ -70,6 +71,11 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0},
     )
     (run_dir / "claim_audit.md").write_text("# Claim Audit\n", encoding="utf-8")
+    _write_json(
+        run_dir / "run_result_card.json",
+        {"result_status": "shareable_smoke_demo", "dry_run": True, "checks": []},
+    )
+    (run_dir / "run_result_card.md").write_text("# Run Result Card\n", encoding="utf-8")
     (run_dir / "portfolio_page.html").write_text("<!doctype html>\n", encoding="utf-8")
     _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100})
     _write_json(
@@ -168,6 +174,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Run Quality Gate" in bundle["quality_gate_markdown"]
     assert bundle["claim_audit"]["status"] == "pass"
     assert "# Claim Audit" in bundle["claim_audit_markdown"]
+    assert bundle["run_result_card"]["result_status"] == "shareable_smoke_demo"
+    assert "# Run Result Card" in bundle["run_result_card_markdown"]
     assert bundle["portfolio_page"].endswith("portfolio_page.html")
     assert bundle["run_audit"]["status"] == "ready"
     assert bundle["run_recommendations"]["readiness_level"] == "ready_for_portfolio"

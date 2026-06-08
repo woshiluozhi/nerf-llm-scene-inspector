@@ -38,6 +38,7 @@ def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> No
     assert any("trained LERF outputs" in claim for claim in packet.avoid_claims)
     assert any(item.name == "claim_audit" and item.status == "pass" for item in packet.checklist)
     assert any(item.name == "path_leaks" and item.status == "pass" for item in packet.checklist)
+    assert packet.recommended_links["run_result_card"].endswith("run_result_card.md")
 
 
 def test_write_submission_packet_outputs_markdown_and_briefs(tmp_path: Path) -> None:
