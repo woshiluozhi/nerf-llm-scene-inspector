@@ -184,7 +184,8 @@ def _validate_portfolio_zip(zip_path: Path) -> PortfolioValidationReport:
                 extract_root = Path(tmp_dir) / "pack"
                 extract_root.mkdir()
                 archive.extractall(extract_root)
-                return _validate_portfolio_directory(extract_root, report_path=zip_path)
+                pack_root = _extracted_pack_root(extract_root)
+                return _validate_portfolio_directory(pack_root, report_path=zip_path)
     except (OSError, zipfile.BadZipFile) as exc:
         errors.append(f"Could not validate portfolio pack zip {zip_path}: {exc}")
         return _report(zip_path, [], [], [], [], [], errors)
@@ -257,6 +258,17 @@ def _check_required_files(pack_path: Path, relative_paths: list[str], missing_fi
     for relative_path in relative_paths:
         if not (pack_path / relative_path).exists():
             missing_files.append(relative_path)
+
+
+def _extracted_pack_root(extract_root: Path) -> Path:
+    if (extract_root / "portfolio_pack_index.json").exists():
+        return extract_root
+    children = [path for path in extract_root.iterdir() if path.name != "__MACOSX"]
+    directories = [path for path in children if path.is_dir()]
+    files = [path for path in children if path.is_file()]
+    if not files and len(directories) == 1 and (directories[0] / "portfolio_pack_index.json").exists():
+        return directories[0]
+    return extract_root
 
 
 def _unsafe_zip_members(archive: zipfile.ZipFile) -> list[str]:

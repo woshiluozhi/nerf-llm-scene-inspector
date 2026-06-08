@@ -134,6 +134,18 @@ def test_validate_portfolio_pack_accepts_zip_archive(tmp_path: Path) -> None:
     assert report.path_leaks == []
 
 
+def test_validate_portfolio_pack_accepts_zip_archive_with_top_level_folder(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    zip_path = _zip_pack(pack, include_top_level=True)
+
+    report = validate_portfolio_pack(zip_path)
+
+    assert report.ok is True, report.to_dict()
+    assert report.pack_dir == "portfolio_pack.zip"
+    assert "portfolio_pack_index.json" in report.checked_files
+    assert report.path_leaks == []
+
+
 def test_validate_portfolio_pack_rejects_unsafe_zip_member(tmp_path: Path) -> None:
     zip_path = tmp_path / "portfolio_pack.zip"
     with zipfile.ZipFile(zip_path, "w") as archive:
@@ -318,12 +330,14 @@ def _write_complete_pack(tmp_path: Path) -> Path:
     return pack
 
 
-def _zip_pack(pack: Path) -> Path:
+def _zip_pack(pack: Path, *, include_top_level: bool = False) -> Path:
     zip_path = pack.with_suffix(".zip")
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(pack.rglob("*")):
             if path.is_file():
-                archive.write(path, path.relative_to(pack).as_posix())
+                relative = path.relative_to(pack).as_posix()
+                archive_name = f"{pack.name}/{relative}" if include_top_level else relative
+                archive.write(path, archive_name)
     return zip_path
 
 

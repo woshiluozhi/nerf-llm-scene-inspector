@@ -250,7 +250,8 @@ and the next action to take before CV/professor outreach.
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, copied-file SHA256/size digests still match, and text/JSON files do
 not leak user-home, temporary, or CI workspace directories. It accepts either the exported
-directory or the final `.zip` archive.
+directory or the final `.zip` archive, including archives whose contents are wrapped in one
+top-level `portfolio_pack/` folder.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
 evidence and a validated shareable pack:

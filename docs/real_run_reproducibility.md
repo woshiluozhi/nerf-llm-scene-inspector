@@ -138,6 +138,8 @@ When `--zip` is used, the archive is self-contained and includes the same
 `portfolio_pack_index.json` with digest metadata.
 The normal finalization path runs validation and re-archives the pack afterward, so the
 shareable zip also includes `portfolio_pack_validation.json`.
+`validate_portfolio_pack.py` accepts both zip layouts: files at the archive root, or files
+inside one top-level `portfolio_pack/` directory.
 
 ## Finalize And Export
 
