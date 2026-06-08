@@ -32,6 +32,7 @@ def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> No
         ci_url="https://github.com/example/repo/actions/runs/1",
     )
 
+    assert packet.run_dir == "run"
     assert packet.readiness_level == "shareable_smoke_demo"
     assert packet.pack_ok is True
     assert packet.readiness_summary["status"] == "warn"
@@ -43,7 +44,10 @@ def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> No
     assert any("trained LERF outputs" in claim for claim in packet.avoid_claims)
     assert any(item.name == "claim_audit" and item.status == "pass" for item in packet.checklist)
     assert any(item.name == "path_leaks" and item.status == "pass" for item in packet.checklist)
-    assert packet.recommended_links["run_result_card"].endswith("run_result_card.md")
+    assert packet.recommended_links["research_report"] == "research_report.md"
+    assert packet.recommended_links["portfolio_page"] == "portfolio_page.html"
+    assert packet.recommended_links["reproduction_report"] == "reproduction_report.md"
+    assert packet.recommended_links["quality_gate"] == "quality_gate.md"
 
 
 def test_write_submission_packet_outputs_markdown_and_briefs(tmp_path: Path) -> None:
@@ -80,13 +84,14 @@ def test_submission_packet_uses_share_safe_pack_path(tmp_path: Path) -> None:
 
     assert packet.pack_dir == "portfolio_pack.zip"
     assert packet.recommended_links["portfolio_pack"] == "portfolio_pack.zip"
-    pack_payload = json.dumps(
+    external_payload = json.dumps(
         {
+            "run_dir": packet.run_dir,
             "pack_dir": packet.pack_dir,
-            "portfolio_pack": packet.recommended_links["portfolio_pack"],
+            "recommended_links": packet.recommended_links,
         }
     )
-    assert str(tmp_path) not in pack_payload
+    assert str(tmp_path) not in external_payload
 
 
 def test_submission_packet_missing_pack_error_is_share_safe(tmp_path: Path) -> None:
@@ -133,9 +138,11 @@ def test_create_submission_packet_cli(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     payload = json.loads((output_dir / "submission_packet.json").read_text(encoding="utf-8"))
+    assert payload["run_dir"] == "run"
     assert payload["repo_url"] == "https://github.com/example/repo"
     assert payload["readiness_level"] == "needs_pack_validation"
     assert payload["readiness_summary"]["readiness_level"] == "needs_pack_validation"
+    assert payload["recommended_links"]["research_report"] == "research_report.md"
 
 
 def test_create_submission_packet_cli_uses_share_safe_pack_path(tmp_path: Path) -> None:
@@ -167,8 +174,17 @@ def test_create_submission_packet_cli_uses_share_safe_pack_path(tmp_path: Path) 
 
     assert result.returncode == 0, result.stderr
     payload = json.loads((output_dir / "submission_packet.json").read_text(encoding="utf-8"))
+    assert payload["run_dir"] == "run"
     assert payload["pack_dir"] == "portfolio_pack.zip"
     assert payload["recommended_links"]["portfolio_pack"] == "portfolio_pack.zip"
+    external_payload = json.dumps(
+        {
+            "run_dir": payload["run_dir"],
+            "pack_dir": payload["pack_dir"],
+            "recommended_links": payload["recommended_links"],
+        }
+    )
+    assert str(tmp_path) not in external_payload
 
 
 def test_submission_packet_blocks_failed_claim_audit(tmp_path: Path) -> None:

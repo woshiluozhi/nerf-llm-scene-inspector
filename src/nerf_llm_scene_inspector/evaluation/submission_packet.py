@@ -195,7 +195,7 @@ def build_submission_packet(
     warnings = _warnings(quality, audit, annotations, claim_audit, pack_validation)
     next_actions = _next_actions(recommendations, readiness, pack_validation)
     return SubmissionPacket(
-        run_dir=_display_path(root),
+        run_dir=_display_run_dir(root),
         scene_name=scene_name,
         backend=backend,
         dry_run=dry_run,
@@ -213,7 +213,7 @@ def build_submission_packet(
         ci_url=ci_url,
         pack_dir=_display_pack_path(Path(pack_dir)) if pack_dir else "",
         pack_ok=_pack_ok(pack_validation),
-        recommended_links=_recommended_links(root, repo_url, ci_url, pack_dir),
+        recommended_links=_recommended_links(repo_url, ci_url, pack_dir),
         allowed_claims=_allowed_claims(dry_run, readiness),
         avoid_claims=_avoid_claims(dry_run),
         checklist=checklist,
@@ -609,18 +609,17 @@ def _next_actions(
 
 
 def _recommended_links(
-    root: Path,
     repo_url: str,
     ci_url: str,
     pack_dir: str | Path | None,
 ) -> dict[str, str]:
     links = {
-        "research_report": _display_path(root / "research_report.md"),
-        "run_result_card": _display_path(root / "run_result_card.md"),
-        "portfolio_page": _display_path(root / "portfolio_page.html"),
-        "reproduction_report": _display_path(root / "reproduction_report.md"),
-        "evidence_scorecard": _display_path(root / "evidence_scorecard.md"),
-        "quality_gate": _display_path(root / "quality_gate.md"),
+        "research_report": "research_report.md",
+        "run_result_card": "run_result_card.md",
+        "portfolio_page": "portfolio_page.html",
+        "reproduction_report": "reproduction_report.md",
+        "evidence_scorecard": "evidence_scorecard.md",
+        "quality_gate": "quality_gate.md",
     }
     if repo_url:
         links["repository"] = repo_url
@@ -664,6 +663,10 @@ def _read_json(path: str | Path) -> dict[str, Any]:
 
 def _display_path(path: Path) -> str:
     return str(path).replace("\\", "/")
+
+
+def _display_run_dir(path: Path) -> str:
+    return path.name or "run"
 
 
 def _display_pack_path(path: Path) -> str:
