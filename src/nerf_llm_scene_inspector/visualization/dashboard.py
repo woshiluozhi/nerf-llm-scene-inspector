@@ -31,6 +31,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "capture_manifest_validation_markdown": _read_text(root / "capture_manifest_validation.md"),
         "preflight_report": _read_json(root / "preflight_report.json"),
         "preflight_markdown": _read_text(root / "preflight_report.md"),
+        "failure_diagnostics": _read_json(root / "failure_diagnostics.json"),
+        "failure_diagnostics_markdown": _read_text(root / "failure_diagnostics.md"),
         "evidence_scorecard": _read_json(root / "evidence_scorecard.json"),
         "evidence_scorecard_markdown": _read_text(root / "evidence_scorecard.md"),
         "quality_gate": _read_json(root / "quality_gate.json"),
@@ -286,6 +288,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["preflight_markdown"])
             else:
                 st.json(preflight)
+    if bundle["failure_diagnostics"]:
+        diagnostics = bundle["failure_diagnostics"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Failure Diagnostics", str(diagnostics.get("status", "unknown")))
+        col_b.metric("Diagnostic Blockers", str(diagnostics.get("blocker_count", 0)))
+        col_c.metric("Diagnostic Warnings", str(diagnostics.get("warning_count", 0)))
+        with st.expander("Failure Diagnostics", expanded=diagnostics.get("status") == "blocked"):
+            if bundle["failure_diagnostics_markdown"]:
+                st.markdown(bundle["failure_diagnostics_markdown"])
+            else:
+                st.json(diagnostics)
     if bundle["capture_manifest_validation"]:
         validation = bundle["capture_manifest_validation"]
         with st.expander("Capture Manifest", expanded=validation.get("status") != "ready"):
@@ -571,6 +584,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "capture_manifest.json",
         "capture_manifest_validation.json",
         "preflight_report.json",
+        "failure_diagnostics.json",
         "evidence_scorecard.json",
         "quality_gate.json",
         "run_readiness.json",
@@ -624,6 +638,8 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("real_run_plan/real_run_plan.md")
     if _step_succeeded(pipeline_summary, "create_run_readiness"):
         expected.append("run_readiness.md")
+    if _step_succeeded(pipeline_summary, "diagnose_run_failures"):
+        expected.append("failure_diagnostics.md")
     if _step_succeeded(pipeline_summary, "audit_claims"):
         expected.append("claim_audit.md")
     if _step_succeeded(pipeline_summary, "create_run_result_card"):

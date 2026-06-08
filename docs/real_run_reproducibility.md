@@ -11,6 +11,7 @@ python scripts/check_env.py --check-upstream --require-gpu --verbose
 python scripts/create_capture_manifest.py --input path/to/video.mp4 --type video --scene-name desk_scene --capture-device "phone model" --lighting "bright diffuse indoor" --camera-motion "slow orbit" --static-scene --high-overlap --privacy-reviewed --output results/capture_manifest
 python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --input path/to/video.mp4 --type video
+python scripts/diagnose_run_failures.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene
 ```
 
@@ -56,6 +57,7 @@ python scripts/run_scene_pipeline.py \
 - `../run_comparison.md`: ranked comparison across repeated captures/training attempts, with dry-runs separated from real portfolio candidates.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
 - `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps.
+- `failure_diagnostics.md`: classified CUDA, Nerfstudio/LERF, COLMAP/FFmpeg, missing-config, and viewer-fallback repair actions inferred from saved logs and run artifacts.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
 - `training/baseline_train_summary.json`: baseline Nerfstudio command, status, final config, and viewer command.
 - `training/language_train_summary.json`: LERF/OpenNeRF command, status, final config, and viewer command.
@@ -101,7 +103,7 @@ references in this packet use share-safe artifact names such as `portfolio_pack.
 of machine-specific absolute paths.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,
 dry-run/real-run mode, capture metadata, preflight status, GPU/upstream environment checks,
-language training, quality gates, claim audit, submission packet, and portfolio pack
+language training, failure diagnostics, quality gates, claim audit, submission packet, and portfolio pack
 validation into two explicit booleans: `ready_to_start_real_run` and
 `ready_for_external_review`.
 
@@ -220,7 +222,7 @@ The lower-level tools are still available for debugging individual steps:
 `evaluate_queries.py`, `audit_run.py`, `recommend_next_steps.py`,
 `create_evidence_scorecard.py`, `check_run_quality.py`, `generate_research_report.py`,
 `create_run_result_card.py`, `generate_portfolio_page.py`, `create_reproduction_bundle.py`,
-`audit_claims.py`, and `create_submission_packet.py`.
+`diagnose_run_failures.py`, `audit_claims.py`, and `create_submission_packet.py`.
 
 Only rows with a filled `bbox_2d` are included in localization metrics such as
 `top_k_hit_rate` and `mean_iou_2d`. Rows without bbox annotations stay in the qualitative

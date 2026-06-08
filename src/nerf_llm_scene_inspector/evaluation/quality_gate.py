@@ -185,6 +185,7 @@ def check_run_quality(
     )
     pipeline = _read_json(root / "pipeline_summary.json")
     audit = _read_json(root / "run_audit.json")
+    diagnostics = _read_json(root / "failure_diagnostics.json")
     scorecard = _read_json(root / "evidence_scorecard.json")
     capture = _read_json(root / "capture_manifest_validation.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
@@ -194,6 +195,7 @@ def check_run_quality(
         _pipeline_criterion(pipeline),
         _dry_run_criterion(bool(pipeline.get("dry_run")), policy),
         _audit_criterion(audit, policy),
+        _failure_diagnostics_criterion(diagnostics),
         _evidence_criterion(scorecard, policy),
         _capture_criterion(capture, policy),
         _query_criterion(root, pipeline, scorecard, policy),
@@ -326,6 +328,48 @@ def _audit_criterion(audit: dict[str, Any], policy: GatePolicy) -> QualityGateCr
         f"Run audit has unrecognized status: {status or 'missing'}.",
         "Regenerate run_audit.json.",
         "run_audit.json",
+    )
+
+
+def _failure_diagnostics_criterion(diagnostics: dict[str, Any]) -> QualityGateCriterion:
+    if not diagnostics:
+        return QualityGateCriterion(
+            "failure_diagnostics",
+            "warn",
+            "failure_diagnostics.json is missing or unreadable.",
+            "Run python scripts/diagnose_run_failures.py --run-dir <run-dir>.",
+            "failure_diagnostics.json",
+        )
+    status = str(diagnostics.get("status") or "")
+    if status == "blocked" or diagnostics.get("blocker_count"):
+        return QualityGateCriterion(
+            "failure_diagnostics",
+            "fail",
+            "Failure diagnostics report blocker-level issues.",
+            "Open failure_diagnostics.md and fix the listed root causes.",
+            "failure_diagnostics.md",
+        )
+    if status == "needs_attention" or diagnostics.get("warning_count"):
+        return QualityGateCriterion(
+            "failure_diagnostics",
+            "warn",
+            "Failure diagnostics report warning-level issues.",
+            "Review failure_diagnostics.md before sharing or spending more GPU time.",
+            "failure_diagnostics.md",
+        )
+    if status == "clear":
+        return QualityGateCriterion(
+            "failure_diagnostics",
+            "pass",
+            "No known failure signatures were detected.",
+            artifact="failure_diagnostics.md",
+        )
+    return QualityGateCriterion(
+        "failure_diagnostics",
+        "warn",
+        f"Failure diagnostics has unrecognized status: {status or 'missing'}.",
+        "Regenerate failure_diagnostics.json.",
+        "failure_diagnostics.json",
     )
 
 

@@ -199,6 +199,7 @@ def _artifacts(root: Path) -> list[dict[str, str]]:
         "Capture manifest": "capture_manifest.md",
         "Capture validation": "capture_manifest_validation.md",
         "Preflight report": "preflight_report.md",
+        "Failure diagnostics": "failure_diagnostics.md",
         "Evidence scorecard": "evidence_scorecard.md",
         "Quality gate": "quality_gate.md",
         "Run readiness gate": "run_readiness.md",

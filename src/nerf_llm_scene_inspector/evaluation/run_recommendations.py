@@ -99,6 +99,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     run_audit = _read_json(root / "run_audit.json")
     capture_validation = _read_json(root / "capture_manifest_validation.json")
     preflight_report = _read_json(root / "preflight_report.json")
+    failure_diagnostics = _read_json(root / "failure_diagnostics.json")
     environment_report = _read_json(root / "environment_report.json")
     scene_inspection = _read_json(root / "scene_data_inspection.json")
     annotation_validation = _read_json(root / "evaluation" / "annotation_validation.json")
@@ -109,6 +110,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     recommendations: list[RecommendationItem] = []
 
     _add_audit_findings(run_audit, recommendations)
+    _add_failure_diagnostics_actions(failure_diagnostics, recommendations)
     _add_capture_manifest_actions(capture_validation, recommendations, dry_run=dry_run)
     _add_preflight_actions(preflight_report, recommendations, dry_run=dry_run)
     _add_environment_actions(environment_report, recommendations, dry_run=dry_run)
@@ -147,6 +149,28 @@ def _add_audit_findings(audit: dict[str, Any], recommendations: list[Recommendat
                 action=str(finding.get("recommendation") or finding.get("message") or "Review run audit finding."),
                 rationale=str(finding.get("message") or "Run audit reported a finding."),
                 artifact=str(finding.get("artifact") or "run_audit.json"),
+            )
+        )
+
+
+def _add_failure_diagnostics_actions(
+    diagnostics: dict[str, Any],
+    recommendations: list[RecommendationItem],
+) -> None:
+    for item in diagnostics.get("diagnostics") or []:
+        if not isinstance(item, dict):
+            continue
+        severity = str(item.get("severity") or "")
+        if severity not in {"blocker", "warning"}:
+            continue
+        recommendations.append(
+            RecommendationItem(
+                severity="critical" if severity == "blocker" else "high",
+                category=str(item.get("category") or "failure_diagnostics"),
+                action=str(item.get("recommendation") or "Inspect failure_diagnostics.md."),
+                rationale=str(item.get("message") or "Failure diagnostics reported an issue."),
+                command=str(item.get("command") or ""),
+                artifact=str(item.get("artifact") or "failure_diagnostics.md"),
             )
         )
 

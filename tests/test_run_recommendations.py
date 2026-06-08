@@ -72,6 +72,32 @@ def test_recommendations_include_preflight_failures(tmp_path: Path) -> None:
     assert any(item.category == "preflight" for item in report.recommendations)
 
 
+def test_recommendations_include_failure_diagnostics_actions(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+    _write_json(
+        run_dir / "failure_diagnostics.json",
+        {
+            "status": "blocked",
+            "diagnostics": [
+                {
+                    "severity": "blocker",
+                    "category": "cuda_oom",
+                    "message": "GPU memory exhaustion was detected in command output.",
+                    "recommendation": "Use lerf-lite or reduce rays per batch.",
+                    "command": "python scripts/check_env.py --check-upstream --require-gpu --verbose",
+                    "artifact": "logs/train_language_field_command.json",
+                }
+            ],
+        },
+    )
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "blocked"
+    assert any(item.category == "cuda_oom" for item in report.recommendations)
+    assert report.top_next_action == "Use lerf-lite or reduce rays per batch."
+
+
 def test_recommendations_include_capture_manifest_review(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
     _write_json(

@@ -22,8 +22,11 @@ def test_build_run_result_card_calibrates_dry_run_claims(tmp_path: Path) -> None
     assert card.dry_run is True
     assert "does not prove trained NeRF/LERF" in card.primary_takeaway
     assert any("dry-run" in claim.lower() for claim in card.do_not_claim)
+    assert card.evidence_snapshot["failure_diagnostics"] == "clear"
     assert card.evidence_snapshot["claim_audit"] == "pass"
     assert card.metrics["mean_iou_2d"] == 0.42
+    assert card.artifacts["failure_diagnostics"] == "failure_diagnostics.md"
+    assert any(check.name == "failure_diagnostics" and check.status == "pass" for check in card.checks)
     assert any(check.name == "claim_audit" and check.status == "pass" for check in card.checks)
 
 
@@ -94,6 +97,7 @@ def _write_run(tmp_path: Path) -> Path:
     )
     _write_json(run_dir / "quality_gate.json", {"profile": "smoke", "status": "warn", "passed": True})
     _write_json(run_dir / "run_audit.json", {"status": "needs_review", "score": 52})
+    _write_json(run_dir / "failure_diagnostics.json", {"status": "clear", "blocker_count": 0, "warning_count": 0})
     _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
@@ -125,6 +129,7 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "research_report.md", "# Report\n")
     _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "quality_gate.md", "# Quality\n")
+    _write_text(run_dir / "failure_diagnostics.md", "# Failure Diagnostics\n")
     _write_text(run_dir / "claim_audit.md", "# Claim\n")
     _write_text(run_dir / "submission_packet" / "submission_checklist.md", "# Submission\n")
     _write_text(run_dir / "real_run_plan" / "real_run_plan.md", "# Plan\n")

@@ -36,6 +36,8 @@ def test_finalize_workbench_annotations_refreshes_run_artifacts(tmp_path: Path) 
     assert (run_dir.parent / "run_comparison.json").exists()
     step_names = [step.name for step in report.steps]
     assert step_names[:3] == ["merge_annotation_workbench", "evaluate_queries", "review_annotations"]
+    assert "diagnose_run_failures" in step_names
+    assert step_names.index("diagnose_run_failures") < step_names.index("audit_run")
     assert "create_run_result_card" in step_names
     assert "create_run_readiness" in step_names
     assert (run_dir / "logs" / "finalize_merge_annotation_workbench_command.json").exists()
@@ -112,6 +114,7 @@ def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: 
 
     assert report.ok is True
     assert step_names.index("refresh_quality_gate_with_pack") > step_names.index("validate_portfolio_pack")
+    assert step_names.index("diagnose_run_failures") < step_names.index("audit_run")
     assert report.steps[step_names.index("check_run_quality")].command.endswith("--no-require-pack")
     assert "--pack" in report.steps[step_names.index("refresh_quality_gate_with_pack")].command
     assert step_names.index("final_export_portfolio_pack") > step_names.index("refresh_reproduction_bundle")
@@ -152,6 +155,8 @@ def test_finalize_zip_pack_contains_final_validation_report(tmp_path: Path) -> N
         names = set(archive.namelist())
         assert "portfolio_pack_index.json" in names
         assert "portfolio_pack_validation.json" in names
+        assert "run/failure_diagnostics.json" in names
+        assert "run/failure_diagnostics.md" in names
         assert "run/run_readiness.json" in names
         assert "run/run_readiness.md" in names
         assert "run/submission_packet/submission_packet.json" in names

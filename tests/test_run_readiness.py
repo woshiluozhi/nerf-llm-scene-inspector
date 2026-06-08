@@ -19,6 +19,7 @@ def test_run_readiness_calibrates_dry_run(tmp_path: Path) -> None:
     assert report.ready_for_external_review is False
     assert report.fail_count == 0
     assert any(gate.name == "evidence_mode" and gate.status == "warn" for gate in report.gates)
+    assert any(gate.name == "failure_diagnostics" and gate.status == "pass" for gate in report.gates)
     assert any(gate.name == "environment_gpu_upstream" and gate.status == "warn" for gate in report.gates)
     assert any("without --dry-run" in action or "CUDA-backed" in action for action in report.next_actions)
 
@@ -93,6 +94,10 @@ def _write_run(tmp_path: Path, *, dry_run: bool) -> Path:
     _write_json(run_dir / "preflight_report.json", {"status": "ready", "ready_for_real_run": True})
     _write_json(run_dir / "environment_report.json", _environment_report(strict=not dry_run))
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
+    _write_json(
+        run_dir / "failure_diagnostics.json",
+        {"status": "clear", "blocker_count": 0, "warning_count": 0},
+    )
     _write_json(
         run_dir / "training" / "language_train_summary.json",
         {

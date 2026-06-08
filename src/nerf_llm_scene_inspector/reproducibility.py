@@ -174,6 +174,7 @@ def _verification_commands(root: Path) -> list[str]:
     run_dir = _display_run_dir(root)
     runs_root = _display_path(root.parent)
     return [
+        _format_command(["python", "scripts/diagnose_run_failures.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/audit_run.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/recommend_next_steps.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/generate_research_report.py", "--run-dir", run_dir]),
@@ -273,6 +274,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             "Validation of capture conditions, overlap, static scene, and privacy review.",
         ),
         ("preflight_report", root / "preflight_report.md", "preflight_report.md", "Real-run readiness checks before training."),
+        (
+            "failure_diagnostics",
+            root / "failure_diagnostics.md",
+            "failure_diagnostics.md",
+            "Classified command-log and training/query failure diagnostics.",
+        ),
         ("environment_report", root / "environment_report.json", "environment_report.json", "Runtime and upstream dependency checks."),
         ("scene_inspection", root / "scene_data_inspection.md", "scene_data_inspection.md", "Processed scene quality and pose readiness."),
         ("run_audit", root / "run_audit.md", "run_audit.md", "Run health audit."),

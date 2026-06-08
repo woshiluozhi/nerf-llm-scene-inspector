@@ -59,6 +59,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Real-run preflight reports that check raw input, processed scene data, config paths, CUDA/upstream tools, and backend method registration before expensive training.
+- Failure diagnostics that classify saved command logs and training/query artifacts into actionable CUDA, Nerfstudio, LERF, COLMAP, FFmpeg, config, and viewer-fallback repair steps.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Evidence scorecards that rate a run's portfolio-readiness across pipeline integrity, capture metadata, environment, scene quality, query outputs, annotations, and presentation artifacts without claiming model performance superiority.
@@ -168,6 +169,7 @@ Practical one-command dry-run pipeline:
 ```bash
 python scripts/run_scene_pipeline.py --dry-run
 python scripts/create_capture_manifest.py --input examples --type images --scene-name desk_scene --output results/capture_manifest --allow-warnings
+python scripts/diagnose_run_failures.py --run-dir results/pipeline_runs/desk_scene
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
@@ -193,6 +195,9 @@ cleaned by default to avoid stale results; pass `--no-clean-run` only when you i
 want to preserve prior files.
 Full command stdout/stderr logs are saved under `results/pipeline_runs/<scene>/logs/`
 for debugging Nerfstudio, LERF, annotation, demo, and evaluation failures.
+Run `diagnose_run_failures.py` when a real run fails or falls back to manual viewer
+workflow: it summarizes common CUDA, LERF registration, COLMAP/FFmpeg, missing-config,
+and query-rendering failure modes in `failure_diagnostics.md`.
 
 Run prompt-sensitivity analysis when you want to check whether several prompts for the
 same concept localize the same scene region:
@@ -239,6 +244,7 @@ python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scen
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke --pack results/portfolio_pack
+python scripts/diagnose_run_failures.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene --output results/real_run_plan --input path/to/video.mp4 --type video --submission-packet results/pipeline_runs/desk_scene/submission_packet/submission_packet.json
 ```
@@ -252,8 +258,8 @@ sharing: its `Readiness Summary` section lists failed checks, warning checks, pa
 and the next action to take before CV/professor outreach.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
 time or send the run externally. It consolidates pipeline success, evidence mode, capture,
-preflight, environment, language training, quality gate, claim audit, submission packet, and
-portfolio pack validation into `ready_to_start_real_run` and `ready_for_external_review`
+preflight, environment, language training, quality gate, claim audit, submission packet,
+failure diagnostics, and portfolio pack validation into `ready_to_start_real_run` and `ready_for_external_review`
 decisions.
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
@@ -393,6 +399,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/capture_manifest_validation.json`
 - `results/pipeline_runs/<scene>/capture_manifest_validation.md`
 - `results/pipeline_runs/<scene>/preflight_report.md`
+- `results/pipeline_runs/<scene>/failure_diagnostics.json`
+- `results/pipeline_runs/<scene>/failure_diagnostics.md`
 - `results/pipeline_runs/<scene>/pipeline_summary.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.md`
@@ -536,6 +544,7 @@ python scripts/generate_project_site.py --help
 python scripts/analyze_prompt_sensitivity.py --help
 python scripts/analyze_scene_relations.py --help
 python scripts/evaluate_queries.py --help
+python scripts/diagnose_run_failures.py --help
 python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help
 python scripts/create_evidence_scorecard.py --help

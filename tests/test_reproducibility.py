@@ -17,6 +17,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert bundle.scene_name == "desk_scene"
     assert bundle.dry_run is True
     assert bundle.replay_command == "python scripts/run_scene_pipeline.py --dry-run --query mug"
+    assert "python scripts/diagnose_run_failures.py --run-dir run" in bundle.verification_commands
     assert "python scripts/audit_run.py --run-dir run" in bundle.verification_commands
     assert "python scripts/create_evidence_scorecard.py --run-dir run" in bundle.verification_commands
     assert "python scripts/generate_portfolio_page.py --run-dir run" in bundle.verification_commands
@@ -39,6 +40,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert any(artifact.name == "pipeline_summary" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "capture_manifest" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "preflight_report" and artifact.exists for artifact in bundle.artifacts)
+    assert any(artifact.name == "failure_diagnostics" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "evidence_scorecard" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "quality_gate" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "claim_audit" and artifact.exists for artifact in bundle.artifacts)
@@ -72,6 +74,7 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     script_text = script.read_text(encoding="utf-8")
     assert "set -euo pipefail" in script_text
     assert "python scripts/run_scene_pipeline.py --dry-run --query mug" in script_text
+    assert "python scripts/diagnose_run_failures.py --run-dir run" in script_text
     assert "python scripts/create_real_run_plan.py --run-dir run" in script_text
     assert "python scripts/create_run_readiness.py --run-dir run" in script_text
     assert "python scripts/audit_claims.py --run-dir run" in script_text
@@ -136,6 +139,7 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "capture_manifest.md", "# Capture\n")
     _write_text(run_dir / "capture_manifest_validation.md", "# Capture Validation\n")
     _write_text(run_dir / "preflight_report.md", "# Preflight\n")
+    _write_text(run_dir / "failure_diagnostics.md", "# Failure Diagnostics\n")
     _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "quality_gate.md", "# Quality Gate\n")
     _write_text(run_dir / "claim_audit.md", "# Claim Audit\n")

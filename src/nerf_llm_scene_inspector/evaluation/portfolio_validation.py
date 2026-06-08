@@ -41,6 +41,8 @@ RUN_REQUIRED_FILES = [
     "run/capture_manifest_validation.md",
     "run/preflight_report.json",
     "run/preflight_report.md",
+    "run/failure_diagnostics.json",
+    "run/failure_diagnostics.md",
     "run/evidence_scorecard.json",
     "run/evidence_scorecard.md",
     "run/quality_gate.json",
@@ -212,6 +214,7 @@ def _validate_portfolio_directory(
         _check_required_files(pack_path, RUN_REQUIRED_FILES, missing_files)
         _check_run_logs(pack_path, artifact_issues)
         _check_run_audit(pack_path, warnings, errors)
+        _check_failure_diagnostics(pack_path, warnings, errors)
         _check_capture_manifest(pack_path, warnings, errors)
         _check_evidence_scorecard(pack_path, warnings, errors)
         _check_quality_gate(pack_path, warnings, errors)
@@ -437,6 +440,19 @@ def _check_run_audit(pack_path: Path, warnings: list[str], errors: list[str]) ->
         warnings.append("run_audit.json status is needs_review; inspect warnings before sharing.")
     elif status and status != "ready":
         warnings.append(f"run_audit.json has unrecognized status: {status}")
+
+
+def _check_failure_diagnostics(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    diagnostics = _read_json(pack_path / "run" / "failure_diagnostics.json", errors)
+    if not isinstance(diagnostics, dict):
+        return
+    status = str(diagnostics.get("status") or "")
+    if status == "blocked":
+        errors.append("failure_diagnostics.json status is blocked.")
+    elif status == "needs_attention":
+        warnings.append("failure_diagnostics.json status is needs_attention; inspect repair actions before sharing.")
+    elif status and status != "clear":
+        warnings.append(f"failure_diagnostics.json has unrecognized status: {status}")
 
 
 def _check_capture_manifest(pack_path: Path, warnings: list[str], errors: list[str]) -> None:

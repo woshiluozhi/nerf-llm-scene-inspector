@@ -124,6 +124,7 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
     scorecard = _read_json(root / "evidence_scorecard.json")
     quality = _read_json(root / "quality_gate.json")
     audit = _read_json(root / "run_audit.json")
+    diagnostics = _read_json(root / "failure_diagnostics.json")
     claim_audit = _read_json(root / "claim_audit.json")
     submission = _read_json(root / "submission_packet" / "submission_packet.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
@@ -144,11 +145,20 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
         readiness=str(submission.get("readiness_level") or ""),
     )
     metrics = _metrics(evaluation, scorecard, scene, relations)
-    evidence_snapshot = _evidence_snapshot(summary, scorecard, quality, audit, claim_audit, submission, annotations)
+    evidence_snapshot = _evidence_snapshot(
+        summary,
+        scorecard,
+        quality,
+        audit,
+        diagnostics,
+        claim_audit,
+        submission,
+        annotations,
+    )
     limitations = _limitations(dry_run, evaluation, annotations, relations)
     next_actions = _next_actions(submission, recommendations, dry_run)
     do_not_claim = _do_not_claim(submission, dry_run)
-    checks = _checks(summary, scorecard, quality, audit, claim_audit, submission, annotations)
+    checks = _checks(summary, scorecard, quality, audit, diagnostics, claim_audit, submission, annotations)
     return RunResultCard(
         scene_name=scene_name,
         backend=backend,
@@ -252,6 +262,7 @@ def _evidence_snapshot(
     scorecard: dict[str, Any],
     quality: dict[str, Any],
     audit: dict[str, Any],
+    diagnostics: dict[str, Any],
     claim_audit: dict[str, Any],
     submission: dict[str, Any],
     annotations: dict[str, Any],
@@ -262,6 +273,7 @@ def _evidence_snapshot(
         "evidence_score": _score_text(scorecard.get("score"), scorecard.get("max_score")),
         "quality_gate": quality.get("status"),
         "run_audit": audit.get("status"),
+        "failure_diagnostics": diagnostics.get("status"),
         "claim_audit": claim_audit.get("status"),
         "submission_readiness": submission.get("readiness_level"),
         "annotation_validation_ok": annotations.get("ok"),
@@ -375,6 +387,7 @@ def _checks(
     scorecard: dict[str, Any],
     quality: dict[str, Any],
     audit: dict[str, Any],
+    diagnostics: dict[str, Any],
     claim_audit: dict[str, Any],
     submission: dict[str, Any],
     annotations: dict[str, Any],
@@ -409,6 +422,17 @@ def _checks(
             "run_audit.md",
         ),
         ResultCardCheck(
+            "failure_diagnostics",
+            "pass"
+            if diagnostics.get("status") == "clear"
+            else "warn"
+            if diagnostics.get("status") == "needs_attention"
+            else "fail",
+            f"status={diagnostics.get('status')}, blockers={diagnostics.get('blocker_count', 0)}, warnings={diagnostics.get('warning_count', 0)}",
+            "Open failure_diagnostics.md before sharing or rerunning." if diagnostics.get("status") != "clear" else "",
+            "failure_diagnostics.md",
+        ),
+        ResultCardCheck(
             "claim_audit",
             "pass" if claim_audit.get("status") == "pass" else "warn" if claim_audit.get("status") == "warn" else "fail",
             f"status={claim_audit.get('status')}, fails={claim_audit.get('fail_count', 0)}, warnings={claim_audit.get('warn_count', 0)}",
@@ -439,6 +463,7 @@ def _artifacts(root: Path) -> dict[str, str]:
         "research_report": "research_report.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "quality_gate": "quality_gate.md",
+        "failure_diagnostics": "failure_diagnostics.md",
         "claim_audit": "claim_audit.md",
         "submission_checklist": "submission_packet/submission_checklist.md",
         "real_run_plan": "real_run_plan/real_run_plan.md",

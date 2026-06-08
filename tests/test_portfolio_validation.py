@@ -98,6 +98,19 @@ def test_validate_portfolio_pack_fails_blocked_result_card(tmp_path: Path) -> No
     assert "run_result_card.json result_status is blocked." in report.errors
 
 
+def test_validate_portfolio_pack_fails_blocked_failure_diagnostics(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "failure_diagnostics.json").write_text(
+        json.dumps({"status": "blocked", "blocker_count": 1, "warning_count": 0}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "failure_diagnostics.json status is blocked." in report.errors
+
+
 def test_validate_portfolio_pack_fails_digest_mismatch(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     target = pack / "run" / "pipeline_summary.json"
@@ -241,6 +254,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/capture_manifest_validation.md",
         "run/preflight_report.json",
         "run/preflight_report.md",
+        "run/failure_diagnostics.json",
+        "run/failure_diagnostics.md",
         "run/evidence_scorecard.json",
         "run/evidence_scorecard.md",
         "run/quality_gate.json",
@@ -316,6 +331,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "capture_manifest": "run/capture_manifest.md",
                 "capture_manifest_validation": "run/capture_manifest_validation.md",
                 "preflight_report": "run/preflight_report.md",
+                "failure_diagnostics": "run/failure_diagnostics.md",
                 "evidence_scorecard": "run/evidence_scorecard.md",
                 "quality_gate": "run/quality_gate.md",
                 "run_readiness": "run/run_readiness.md",
@@ -373,6 +389,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"scene_name": "desk_scene", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"})
     if relative_path.endswith("preflight_report.json"):
         return json.dumps({"status": "ready", "ready_for_real_run": True})
+    if relative_path.endswith("failure_diagnostics.json"):
+        return json.dumps({"status": "clear", "blocker_count": 0, "warning_count": 0})
     if relative_path.endswith("capture_manifest_validation.json"):
         return json.dumps({"status": "ready", "ok": True})
     if relative_path.endswith("evidence_scorecard.json"):

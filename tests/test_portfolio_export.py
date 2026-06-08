@@ -91,6 +91,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     )
     assert index["run_summary"]["artifacts"]["capture_manifest"] == "run/capture_manifest.md"
     assert index["run_summary"]["artifacts"]["preflight_report"] == "run/preflight_report.md"
+    assert index["run_summary"]["artifacts"]["failure_diagnostics"] == "run/failure_diagnostics.md"
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
     assert index["run_summary"]["artifacts"]["quality_gate"] == "run/quality_gate.md"
     assert index["run_summary"]["artifacts"]["run_readiness"] == "run/run_readiness.md"
@@ -122,6 +123,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert "CPU dry-run smoke demo" in pack_readme
     assert "project/docs/index.html" in pack_readme
     assert "run/portfolio_page.html" in pack_readme
+    assert "run/failure_diagnostics.md" in pack_readme
     assert "run/run_readiness.md" in pack_readme
     assert "professor_review_checklist.md" in pack_readme
     assert "state-of-the-art benchmark performance" in pack_readme
@@ -153,6 +155,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "capture_manifest_validation.json").exists()
     assert (output_dir / "run" / "preflight_report.json").exists()
     assert (output_dir / "run" / "preflight_report.md").exists()
+    assert (output_dir / "run" / "failure_diagnostics.json").exists()
+    assert (output_dir / "run" / "failure_diagnostics.md").exists()
     assert (output_dir / "run" / "evidence_scorecard.json").exists()
     assert (output_dir / "run" / "evidence_scorecard.md").exists()
     assert (output_dir / "run" / "quality_gate.json").exists()

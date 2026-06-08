@@ -30,6 +30,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "review_annotations", "status": "success"},
                 {"name": "generate_research_report", "status": "success"},
                 {"name": "create_real_run_plan", "status": "success"},
+                {"name": "diagnose_run_failures", "status": "success"},
                 {"name": "create_run_readiness", "status": "success"},
                 {"name": "audit_claims", "status": "success"},
                 {"name": "create_run_result_card", "status": "success"},
@@ -58,6 +59,11 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"status": "ready", "fail_count": 0, "warn_count": 0},
     )
     (run_dir / "preflight_report.md").write_text("# Real-Run Preflight Report\n", encoding="utf-8")
+    _write_json(
+        run_dir / "failure_diagnostics.json",
+        {"status": "clear", "blocker_count": 0, "warning_count": 0},
+    )
+    (run_dir / "failure_diagnostics.md").write_text("# Failure Diagnostics\n", encoding="utf-8")
     _write_json(
         run_dir / "evidence_scorecard.json",
         {"evidence_level": "dry_run_demo_ready", "score": 82, "max_score": 100, "overlay_count": 1},
@@ -208,6 +214,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["training_summaries"]["language"]["run_type"] == "language"
     assert bundle["preflight_report"]["status"] == "ready"
     assert "# Real-Run Preflight Report" in bundle["preflight_markdown"]
+    assert bundle["failure_diagnostics"]["status"] == "clear"
+    assert "# Failure Diagnostics" in bundle["failure_diagnostics_markdown"]
     assert bundle["evidence_scorecard"]["evidence_level"] == "dry_run_demo_ready"
     assert "# Evidence Scorecard" in bundle["evidence_scorecard_markdown"]
     assert bundle["quality_gate"]["profile"] == "smoke"

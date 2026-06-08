@@ -136,6 +136,7 @@ def build_run_readiness(
     capture = _read_json(root / "capture_manifest_validation.json")
     scene = _read_json(root / "scene_data_inspection.json")
     language = _read_json(root / "training" / "language_train_summary.json")
+    failure_diagnostics = _read_json(root / "failure_diagnostics.json")
     quality = _read_json(root / "quality_gate.json")
     claim_audit = _read_json(root / "claim_audit.json")
     submission = _read_json(root / "submission_packet" / "submission_packet.json")
@@ -153,6 +154,7 @@ def build_run_readiness(
         _environment_gate(environment, dry_run=dry_run),
         _scene_gate(scene),
         _language_training_gate(language, dry_run=dry_run),
+        _failure_diagnostics_gate(failure_diagnostics),
         _quality_gate(quality),
         _claim_audit_gate(claim_audit),
         _submission_gate(submission),
@@ -412,6 +414,40 @@ def _quality_gate(quality: dict[str, Any]) -> ReadinessGate:
         f"Quality gate status is {status or 'unknown'}.",
         "Review warning criteria before sharing externally.",
         "quality_gate.md",
+    )
+
+
+def _failure_diagnostics_gate(diagnostics: dict[str, Any]) -> ReadinessGate:
+    status = str(diagnostics.get("status") or "")
+    if not diagnostics:
+        return ReadinessGate(
+            "failure_diagnostics",
+            "warn",
+            "Failure diagnostics report is missing.",
+            "Run python scripts/diagnose_run_failures.py --run-dir <run> before launch or sharing.",
+            "failure_diagnostics.md",
+        )
+    if status == "clear":
+        return ReadinessGate(
+            "failure_diagnostics",
+            "pass",
+            "No known failure signatures were detected.",
+            artifact="failure_diagnostics.md",
+        )
+    if status == "blocked" or diagnostics.get("blocker_count"):
+        return ReadinessGate(
+            "failure_diagnostics",
+            "fail",
+            "Failure diagnostics found blocker-level issues.",
+            "Open failure_diagnostics.md and resolve the listed root-cause fixes.",
+            "failure_diagnostics.md",
+        )
+    return ReadinessGate(
+        "failure_diagnostics",
+        "warn",
+        f"Failure diagnostics status is {status or 'unknown'}.",
+        "Review failure_diagnostics.md before spending GPU time or sharing externally.",
+        "failure_diagnostics.md",
     )
 
 

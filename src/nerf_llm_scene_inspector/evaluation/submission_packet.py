@@ -171,6 +171,7 @@ def build_submission_packet(
     scorecard = _read_json(root / "evidence_scorecard.json")
     quality = _read_json(root / "quality_gate.json")
     audit = _read_json(root / "run_audit.json")
+    diagnostics = _read_json(root / "failure_diagnostics.json")
     recommendations = _read_json(root / "run_recommendations.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
     research = _read_json(root / "research_report.json")
@@ -186,6 +187,7 @@ def build_submission_packet(
         scorecard,
         quality,
         audit,
+        diagnostics,
         annotations,
         claim_audit,
         pack_validation,
@@ -255,6 +257,7 @@ def _checklist(
     scorecard: dict[str, Any],
     quality: dict[str, Any],
     audit: dict[str, Any],
+    diagnostics: dict[str, Any],
     annotations: dict[str, Any],
     claim_audit: dict[str, Any],
     pack_validation: dict[str, Any],
@@ -292,6 +295,7 @@ def _checklist(
         _scorecard_item(scorecard),
         _quality_item(quality),
         _audit_item(audit),
+        _failure_diagnostics_item(diagnostics),
         _annotation_item(annotations),
         _claim_audit_item(claim_audit),
         _pack_item(pack_validation),
@@ -360,6 +364,33 @@ def _audit_item(audit: dict[str, Any]) -> SubmissionChecklistItem:
         f"status={status}, score={audit.get('score')}",
         "Review run_audit.md warnings before using as evidence." if status != "ready" else "",
         "run_audit.md",
+    )
+
+
+def _failure_diagnostics_item(diagnostics: dict[str, Any]) -> SubmissionChecklistItem:
+    status = str(diagnostics.get("status") or "")
+    if not diagnostics:
+        return SubmissionChecklistItem(
+            "failure_diagnostics",
+            "warn",
+            "failure_diagnostics.json missing",
+            "Run diagnose_run_failures.py before sharing.",
+            "failure_diagnostics.md",
+        )
+    if status == "blocked" or diagnostics.get("blocker_count"):
+        return SubmissionChecklistItem(
+            "failure_diagnostics",
+            "fail",
+            f"status={status}, blockers={diagnostics.get('blocker_count', 0)}",
+            "Fix blocker-level diagnostics before sharing.",
+            "failure_diagnostics.md",
+        )
+    return SubmissionChecklistItem(
+        "failure_diagnostics",
+        "warn" if status == "needs_attention" or diagnostics.get("warning_count") else "pass",
+        f"status={status}, warnings={diagnostics.get('warning_count', 0)}",
+        "Review failure_diagnostics.md warnings before sharing." if status == "needs_attention" else "",
+        "failure_diagnostics.md",
     )
 
 
@@ -618,6 +649,7 @@ def _recommended_links(
         "run_result_card": "run_result_card.md",
         "portfolio_page": "portfolio_page.html",
         "reproduction_report": "reproduction_report.md",
+        "failure_diagnostics": "failure_diagnostics.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "quality_gate": "quality_gate.md",
     }

@@ -20,6 +20,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Capture manifests for device, lighting, camera motion, overlap, static-scene, and privacy metadata, with validation surfaced in run audit and evidence scoring.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
+- Failure-diagnostics report generation that classifies CUDA, LERF registration, COLMAP/FFmpeg, missing-config, and viewer-fallback issues from saved logs.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
 - Multi-run comparison report for ranking repeated captures or training attempts before selecting a portfolio candidate.
 - Experiment-matrix runner for small backend/query/variant ablations with CSV and Markdown summaries.
@@ -64,6 +65,7 @@ python scripts/run_experiment_matrix.py --config examples/experiment_matrix.yaml
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
+python scripts/diagnose_run_failures.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_result_card.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
@@ -82,6 +84,7 @@ python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scen
 - Capture manifest: `results/pipeline_runs/desk_scene/capture_manifest.md`
 - Capture validation: `results/pipeline_runs/desk_scene/capture_manifest_validation.md`
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
+- Failure diagnostics: `results/pipeline_runs/desk_scene/failure_diagnostics.md`
 - Evidence scorecard: `results/pipeline_runs/desk_scene/evidence_scorecard.md`
 - Claim audit: `results/pipeline_runs/desk_scene/claim_audit.md`
 - Run result card: `results/pipeline_runs/desk_scene/run_result_card.md`

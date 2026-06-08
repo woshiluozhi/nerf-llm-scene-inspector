@@ -18,6 +18,7 @@ def test_quality_gate_smoke_passes_dry_run_with_warnings(tmp_path: Path) -> None
     assert report.status == "warn"
     assert report.dry_run is True
     assert report.evidence_level == "dry_run_demo_ready"
+    assert any(criterion.name == "failure_diagnostics" and criterion.status == "pass" for criterion in report.criteria)
     assert any(criterion.name == "run_mode" and criterion.status == "warn" for criterion in report.criteria)
 
 
@@ -78,6 +79,7 @@ def _write_smoke_run(tmp_path: Path) -> Path:
         },
     )
     _write_json(run_dir / "run_audit.json", {"status": "needs_review", "score": 84})
+    _write_json(run_dir / "failure_diagnostics.json", {"status": "clear", "blocker_count": 0, "warning_count": 0})
     _write_json(
         run_dir / "evidence_scorecard.json",
         {

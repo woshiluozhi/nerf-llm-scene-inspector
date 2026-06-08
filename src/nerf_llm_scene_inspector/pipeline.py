@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.capture_manifest import copy_or_create_capture_manifest
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
+from nerf_llm_scene_inspector.evaluation.failure_diagnostics import write_failure_diagnostics
 from nerf_llm_scene_inspector.evaluation.claim_audit import write_claim_audit
 from nerf_llm_scene_inspector.evaluation.prompt_sensitivity import prompt_suite_queries
 from nerf_llm_scene_inspector.evaluation.quality_gate import check_run_quality
@@ -217,6 +218,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "capture_manifest_validation_markdown": str(run_dir / "capture_manifest_validation.md"),
         "preflight_json": str(run_dir / "preflight_report.json"),
         "preflight_markdown": str(run_dir / "preflight_report.md"),
+        "failure_diagnostics_json": str(run_dir / "failure_diagnostics.json"),
+        "failure_diagnostics_markdown": str(run_dir / "failure_diagnostics.md"),
         "evidence_scorecard_json": str(run_dir / "evidence_scorecard.json"),
         "evidence_scorecard_markdown": str(run_dir / "evidence_scorecard.md"),
         "portfolio_page": str(run_dir / "portfolio_page.html"),
@@ -673,6 +676,29 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         warnings=warnings,
     )
     summary_path = run_dir / "pipeline_summary.json"
+    summary.to_json(summary_path)
+    diagnostics = write_failure_diagnostics(run_dir)
+    diagnostics_json = run_dir / "failure_diagnostics.json"
+    diagnostics_md = run_dir / "failure_diagnostics.md"
+    steps.append(
+        PipelineStep(
+            "diagnose_run_failures",
+            "failed"
+            if diagnostics.status == "blocked"
+            else "warning"
+            if diagnostics.status == "needs_attention"
+            else "success",
+            summary={
+                "status": diagnostics.status,
+                "blocker_count": diagnostics.blocker_count,
+                "warning_count": diagnostics.warning_count,
+                "failed_command_count": diagnostics.failed_command_count,
+            },
+            outputs={"json": str(diagnostics_json), "markdown": str(diagnostics_md)},
+        )
+    )
+    if diagnostics.status == "blocked":
+        summary.success = False
     summary.to_json(summary_path)
     audit = audit_pipeline_run(run_dir)
     audit_json = audit.to_json(run_dir / "run_audit.json")

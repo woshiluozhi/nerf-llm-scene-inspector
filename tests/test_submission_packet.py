@@ -43,10 +43,12 @@ def test_build_submission_packet_calibrates_dry_run_claims(tmp_path: Path) -> No
     assert any("CPU-safe pipeline wiring" in claim for claim in packet.allowed_claims)
     assert any("trained LERF outputs" in claim for claim in packet.avoid_claims)
     assert any(item.name == "claim_audit" and item.status == "pass" for item in packet.checklist)
+    assert any(item.name == "failure_diagnostics" and item.status == "pass" for item in packet.checklist)
     assert any(item.name == "path_leaks" and item.status == "pass" for item in packet.checklist)
     assert packet.recommended_links["research_report"] == "research_report.md"
     assert packet.recommended_links["portfolio_page"] == "portfolio_page.html"
     assert packet.recommended_links["reproduction_report"] == "reproduction_report.md"
+    assert packet.recommended_links["failure_diagnostics"] == "failure_diagnostics.md"
     assert packet.recommended_links["quality_gate"] == "quality_gate.md"
 
 
@@ -227,6 +229,7 @@ def _write_run(run_dir: Path, *, dry_run: bool) -> Path:
         {"profile": "smoke" if dry_run else "portfolio", "status": "warn", "passed": True},
     )
     _write_json(run_dir / "run_audit.json", {"status": "needs_review", "score": 70})
+    _write_json(run_dir / "failure_diagnostics.json", {"status": "clear", "blocker_count": 0, "warning_count": 0})
     _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     _write_json(
         run_dir / "run_recommendations.json",

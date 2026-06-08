@@ -190,6 +190,8 @@ def _check_required_files(
                 "evaluation/eval_summary.json",
             ]
         )
+    if _step_status(summary, "diagnose_run_failures") == "success":
+        required.extend(["failure_diagnostics.json", "failure_diagnostics.md"])
     if _step_status(summary, "review_annotations") == "success":
         required.extend(
             [
@@ -522,6 +524,7 @@ def _key_artifacts(root: Path) -> dict[str, str]:
         "capture_manifest": "capture_manifest.md",
         "capture_manifest_validation": "capture_manifest_validation.md",
         "preflight_report": "preflight_report.md",
+        "failure_diagnostics": "failure_diagnostics.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "run_audit": "run_audit.json",
         "command_logs": "logs/",
