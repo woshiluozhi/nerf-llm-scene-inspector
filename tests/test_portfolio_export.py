@@ -13,6 +13,16 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")
+    prompt_suite = tmp_path / "prompt_suite.yaml"
+    prompt_suite.write_text(
+        "scene_name: export_scene\n"
+        "groups:\n"
+        "  - name: mug\n"
+        "    prompts:\n"
+        "      - mug\n"
+        "      - coffee mug\n",
+        encoding="utf-8",
+    )
     annotations_path = ROOT / "examples" / "annotations_example.json"
     run_dir = tmp_path / "pipeline_runs" / "export_scene"
     output_dir = tmp_path / "portfolio_pack"
@@ -27,6 +37,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
             runs_root=tmp_path / "runs",
             output_root=tmp_path / "pipeline_runs",
             annotations_path=annotations_path,
+            prompt_suite_path=prompt_suite,
             config_path=config_path,
             dry_run=True,
             skip_baseline=True,
@@ -60,6 +71,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
     assert index["run_summary"]["artifacts"]["quality_gate"] == "run/quality_gate.md"
     assert index["run_summary"]["artifacts"]["query_reports"] == "run/queries/"
+    assert index["run_summary"]["artifacts"]["prompt_sensitivity"] == "run/prompt_sensitivity/"
     assert index["run_summary"]["artifacts"]["run_comparison"] == "run_comparison.md"
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
     assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
@@ -101,6 +113,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "annotation_template.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.md").exists()
+    assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
+    assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_report.md").exists()
     assert (output_dir / "run" / "project_report.md").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_validation.json").exists()
     assert (output_dir / "run" / "evaluation" / "annotation_review.json").exists()

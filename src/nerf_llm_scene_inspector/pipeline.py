@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.capture_manifest import copy_or_create_capture_manifest
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
+from nerf_llm_scene_inspector.evaluation.prompt_sensitivity import prompt_suite_queries
 from nerf_llm_scene_inspector.evaluation.quality_gate import check_run_quality
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_runs
@@ -54,6 +55,7 @@ class PipelineConfig:
     runs_root: str | Path = "runs"
     output_root: str | Path = "results/pipeline_runs"
     annotations_path: str | Path = "examples/annotations_example.json"
+    prompt_suite_path: str | Path | None = None
     capture_manifest_path: str | Path | None = None
     config_path: str | Path | None = None
     max_num_iterations: int | None = None
@@ -136,12 +138,21 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     query_dir = run_dir / "queries"
     demo_dir = run_dir / "demo_assets"
     eval_dir = run_dir / "evaluation"
+    prompt_sensitivity_dir = run_dir / "prompt_sensitivity"
     training_dir = run_dir / "training"
     logs_dir = run_dir / "logs"
     run_dir.mkdir(parents=True, exist_ok=True)
     if config.clean_run_outputs:
-        for subdir in (query_dir, demo_dir, eval_dir, logs_dir):
+        for subdir in (query_dir, demo_dir, eval_dir, prompt_sensitivity_dir, logs_dir):
             _reset_run_subdir(subdir, run_dir)
+    if config.prompt_suite_path:
+        config = replace(
+            config,
+            queries=_merge_unique_queries(
+                config.queries,
+                prompt_suite_queries(config.prompt_suite_path),
+            ),
+        )
     run_queries_path = _write_run_queries_file(run_dir, config.scene_name, config.queries)
 
     steps: list[PipelineStep] = []
@@ -158,6 +169,13 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "queries": str(query_dir),
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
+        "prompt_sensitivity": str(prompt_sensitivity_dir),
+        "prompt_sensitivity_json": str(
+            prompt_sensitivity_dir / "prompt_sensitivity_summary.json"
+        ),
+        "prompt_sensitivity_markdown": str(
+            prompt_sensitivity_dir / "prompt_sensitivity_report.md"
+        ),
         "annotation_review_json": str(eval_dir / "annotation_review.json"),
         "annotation_review_markdown": str(eval_dir / "annotation_review.md"),
         "annotation_review_contact_sheet": str(eval_dir / "annotation_review_contact_sheet.png"),
@@ -395,7 +413,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 PipelineStep(
                     "query_scene",
                     "success",
-                    summary={"num_queries": len(query_outputs)},
+                    summary={"num_queries": len(config.queries)},
                     outputs=query_outputs,
                 )
             )
@@ -420,6 +438,33 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 {"annotation_template": str(run_dir / "annotation_template.json")}
             )
             steps.append(annotation_template_result)
+
+        if config.prompt_suite_path and not config.skip_queries:
+            prompt_result = _run_helper_script(
+                [
+                    sys.executable,
+                    str(root / "scripts" / "analyze_prompt_sensitivity.py"),
+                    "--suite",
+                    str(config.prompt_suite_path),
+                    "--results",
+                    str(query_dir),
+                    "--output",
+                    str(prompt_sensitivity_dir),
+                    "--scene-name",
+                    config.scene_name,
+                    *(["--dry-run"] if config.dry_run else []),
+                ],
+                root=root,
+                log_path=logs_dir / "analyze_prompt_sensitivity_command.json",
+            )
+            prompt_result.outputs.update(
+                {
+                    "summary": str(prompt_sensitivity_dir / "prompt_sensitivity_summary.json"),
+                    "table": str(prompt_sensitivity_dir / "prompt_sensitivity_table.csv"),
+                    "markdown": str(prompt_sensitivity_dir / "prompt_sensitivity_report.md"),
+                }
+            )
+            steps.append(prompt_result)
 
         if config.skip_demo or not model_config_path:
             steps.append(PipelineStep("generate_demo_assets", "skipped"))
@@ -707,6 +752,18 @@ def _write_run_queries_file(run_dir: Path, scene_name: str, queries: list[str]) 
     lines.extend(f"  - {json.dumps(query)}" for query in queries)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
+
+
+def _merge_unique_queries(primary: list[str], extra: list[str]) -> list[str]:
+    seen: set[str] = set()
+    merged: list[str] = []
+    for query in [*primary, *extra]:
+        normalized = query.strip()
+        key = normalized.lower()
+        if normalized and key not in seen:
+            seen.add(key)
+            merged.append(normalized)
+    return merged
 
 
 def _write_step_json(path: Path, payload: dict[str, object]) -> Path:

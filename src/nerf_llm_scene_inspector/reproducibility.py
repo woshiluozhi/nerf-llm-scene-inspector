@@ -183,6 +183,18 @@ def _verification_commands(root: Path) -> list[str]:
         _format_command(
             [
                 "python",
+                "scripts/analyze_prompt_sensitivity.py",
+                "--suite",
+                "examples/prompt_sensitivity.yaml",
+                "--results",
+                f"{run_dir}/queries",
+                "--output",
+                f"{run_dir}/prompt_sensitivity",
+            ]
+        ),
+        _format_command(
+            [
+                "python",
                 "scripts/review_annotations.py",
                 "--annotations",
                 f"{run_dir}/annotation_template.json",
@@ -243,6 +255,12 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
             "Ranked comparison across repeated captures/training attempts.",
         ),
         ("query_grid", root / "demo_assets" / "query_grid.png", "demo_assets/query_grid.png", "Qualitative query visualization."),
+        (
+            "prompt_sensitivity",
+            root / "prompt_sensitivity" / "prompt_sensitivity_report.md",
+            "prompt_sensitivity/prompt_sensitivity_report.md",
+            "Prompt wording stability report for open-vocabulary query variants.",
+        ),
         ("evaluation_summary", root / "evaluation" / "eval_summary.json", "evaluation/eval_summary.json", "Quantitative/qualitative metric summary."),
         ("annotation_review", root / "evaluation" / "annotation_review.md", "evaluation/annotation_review.md", "Visual QA report for manual bbox annotations."),
         (

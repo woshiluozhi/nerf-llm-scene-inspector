@@ -24,6 +24,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "train_baseline_nerf", "status": "success"},
                 {"name": "train_language_field", "status": "success"},
                 {"name": "query_scene", "status": "success"},
+                {"name": "analyze_prompt_sensitivity", "status": "success"},
                 {"name": "review_annotations", "status": "success"},
             ],
             "provenance": {"git_commit": "abc123"},
@@ -79,6 +80,14 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "evaluation" / "annotation_review.json", {"ok": True, "items": []})
     (run_dir / "evaluation" / "annotation_review.md").write_text("# Annotation Review\n", encoding="utf-8")
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"top_k_hit_rate": 1.0})
+    _write_json(
+        run_dir / "prompt_sensitivity" / "prompt_sensitivity_summary.json",
+        {"stable_group_count": 1, "num_groups": 1},
+    )
+    (run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md").write_text(
+        "# Prompt Sensitivity Report\n",
+        encoding="utf-8",
+    )
     _write_json(run_dir / "logs" / "prepare_data_command.json", {"returncode": 0, "stdout": "ok"})
     (run_dir / "evaluation" / "eval_table.csv").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "evaluation" / "eval_table.csv").write_text(
@@ -120,6 +129,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["annotation_review"]["ok"] is True
     assert "# Annotation Review" in bundle["annotation_review_markdown"]
+    assert bundle["prompt_sensitivity"]["stable_group_count"] == 1
+    assert "# Prompt Sensitivity Report" in bundle["prompt_sensitivity_markdown"]
     assert bundle["command_logs"][0]["label"] == "logs/prepare_data_command.json"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"

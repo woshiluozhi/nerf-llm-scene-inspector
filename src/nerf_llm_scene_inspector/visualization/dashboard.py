@@ -50,6 +50,12 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "annotation_review_markdown": _read_text(root / "evaluation" / "annotation_review.md"),
         "evaluation_summary": _read_json(root / "evaluation" / "eval_summary.json"),
         "evaluation_table": _read_csv(root / "evaluation" / "eval_table.csv"),
+        "prompt_sensitivity": _read_json(
+            root / "prompt_sensitivity" / "prompt_sensitivity_summary.json"
+        ),
+        "prompt_sensitivity_markdown": _read_text(
+            root / "prompt_sensitivity" / "prompt_sensitivity_report.md"
+        ),
         "annotation_template": _read_json(root / "annotation_template.json"),
         "portfolio_card": _read_text(root / "portfolio_result_card.md"),
         "portfolio_page": str(root / "portfolio_page.html") if (root / "portfolio_page.html").exists() else "",
@@ -335,6 +341,14 @@ def _render_evaluation(st: Any, bundle: dict[str, Any]) -> None:
     if bundle["evaluation_table"]:
         st.table(bundle["evaluation_table"])
 
+    st.subheader("Prompt Sensitivity")
+    if bundle["prompt_sensitivity_markdown"]:
+        st.markdown(bundle["prompt_sensitivity_markdown"])
+    elif bundle["prompt_sensitivity"]:
+        st.json(bundle["prompt_sensitivity"])
+    else:
+        st.info("No prompt-sensitivity report found.")
+
     st.subheader("Annotation Template")
     if bundle["annotation_validation"]:
         with st.expander("Annotation Validation"):
@@ -436,6 +450,13 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
             [
                 "evaluation/annotation_review.json",
                 "evaluation/annotation_review.md",
+            ]
+        )
+    if _step_succeeded(pipeline_summary, "analyze_prompt_sensitivity"):
+        expected.extend(
+            [
+                "prompt_sensitivity/prompt_sensitivity_summary.json",
+                "prompt_sensitivity/prompt_sensitivity_report.md",
             ]
         )
     if _step_succeeded(pipeline_summary, "train_baseline_nerf"):

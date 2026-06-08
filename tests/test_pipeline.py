@@ -86,6 +86,16 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
 def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")
+    prompt_suite = tmp_path / "prompt_suite.yaml"
+    prompt_suite.write_text(
+        "scene_name: scoped_scene\n"
+        "groups:\n"
+        "  - name: mug\n"
+        "    prompts:\n"
+        "      - mug\n"
+        "      - coffee mug\n",
+        encoding="utf-8",
+    )
     annotations_path = Path(__file__).resolve().parents[1] / "examples" / "annotations_example.json"
     run_dir = tmp_path / "pipeline_runs" / "scoped_scene"
 
@@ -99,6 +109,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
             runs_root=tmp_path / "runs",
             output_root=tmp_path / "pipeline_runs",
             annotations_path=annotations_path,
+            prompt_suite_path=prompt_suite,
             config_path=config_path,
             dry_run=True,
             skip_baseline=True,
@@ -128,6 +139,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "evaluation" / "annotation_review_contact_sheet.png").exists()
     assert (run_dir / "evaluation" / "eval_summary.json").exists()
     assert (run_dir / "evaluation" / "qualitative_report.md").exists()
+    assert (run_dir / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
+    assert (run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md").exists()
     assert (run_dir / "project_report.md").exists()
     assert (run_dir / "run_audit.json").exists()
     assert (run_dir / "run_audit.md").exists()
@@ -148,6 +161,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()
     assert (run_dir / "logs" / "evaluate_queries_command.json").exists()
     assert (run_dir / "logs" / "review_annotations_command.json").exists()
+    assert (run_dir / "logs" / "analyze_prompt_sensitivity_command.json").exists()
     eval_step = next(step for step in summary.steps if step.name == "evaluate_queries")
     assert eval_step.outputs["eval_summary"] == str(run_dir / "evaluation" / "eval_summary.json")
     assert eval_step.outputs["annotation_validation"] == str(
@@ -162,7 +176,15 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
     query_step = next(step for step in summary.steps if step.name == "query_scene")
+    assert query_step.summary["num_queries"] == 2
     assert query_step.outputs["mug_markdown"] == str(run_dir / "queries" / "mug" / "scene_query_report.md")
+    assert query_step.outputs["coffee_mug"] == str(
+        run_dir / "queries" / "coffee_mug" / "scene_query_report.json"
+    )
+    prompt_step = next(step for step in summary.steps if step.name == "analyze_prompt_sensitivity")
+    assert prompt_step.outputs["markdown"] == str(
+        run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md"
+    )
     capture_step = next(step for step in summary.steps if step.name == "capture_manifest")
     assert capture_step.outputs["manifest_json"] == str(run_dir / "capture_manifest.json")
     audit_step = next(step for step in summary.steps if step.name == "audit_run")

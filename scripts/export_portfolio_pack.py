@@ -149,6 +149,7 @@ def _copy_run_materials(
         _copy_share_safe_file(source, output / relative_destination, output, copied, missing, run_dir)
     _copy_command_logs(run_dir, output, copied)
     _copy_query_reports(run_dir, output, copied)
+    _copy_prompt_sensitivity(run_dir, output, copied)
     _copy_file(
         run_dir / "training" / "baseline_train_summary.json",
         output / "run/training/baseline_train_summary.json",
@@ -297,6 +298,21 @@ def _copy_query_reports(
         _copy_share_safe_file(source, output / "run" / relative, output, copied, [], run_dir)
 
 
+def _copy_prompt_sensitivity(
+    run_dir: Path,
+    output: Path,
+    copied: list[dict[str, str]],
+) -> None:
+    prompt_dir = run_dir / "prompt_sensitivity"
+    if not prompt_dir.exists():
+        return
+    for source in sorted(prompt_dir.glob("prompt_sensitivity_*")):
+        if source.suffix.lower() not in TEXT_SUFFIXES:
+            continue
+        relative = source.relative_to(run_dir)
+        _copy_share_safe_file(source, output / "run" / relative, output, copied, [], run_dir)
+
+
 def _copy_pipeline_summary(
     source: Path,
     destination: Path,
@@ -356,6 +372,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "scene_data_inspection": "run/scene_data_inspection.md",
         "query_plan": "run/queries.yaml",
         "query_reports": "run/queries/",
+        "prompt_sensitivity": "run/prompt_sensitivity/",
         "annotation_template": "run/annotation_template.json",
         "project_report": "run/project_report.md",
         "portfolio_card": "run/portfolio_result_card.md",

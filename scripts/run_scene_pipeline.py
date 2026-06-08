@@ -34,6 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--runs-root", default="runs")
     parser.add_argument("--output-root", default="results/pipeline_runs")
     parser.add_argument("--annotations", default="examples/annotations_example.json")
+    parser.add_argument(
+        "--prompt-suite",
+        help="Optional YAML prompt suite for robustness analysis; suite prompts are added to queries.",
+    )
     parser.add_argument("--capture-manifest", help="Optional capture_manifest.json to copy into the run.")
     parser.add_argument("--max-num-iterations", type=int)
     parser.add_argument("--num-views", type=int, default=1)
@@ -71,6 +75,7 @@ def main() -> int:
         runs_root=args.runs_root,
         output_root=args.output_root,
         annotations_path=args.annotations,
+        prompt_suite_path=args.prompt_suite,
         capture_manifest_path=args.capture_manifest,
         config_path=args.config,
         max_num_iterations=args.max_num_iterations,

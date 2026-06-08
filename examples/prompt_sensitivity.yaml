@@ -1,0 +1,23 @@
+scene_name: desk_scene
+groups:
+  - name: mug
+    description: Object-level wording variants for a mug-like object.
+    expected_behavior: Top relevancy regions should stay on the same physical mug or cup.
+    prompts:
+      - mug
+      - coffee mug
+      - cup
+  - name: laptop_support
+    description: Relation-oriented prompts for the surface or object supporting a laptop.
+    expected_behavior: Prompts should localize the same support surface when the scene contains a laptop.
+    prompts:
+      - object supporting the laptop
+      - surface under the laptop
+      - laptop support
+  - name: containers
+    description: Affordance wording variants for objects that can hold liquid or small items.
+    expected_behavior: Prompts should return compact regions on container-like objects.
+    prompts:
+      - objects that can hold water
+      - container
+      - cup or bottle

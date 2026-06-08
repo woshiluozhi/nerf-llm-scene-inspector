@@ -54,6 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Annotation review artifacts that draw manual `bbox_2d` labels over rendered views for QA before reporting metrics.
+- Prompt-sensitivity analysis that checks whether wording variants retrieve consistent regions, views, and relevancy scores.
 - Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Real-run preflight reports that check raw input, processed scene data, config paths, CUDA/upstream tools, and backend method registration before expensive training.
@@ -89,7 +90,9 @@ flowchart LR
   I --> F
   F --> J[Relevancy renders and QueryResult JSON]
   J --> K[Spatial reasoning and answer synthesis]
+  J --> M[Prompt sensitivity analysis]
   K --> L[Evidence-grounded scene answer, overlays, demo video, evaluation]
+  M --> L
 ```
 
 ## Installation
@@ -174,6 +177,18 @@ want to preserve prior files.
 Full command stdout/stderr logs are saved under `results/pipeline_runs/<scene>/logs/`
 for debugging Nerfstudio, LERF, annotation, demo, and evaluation failures.
 
+Run prompt-sensitivity analysis when you want to check whether several prompts for the
+same concept localize the same scene region:
+
+```bash
+python scripts/run_scene_pipeline.py --dry-run --prompt-suite examples/prompt_sensitivity.yaml
+python scripts/analyze_prompt_sensitivity.py --suite examples/prompt_sensitivity.yaml --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/prompt_sensitivity
+```
+
+The report is a robustness diagnostic for open-vocabulary querying. It summarizes missing
+prompt variants, mean confidence, top-region IoU, and view agreement without claiming a
+benchmark result.
+
 Export the latest run into a shareable portfolio package:
 
 ```bash
@@ -201,6 +216,7 @@ python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-fram
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene --dry-run
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
+python scripts/analyze_prompt_sensitivity.py --suite examples/prompt_sensitivity.yaml --results results/query_outputs --output results/prompt_sensitivity --dry-run
 python scripts/create_annotation_template.py --queries examples/queries_demo.yaml --results results/query_outputs --output results/annotations_template.json --overwrite
 python scripts/validate_annotations.py --annotations examples/annotations_example.json --queries examples/queries_demo.yaml --results results/query_outputs
 python scripts/review_annotations.py --annotations examples/annotations_example.json --results results/query_outputs --output results/evaluation --allow-warnings
@@ -255,6 +271,7 @@ python scripts/run_scene_pipeline.py \
   --query "mug" \
   --query "objects that can hold water" \
   --query "safe place to put a hot cup" \
+  --prompt-suite examples/prompt_sensitivity.yaml \
   --annotations examples/annotations_example.json \
   --num-views 3 \
   --min-pose-extent 0.05 \
@@ -294,6 +311,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/training/language_train_summary.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.md`
+- `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_summary.json`
+- `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_report.md`
 - `results/pipeline_runs/<scene>/annotation_template.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`
 - `results/pipeline_runs/<scene>/evaluation/annotation_validation.json`
