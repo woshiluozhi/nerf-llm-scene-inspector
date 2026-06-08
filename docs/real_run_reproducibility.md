@@ -56,6 +56,7 @@ python scripts/run_scene_pipeline.py \
 - `run_audit.md`: run-level health summary for environment, data, query, annotation, and evaluation readiness.
 - `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
 - `evidence_scorecard.md`: conservative 100-point scorecard for whether the run is strong enough to share.
+- `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
 - `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
 - `reproduce_run.sh`: shell recipe that installs local dependencies, runs checks, replays the pipeline, and verifies the pack.
@@ -147,6 +148,9 @@ python scripts/recommend_next_steps.py \
   --run-dir results/pipeline_runs/desk_scene
 
 python scripts/create_evidence_scorecard.py \
+  --run-dir results/pipeline_runs/desk_scene
+
+python scripts/generate_portfolio_page.py \
   --run-dir results/pipeline_runs/desk_scene
 
 python scripts/create_reproduction_bundle.py \

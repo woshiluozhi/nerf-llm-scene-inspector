@@ -58,6 +58,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Evidence scorecards that rate a run's portfolio-readiness without claiming model performance superiority.
+- Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
 - Shareable portfolio-pack export and validation that checks required artifacts, artifact links, and local path leakage before sharing.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
@@ -152,6 +153,7 @@ python scripts/run_scene_pipeline.py --dry-run
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk_scene
+python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/index_runs.py --root results/pipeline_runs
 ```
@@ -274,6 +276,7 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/run_recommendations.md`
 - `results/pipeline_runs/<scene>/evidence_scorecard.json`
 - `results/pipeline_runs/<scene>/evidence_scorecard.md`
+- `results/pipeline_runs/<scene>/portfolio_page.html`
 - `results/pipeline_runs/<scene>/reproduction_manifest.json`
 - `results/pipeline_runs/<scene>/reproduction_report.md`
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
@@ -342,6 +345,7 @@ python scripts/import_viewer_outputs.py --help
 python scripts/create_annotation_template.py --help
 python scripts/validate_annotations.py --help
 python scripts/generate_demo_assets.py --help
+python scripts/generate_portfolio_page.py --help
 python scripts/evaluate_queries.py --help
 python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help

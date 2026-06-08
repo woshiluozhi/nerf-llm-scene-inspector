@@ -26,6 +26,7 @@ from nerf_llm_scene_inspector.utils.env_check import build_env_report
 from nerf_llm_scene_inspector.utils.paths import project_root, slugify, utc_timestamp
 from nerf_llm_scene_inspector.utils.provenance import build_provenance
 from nerf_llm_scene_inspector.utils.shell import format_command, run_command
+from nerf_llm_scene_inspector.visualization.portfolio_page import build_portfolio_page
 
 
 DEFAULT_PIPELINE_QUERIES = [
@@ -158,6 +159,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "preflight_markdown": str(run_dir / "preflight_report.md"),
         "evidence_scorecard_json": str(run_dir / "evidence_scorecard.json"),
         "evidence_scorecard_markdown": str(run_dir / "evidence_scorecard.md"),
+        "portfolio_page": str(run_dir / "portfolio_page.html"),
         "run_audit_json": str(run_dir / "run_audit.json"),
         "run_audit_markdown": str(run_dir / "run_audit.md"),
         "run_recommendations_json": str(run_dir / "run_recommendations.json"),
@@ -507,6 +509,22 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 "top_recommendations": scorecard.top_recommendations[:3],
             },
             outputs={"json": str(scorecard_json), "markdown": str(scorecard_md)},
+        )
+    )
+    summary.to_json(summary_path)
+    portfolio_page = build_portfolio_page(run_dir)
+    portfolio_page_path = portfolio_page.write_html(run_dir / "portfolio_page.html")
+    steps.append(
+        PipelineStep(
+            "generate_portfolio_page",
+            "success",
+            summary={
+                "evidence_level": portfolio_page.evidence_level,
+                "evidence_score": portfolio_page.evidence_score,
+                "image_count": len(portfolio_page.images),
+                "artifact_count": len(portfolio_page.artifacts),
+            },
+            outputs={"html": str(portfolio_page_path)},
         )
     )
     summary.to_json(summary_path)

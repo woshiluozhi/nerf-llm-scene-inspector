@@ -472,6 +472,7 @@ def _key_artifacts(root: Path) -> dict[str, str]:
         "query_grid": "demo_assets/query_grid.png",
         "demo_montage": "demo_assets/demo_montage.gif",
         "portfolio_card": "portfolio_result_card.md",
+        "portfolio_page": "portfolio_page.html",
         "project_report": "project_report.md",
     }
     return {name: relative for name, relative in candidates.items() if (root / relative).exists()}

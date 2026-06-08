@@ -47,6 +47,7 @@ RUN_REQUIRED_FILES = [
     "run/annotation_template.json",
     "run/project_report.md",
     "run/portfolio_result_card.md",
+    "run/portfolio_page.html",
     "run/evaluation/eval_summary.json",
     "run/evaluation/eval_table.csv",
     "run/evaluation/annotation_validation.json",
@@ -59,6 +60,7 @@ RUN_REQUIRED_FILES = [
 TEXT_SUFFIXES = {
     ".cff",
     ".csv",
+    ".html",
     ".json",
     ".md",
     ".py",

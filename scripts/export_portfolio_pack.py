@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-TEXT_SUFFIXES = {".cff", ".csv", ".json", ".md", ".sh", ".txt", ".yaml", ".yml"}
+TEXT_SUFFIXES = {".cff", ".csv", ".html", ".json", ".md", ".sh", ".txt", ".yaml", ".yml"}
 TEXT_NAMES = {"LICENSE", "README", "README.md"}
 
 
@@ -123,6 +123,7 @@ def _copy_run_materials(
         (run_dir / "annotation_template.json", "run/annotation_template.json"),
         (run_dir / "project_report.md", "run/project_report.md"),
         (run_dir / "portfolio_result_card.md", "run/portfolio_result_card.md"),
+        (run_dir / "portfolio_page.html", "run/portfolio_page.html"),
         (run_dir / "evaluation" / "eval_summary.json", "run/evaluation/eval_summary.json"),
         (run_dir / "evaluation" / "eval_table.csv", "run/evaluation/eval_table.csv"),
         (run_dir / "evaluation" / "annotation_validation.json", "run/evaluation/annotation_validation.json"),
@@ -315,6 +316,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "annotation_template": "run/annotation_template.json",
         "project_report": "run/project_report.md",
         "portfolio_card": "run/portfolio_result_card.md",
+        "portfolio_page": "run/portfolio_page.html",
         "evaluation_summary": "run/evaluation/eval_summary.json",
         "annotation_validation": "run/evaluation/annotation_validation.json",
         "demo_grid": "run/demo_assets/query_grid.png",

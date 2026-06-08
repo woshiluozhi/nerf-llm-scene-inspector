@@ -49,6 +49,7 @@ jobs:
           python scripts/create_annotation_template.py --help
           python scripts/validate_annotations.py --help
           python scripts/generate_demo_assets.py --help
+          python scripts/generate_portfolio_page.py --help
           python scripts/evaluate_queries.py --help
           python scripts/audit_run.py --help
           python scripts/recommend_next_steps.py --help

@@ -41,6 +41,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "evaluation_table": _read_csv(root / "evaluation" / "eval_table.csv"),
         "annotation_template": _read_json(root / "annotation_template.json"),
         "portfolio_card": _read_text(root / "portfolio_result_card.md"),
+        "portfolio_page": str(root / "portfolio_page.html") if (root / "portfolio_page.html").exists() else "",
         "project_report": _read_text(root / "project_report.md"),
         "command_logs": collect_command_logs(root),
         "images": collect_run_images(root),
@@ -206,6 +207,8 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["evidence_scorecard_markdown"])
             else:
                 st.json(scorecard)
+    if bundle["portfolio_page"]:
+        st.markdown(f"[Open static portfolio page]({bundle['portfolio_page']})")
 
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})
@@ -356,6 +359,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "annotation_template.json",
         "evaluation/annotation_validation.json",
         "evaluation/eval_summary.json",
+        "portfolio_page.html",
     ]
     if _step_succeeded(pipeline_summary, "train_baseline_nerf"):
         expected.append("training/baseline_train_summary.json")

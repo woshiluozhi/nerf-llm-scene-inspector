@@ -39,6 +39,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"evidence_level": "dry_run_demo_ready", "score": 82, "max_score": 100, "overlay_count": 1},
     )
     (run_dir / "evidence_scorecard.md").write_text("# Evidence Scorecard\n", encoding="utf-8")
+    (run_dir / "portfolio_page.html").write_text("<!doctype html>\n", encoding="utf-8")
     _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100})
     _write_json(
         run_dir / "run_recommendations.json",
@@ -81,6 +82,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Real-Run Preflight Report" in bundle["preflight_markdown"]
     assert bundle["evidence_scorecard"]["evidence_level"] == "dry_run_demo_ready"
     assert "# Evidence Scorecard" in bundle["evidence_scorecard_markdown"]
+    assert bundle["portfolio_page"].endswith("portfolio_page.html")
     assert bundle["run_audit"]["status"] == "ready"
     assert bundle["run_recommendations"]["readiness_level"] == "ready_for_portfolio"
     assert "# Run Recommendations" in bundle["run_recommendations_markdown"]
