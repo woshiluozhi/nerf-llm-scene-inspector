@@ -221,6 +221,7 @@ def _validate_portfolio_directory(
         _check_claim_audit(pack_path, warnings, errors)
         _check_run_result_card(pack_path, warnings, errors)
         _check_annotation_validation(pack_path, warnings, errors)
+        _check_viewer_import_repair_summaries(pack_path, warnings, errors)
     else:
         warnings.append("No run/ directory found; pack includes project materials but no run-scoped evidence.")
 
@@ -534,6 +535,40 @@ def _check_annotation_validation(pack_path: Path, warnings: list[str], errors: l
         errors.append("annotation_validation.json reports invalid annotations.")
     for warning in validation.get("warnings") or []:
         warnings.append(f"Annotation validation warning: {warning}")
+
+
+def _check_viewer_import_repair_summaries(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    queries_root = pack_path / "run" / "queries"
+    if not queries_root.exists():
+        return
+    for path in sorted(queries_root.rglob("viewer_repair_summary.json")):
+        summary = _read_json(path, errors)
+        if not isinstance(summary, dict):
+            continue
+        display = _relative_path(path, pack_path)
+        missing_required = [str(item) for item in summary.get("missing_required_queries") or []]
+        if summary.get("ok") is False or missing_required:
+            errors.append(
+                f"{display} reports incomplete required viewer repairs: "
+                + ", ".join(missing_required or ["ok=false"])
+            )
+        missing_dirs = [str(item) for item in summary.get("missing_viewer_dirs") or []]
+        repaired = [str(item) for item in summary.get("repaired_queries") or []]
+        if missing_dirs and not missing_required:
+            warnings.append(
+                f"{display} kept {len(missing_dirs)} query result(s) without manual viewer outputs; "
+                f"repaired={len(repaired)}."
+            )
+        for warning in summary.get("warnings") or []:
+            warnings.append(f"{display} warning: {warning}")
+
+    for path in sorted(queries_root.rglob("viewer_import_summary.json")):
+        summary = _read_json(path, errors)
+        if not isinstance(summary, dict):
+            continue
+        display = _relative_path(path, pack_path)
+        for warning in summary.get("warnings") or []:
+            warnings.append(f"{display} warning: {warning}")
 
 
 def _scan_path_leaks(pack_path: Path) -> tuple[list[str], list[PathLeak]]:

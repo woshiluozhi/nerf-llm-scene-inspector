@@ -111,6 +111,50 @@ def test_validate_portfolio_pack_fails_blocked_failure_diagnostics(tmp_path: Pat
     assert "failure_diagnostics.json status is blocked." in report.errors
 
 
+def test_validate_portfolio_pack_fails_incomplete_viewer_repair(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    repair_summary = pack / "run" / "queries" / "mug" / "viewer_repair_summary.json"
+    repair_summary.write_text(
+        json.dumps(
+            {
+                "ok": False,
+                "repaired_queries": ["mug"],
+                "missing_required_queries": ["bottle"],
+                "warnings": ["No manual viewer output directory found for fallback query 'bottle'."],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert any("viewer_repair_summary.json reports incomplete required viewer repairs" in error for error in report.errors)
+    assert any("fallback query 'bottle'" in warning for warning in report.warnings)
+
+
+def test_validate_portfolio_pack_warns_partial_viewer_repair(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    repair_summary = pack / "run" / "queries" / "mug" / "viewer_repair_summary.json"
+    repair_summary.write_text(
+        json.dumps(
+            {
+                "ok": True,
+                "repaired_queries": ["mug"],
+                "missing_viewer_dirs": ["bottle"],
+                "missing_required_queries": [],
+                "warnings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is True
+    assert any("kept 1 query result" in warning for warning in report.warnings)
+
+
 def test_validate_portfolio_pack_fails_digest_mismatch(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     target = pack / "run" / "pipeline_summary.json"

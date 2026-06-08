@@ -63,6 +63,26 @@ def test_failure_diagnostics_detects_lerf_viewer_fallback(tmp_path: Path) -> Non
 
     assert report.status == "needs_attention"
     assert any(item.category == "lerf_render_fallback" for item in report.diagnostics)
+    fallback = next(item for item in report.diagnostics if item.category == "lerf_render_fallback")
+    assert "repair_scene_query_from_viewer.py" in fallback.command
+
+
+def test_failure_diagnostics_detects_incomplete_viewer_repair(tmp_path: Path) -> None:
+    run_dir = _write_base_run(tmp_path)
+    _write_json(
+        run_dir / "queries" / "mug" / "viewer_repair_summary.json",
+        {
+            "ok": False,
+            "repaired_queries": ["mug"],
+            "missing_required_queries": ["bottle"],
+            "warnings": [],
+        },
+    )
+
+    report = build_failure_diagnostics(run_dir)
+
+    assert report.status == "blocked"
+    assert any(item.category == "viewer_repair_incomplete" for item in report.diagnostics)
 
 
 def test_write_failure_diagnostics_outputs_json_and_markdown(tmp_path: Path) -> None:

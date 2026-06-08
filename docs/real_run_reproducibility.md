@@ -143,6 +143,8 @@ python scripts/repair_scene_query_from_viewer.py \
 
 Use `--require-all` when every expanded prompt should have manually saved viewer evidence.
 Without it, missing query folders are kept as original results and recorded as warnings.
+Portfolio-pack export keeps `viewer_repair_summary.json` and `viewer_import_summary.json`;
+pack validation treats incomplete required repairs as share-blocking evidence issues.
 
 ## Provenance Fields
 

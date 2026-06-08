@@ -52,6 +52,14 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     (run_dir / "annotation_merge_report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
     (run_dir / "annotation_finalize_report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
     (run_dir / "annotation_finalize_report.md").write_text("# Annotation Finalization Report\n", encoding="utf-8")
+    (run_dir / "queries" / "mug" / "viewer_repair_summary.json").write_text(
+        json.dumps({"ok": True, "repaired_queries": ["mug"], "missing_required_queries": [], "warnings": []}),
+        encoding="utf-8",
+    )
+    (run_dir / "queries" / "mug" / "mug" / "viewer_import_summary.json").write_text(
+        json.dumps({"query": "mug", "warnings": []}),
+        encoding="utf-8",
+    )
 
     result = subprocess.run(
         [
@@ -199,6 +207,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "annotation_finalize_report.md").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.md").exists()
+    assert (output_dir / "run" / "queries" / "mug" / "viewer_repair_summary.json").exists()
+    assert (output_dir / "run" / "queries" / "mug" / "mug" / "viewer_import_summary.json").exists()
     assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
     assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_report.md").exists()
     assert (output_dir / "run" / "scene_relations" / "scene_relations_summary.json").exists()
@@ -233,6 +243,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
         assert "professor_review_checklist.md" in names
         assert "portfolio_pack_index.json" in names
         assert "run/pipeline_summary.json" in names
+        assert "run/queries/mug/viewer_repair_summary.json" in names
+        assert "run/queries/mug/mug/viewer_import_summary.json" in names
         zipped_index = json.loads(archive.read("portfolio_pack_index.json").decode("utf-8"))
         zipped_readme = archive.read("README.md").decode("utf-8")
         zipped_review = archive.read("professor_review_checklist.md").decode("utf-8")

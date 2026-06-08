@@ -366,8 +366,15 @@ def _copy_query_reports(
     queries_dir = run_dir / "queries"
     if not queries_dir.exists():
         return
+    exported_query_files = {
+        "scene_query_report.json",
+        "scene_query_report.md",
+        "query_result.json",
+        "viewer_import_summary.json",
+        "viewer_repair_summary.json",
+    }
     for source in sorted(queries_dir.rglob("*")):
-        if source.name not in {"scene_query_report.json", "scene_query_report.md", "query_result.json"}:
+        if source.name not in exported_query_files:
             continue
         relative = source.relative_to(run_dir)
         _copy_share_safe_file(source, output / "run" / relative, output, copied, [], run_dir)

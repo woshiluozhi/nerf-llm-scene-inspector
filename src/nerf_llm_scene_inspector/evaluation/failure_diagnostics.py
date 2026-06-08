@@ -234,10 +234,10 @@ LOG_PATTERNS = [
         pattern=r"automated lerf rendering failed|does not expose image_encoder",
         message="Automated LERF rendering fell back to the interactive viewer workflow.",
         recommendation=(
-            "Use scripts/import_viewer_outputs.py for manually saved viewer renders, or update the adapter "
-            "for the installed Nerfstudio/LERF revision."
+            "Use scripts/repair_scene_query_from_viewer.py for full scene reports or "
+            "scripts/import_viewer_outputs.py for single-query viewer renders."
         ),
-        command="python scripts/import_viewer_outputs.py --query mug --config path/to/config.yml --input results/manual_viewer/mug --output results/query_outputs/mug",
+        command="python scripts/repair_scene_query_from_viewer.py --report results/pipeline_runs/desk_scene/queries/mug/scene_query_report.json --viewer-root results/manual_viewer",
     ),
 ]
 
@@ -253,6 +253,7 @@ def build_failure_diagnostics(run_dir: str | Path) -> FailureDiagnosticsReport:
     command_logs = _command_logs(root)
     training_summaries = _training_summaries(root)
     query_reports = _query_reports(root)
+    viewer_repair_summaries = _viewer_repair_summaries(root)
 
     _diagnose_pipeline_steps(pipeline, diagnostics)
     _diagnose_environment(root, diagnostics)
@@ -260,6 +261,7 @@ def build_failure_diagnostics(run_dir: str | Path) -> FailureDiagnosticsReport:
     _diagnose_command_logs(command_logs, diagnostics, root)
     _diagnose_training_summaries(training_summaries, diagnostics, root)
     _diagnose_query_reports(query_reports, diagnostics, root)
+    _diagnose_viewer_repair_summaries(viewer_repair_summaries, diagnostics, root)
 
     diagnostics = _dedupe(diagnostics)
     status = _status(diagnostics)
@@ -471,12 +473,15 @@ def _diagnose_query_reports(
                         severity="warning",
                         category="lerf_render_fallback",
                         message="A query result used the interactive LERF viewer fallback.",
-                        recommendation="Import manually saved viewer outputs to keep evaluation and reports structured.",
+                        recommendation=(
+                            "Repair the scene query report with manually saved viewer outputs, or import "
+                            "single-query outputs before annotation/evaluation."
+                        ),
                         artifact=artifact,
                         command=(
-                            "python scripts/import_viewer_outputs.py --query mug "
-                            "--config path/to/config.yml --input results/manual_viewer/mug "
-                            "--output results/query_outputs/mug"
+                            "python scripts/repair_scene_query_from_viewer.py "
+                            "--report results/pipeline_runs/desk_scene/queries/mug/scene_query_report.json "
+                            "--viewer-root results/manual_viewer"
                         ),
                         source=path.name,
                     )
@@ -487,7 +492,7 @@ def _diagnose_query_reports(
                 severity="warning",
                 category="lerf_render_fallback",
                 message=f"{fallback_count} query artifacts used LERF viewer fallback outputs.",
-                recommendation="Use imported viewer outputs or update the automated renderer for the installed upstream revision.",
+                recommendation="Use repaired/imported viewer outputs or update the automated renderer for the installed upstream revision.",
                 artifact="queries/",
             )
         )
@@ -503,6 +508,45 @@ def _diagnose_query_reports(
         )
 
 
+def _diagnose_viewer_repair_summaries(
+    summaries: list[tuple[Path, dict[str, Any]]],
+    diagnostics: list[FailureDiagnostic],
+    root: Path,
+) -> None:
+    for path, payload in summaries:
+        artifact = _relative_path(path, root)
+        missing_required = [str(item) for item in payload.get("missing_required_queries") or []]
+        if payload.get("ok") is False or missing_required:
+            diagnostics.append(
+                FailureDiagnostic(
+                    severity="blocker",
+                    category="viewer_repair_incomplete",
+                    message="A scene-query viewer repair did not cover all required queries.",
+                    recommendation="Add missing manual viewer output directories or rerun repair without --require-all.",
+                    artifact=artifact,
+                    command=(
+                        "python scripts/repair_scene_query_from_viewer.py "
+                        "--report results/pipeline_runs/desk_scene/queries/mug/scene_query_report.json "
+                        "--viewer-root results/manual_viewer --require-all"
+                    ),
+                    source=path.name,
+                )
+            )
+            continue
+        missing_dirs = [str(item) for item in payload.get("missing_viewer_dirs") or []]
+        if missing_dirs:
+            diagnostics.append(
+                FailureDiagnostic(
+                    severity="warning",
+                    category="viewer_repair_partial",
+                    message=f"A scene-query viewer repair kept {len(missing_dirs)} query result(s) unchanged.",
+                    recommendation="Review viewer_repair_summary.json before using the repaired report as evidence.",
+                    artifact=artifact,
+                    source=path.name,
+                )
+            )
+
+
 def _command_logs(root: Path) -> list[tuple[Path, dict[str, Any]]]:
     return [(path, _read_json(path)) for path in sorted((root / "logs").glob("*.json"))]
 
@@ -516,6 +560,13 @@ def _training_summaries(root: Path) -> list[tuple[Path, dict[str, Any]]]:
 
 def _query_reports(root: Path) -> list[tuple[Path, dict[str, Any]]]:
     return [(path, _read_json(path)) for path in sorted((root / "queries").rglob("query_result.json"))]
+
+
+def _viewer_repair_summaries(root: Path) -> list[tuple[Path, dict[str, Any]]]:
+    return [
+        (path, _read_json(path))
+        for path in sorted((root / "queries").rglob("viewer_repair_summary.json"))
+    ]
 
 
 def _read_json(path: Path) -> dict[str, Any]:

@@ -402,7 +402,8 @@ python scripts/repair_scene_query_from_viewer.py --report results/pipeline_runs/
 
 This updates `scene_query_report.json`, rewrites `scene_query_report.md`, and records
 `viewer_repair_summary.json` so annotation, evaluation, and portfolio reports can use the
-manual LERF evidence.
+manual LERF evidence. Portfolio-pack export keeps these summaries, and pack validation fails
+when a `--require-all` repair left required queries unresolved.
 
 ## Expected Outputs
 
@@ -423,6 +424,8 @@ manual LERF evidence.
 - `results/pipeline_runs/<scene>/training/language_train_summary.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.md`
+- `results/pipeline_runs/<scene>/queries/<query>/viewer_repair_summary.json` when manual viewer repair is used
+- `results/pipeline_runs/<scene>/queries/<query>/<expanded_query>/viewer_import_summary.json` when manual viewer outputs are imported
 - `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_summary.json`
 - `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_report.md`
 - `results/pipeline_runs/<scene>/scene_relations/scene_relations_summary.json`
