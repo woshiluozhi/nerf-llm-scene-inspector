@@ -65,6 +65,10 @@ Each run can also produce `real_run_plan.md` and `real_run_plan.json`, a concret
 
 Before sharing a run externally, `claim_audit.md` scans README/docs, run reports, and optional portfolio packs for unsupported wording such as unqualified state-of-the-art claims, novel-architecture claims, benchmark superiority, production guarantees, or implemented robotics policy claims. The audit also checks that dry-run, upstream-attribution, no-new-architecture, no-SOTA, and GPU-requirement disclaimers are present.
 
+## Reproduction Evidence
+
+The reproduction manifest is evidence-oriented rather than just a command log. It records replay and verification commands, summarizes existing and missing artifacts, and stores file sizes plus SHA256 digests for run-local reports, visual grids, query summaries, evaluation files, and command logs. This makes a real run easier to audit before exporting a portfolio pack or sending evidence to a collaborator.
+
 ## How This Project Differs From A Pure Reproduction
 
 This project is built on Nerfstudio and LERF, but it adds a user-facing research engineering layer: reproducible CLI wrappers, dry-run mode, typed query artifacts, capture manifests, a local query planner with intent tags and relation anchors, deterministic answer synthesis with evidence summaries, spatial-reasoning utilities, scene-relation graph reports, experiment-matrix summaries, OpenNeRF secondary-backend dry-run/fallback support, research-report generation, real-run action planning, failure diagnostics, claim auditing, submission-packet generation, visualization generation, annotation QA, prompt-sensitivity diagnostics, evaluation scaffolding, evidence scorecards, project/run-level static portfolio pages, and portfolio-ready documentation. It is intended to demonstrate implementation depth and research readiness without claiming a new algorithmic contribution.

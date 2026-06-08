@@ -352,12 +352,24 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_step.outputs["manifest"] == str(run_dir / "reproduction_manifest.json")
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
+    assert reproduction_payload["artifact_summary"]["files"] > 0
     assert any(artifact["name"] == "real_run_plan" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "failure_diagnostics" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "run_readiness" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "claim_audit" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "annotation_workbench" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "run_result_card" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
+    query_grid_artifact = next(
+        artifact for artifact in reproduction_payload["artifacts"] if artifact["name"] == "query_mug_grid"
+    )
+    assert query_grid_artifact["exists"] is True
+    assert query_grid_artifact["kind"] == "file"
+    assert query_grid_artifact["size_bytes"] > 0
+    assert len(query_grid_artifact["sha256"]) == 64
+    assert any(
+        artifact["name"] == "query_coffee_mug_visual_summary" and artifact["exists"]
+        for artifact in reproduction_payload["artifacts"]
+    )
     research_step = next(step for step in summary.steps if step.name == "generate_research_report")
     assert research_step.outputs["markdown"] == str(run_dir / "research_report.md")
     submission_step = next(step for step in summary.steps if step.name == "create_submission_packet")

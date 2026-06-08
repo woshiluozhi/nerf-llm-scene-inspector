@@ -482,7 +482,7 @@ when a `--require-all` repair left required queries unresolved.
 - `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` with the reviewer-facing readiness summary
 - `results/pipeline_runs/<scene>/submission_packet/cv_project_entry.md`
 - `results/pipeline_runs/<scene>/submission_packet/professor_email_brief.md`
-- `results/pipeline_runs/<scene>/reproduction_manifest.json`
+- `results/pipeline_runs/<scene>/reproduction_manifest.json` with replay commands, artifact existence checks, file sizes, SHA256 digests, and query-level evidence paths
 - `results/pipeline_runs/<scene>/reproduction_report.md`
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
 - `results/pipeline_runs/run_index.json`
@@ -547,6 +547,11 @@ Every `run_scene_pipeline.py` execution writes a `provenance` block inside
 Python/platform details, the CLI command, git commit, branch, dirty state, and sanitized
 remote URL when available. The exported portfolio pack keeps a share-safe provenance excerpt
 in `portfolio_pack_index.json` and sanitizes machine-specific paths in the packaged summary.
+Each run also writes `reproduction_manifest.json`, `reproduction_report.md`, and
+`reproduce_run.sh`. The manifest records replay and verification commands plus an artifact
+summary with file/dir counts, sizes, SHA256 digests for files, and run-scoped query artifacts
+such as `queries/<query>/scene_query_report.json`, `query_visual_summary.json`, and
+`query_grid.png`.
 
 ## LERF Query Rendering
 

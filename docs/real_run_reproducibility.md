@@ -87,7 +87,7 @@ python scripts/run_scene_pipeline.py \
 - `research_report.json`: machine-readable version of the same research report.
 - `submission_packet/submission_checklist.md`: claim-calibrated checklist for CV, portfolio, and professor outreach.
 - `submission_packet/submission_packet.json`: machine-readable sharing decision and checklist status.
-- `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
+- `reproduction_manifest.json`: machine-readable replay command, verification commands, artifact summary, key artifact map, file sizes, SHA256 digests, and query-level evidence paths.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
 - `reproduce_run.sh`: shell recipe that installs local dependencies, runs checks, replays the pipeline, and verifies the pack.
 - `real_run_plan/real_run_plan.md`: concrete action plan for upgrading a dry-run or partially reviewed run into real CUDA/Nerfstudio/LERF evidence.
@@ -161,6 +161,10 @@ The exported portfolio pack keeps the original run files but sanitizes machine-s
 inside the packaged copy. The top-level `portfolio_pack_index.json` exposes a compact,
 share-safe provenance excerpt and records SHA256/size digests for copied files so
 `validate_portfolio_pack.py` can detect accidental edits or tampering before sharing.
+The run-local `reproduction_manifest.json` now provides a similar pre-pack audit trail:
+before exporting, inspect `artifact_summary` and the per-artifact `kind`, `size_bytes`,
+`sha256`, and `file_count` fields to confirm that query reports, visual summaries, grids,
+evaluation files, and command logs are present.
 When `--zip` is used, the archive is self-contained and includes the same
 `portfolio_pack_index.json` with digest metadata.
 The normal finalization path runs validation and re-archives the pack afterward, so the

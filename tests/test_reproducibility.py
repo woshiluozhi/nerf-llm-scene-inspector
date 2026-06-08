@@ -56,6 +56,22 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert any(artifact.name == "annotation_finalize" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "prompt_sensitivity" for artifact in bundle.artifacts)
     assert any(artifact.name == "scene_relations" and artifact.exists for artifact in bundle.artifacts)
+    assert bundle.artifact_summary["existing"] > 0
+    assert bundle.artifact_summary["files"] > 0
+    assert bundle.artifact_summary["directories"] > 0
+    assert bundle.artifact_summary["total_size_bytes"] > 0
+    pipeline_summary = next(artifact for artifact in bundle.artifacts if artifact.name == "pipeline_summary")
+    assert pipeline_summary.kind == "file"
+    assert pipeline_summary.size_bytes and pipeline_summary.size_bytes > 0
+    assert pipeline_summary.sha256 and len(pipeline_summary.sha256) == 64
+    command_logs = next(artifact for artifact in bundle.artifacts if artifact.name == "command_logs")
+    assert command_logs.kind == "directory"
+    assert command_logs.file_count and command_logs.file_count >= 1
+    query_grid = next(artifact for artifact in bundle.artifacts if artifact.name == "query_mug_grid")
+    assert query_grid.exists is True
+    assert query_grid.kind == "file"
+    assert query_grid.sha256 and len(query_grid.sha256) == 64
+    assert any(artifact.name == "query_mug_mug_result" and artifact.exists for artifact in bundle.artifacts)
 
 
 def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> None:
@@ -70,7 +86,15 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     bundle.to_shell_script(script)
 
     assert json.loads(manifest.read_text(encoding="utf-8"))["scene_name"] == "desk_scene"
-    assert "# Reproduction Report" in report.read_text(encoding="utf-8")
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert manifest_payload["artifact_summary"]["files"] > 0
+    assert len(
+        next(item for item in manifest_payload["artifacts"] if item["name"] == "pipeline_summary")["sha256"]
+    ) == 64
+    report_text = report.read_text(encoding="utf-8")
+    assert "# Reproduction Report" in report_text
+    assert "Existing artifacts:" in report_text
+    assert "sha256" in report_text
     script_text = script.read_text(encoding="utf-8")
     assert "set -euo pipefail" in script_text
     assert "python scripts/run_scene_pipeline.py --dry-run --query mug" in script_text
@@ -153,6 +177,11 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "run_audit.md", "# Audit\n")
     _write_text(run_dir / "run_recommendations.md", "# Recommendations\n")
     _write_text(run_dir / "demo_assets" / "query_grid.png", "image")
+    _write_json(run_dir / "queries" / "mug" / "scene_query_report.json", {"scene_name": "desk_scene"})
+    _write_text(run_dir / "queries" / "mug" / "scene_query_report.md", "# Query Report\n")
+    _write_text(run_dir / "queries" / "mug" / "query_grid.png", "image")
+    _write_json(run_dir / "queries" / "mug" / "query_visual_summary.json", {"query_grid": "query_grid.png"})
+    _write_json(run_dir / "queries" / "mug" / "mug" / "query_result.json", {"query": "mug"})
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"num_evaluated_queries": 1})
     _write_text(run_dir / "evaluation" / "annotation_review.md", "# Annotation Review\n")
     _write_text(run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html", "<!doctype html>\n")

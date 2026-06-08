@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import re
 import shlex
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -19,9 +21,14 @@ class ReproductionArtifact:
     path: str
     exists: bool
     purpose: str
+    kind: str = "missing"
+    size_bytes: int | None = None
+    sha256: str | None = None
+    file_count: int | None = None
 
     def to_dict(self) -> dict[str, object]:
-        return asdict(self)
+        payload = asdict(self)
+        return {key: value for key, value in payload.items() if value is not None}
 
 
 @dataclass
@@ -39,6 +46,7 @@ class ReproductionBundle:
     verification_commands: list[str] = field(default_factory=list)
     queries: list[str] = field(default_factory=list)
     artifacts: list[ReproductionArtifact] = field(default_factory=list)
+    artifact_summary: dict[str, int] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
@@ -54,6 +62,7 @@ class ReproductionBundle:
             "verification_commands": list(self.verification_commands),
             "queries": list(self.queries),
             "artifacts": [artifact.to_dict() for artifact in self.artifacts],
+            "artifact_summary": dict(self.artifact_summary),
             "notes": list(self.notes),
         }
 
@@ -85,6 +94,8 @@ class ReproductionBundle:
             *_command_lines(self.verification_commands),
             "",
             "## Key Artifacts",
+            "",
+            *_artifact_summary_lines(self.artifact_summary),
             "",
             *_artifact_lines(self.artifacts),
             "",
@@ -123,6 +134,7 @@ def build_reproduction_bundle(run_dir: str | Path) -> ReproductionBundle:
     dry_run = bool(summary.get("dry_run"))
     backend = str(summary.get("backend") or "")
     source_command = _source_command(summary)
+    artifacts = _artifacts(root)
     return ReproductionBundle(
         run_dir=_display_run_dir(root),
         scene_name=scene_name,
@@ -134,7 +146,8 @@ def build_reproduction_bundle(run_dir: str | Path) -> ReproductionBundle:
         prerequisites=_prerequisites(dry_run=dry_run),
         verification_commands=_verification_commands(root),
         queries=[str(query) for query in summary.get("queries") or []],
-        artifacts=_artifacts(root),
+        artifacts=artifacts,
+        artifact_summary=_artifact_summary(artifacts),
         notes=_notes(dry_run=dry_run),
     )
 
@@ -364,15 +377,108 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
     ]
     artifacts: list[ReproductionArtifact] = []
     for name, path, relative_path, purpose in candidates:
-        artifacts.append(
-            ReproductionArtifact(
-                name=name,
-                path=relative_path.replace("\\", "/"),
-                exists=path.exists(),
-                purpose=purpose,
-            )
-        )
+        artifacts.append(_artifact(name, path, relative_path, purpose))
+    artifacts.extend(_query_artifacts(root))
     return artifacts
+
+
+def _query_artifacts(root: Path) -> list[ReproductionArtifact]:
+    query_root = root / "queries"
+    if not query_root.exists() or not query_root.is_dir():
+        return []
+    artifacts: list[ReproductionArtifact] = []
+    for task_dir in sorted(path for path in query_root.iterdir() if path.is_dir()):
+        task_slug = task_dir.name
+        artifacts.extend(
+            [
+                _artifact(
+                    _artifact_name("query", task_slug, "report"),
+                    task_dir / "scene_query_report.json",
+                    f"queries/{task_slug}/scene_query_report.json",
+                    "Machine-readable scene query report for one natural-language task.",
+                ),
+                _artifact(
+                    _artifact_name("query", task_slug, "markdown"),
+                    task_dir / "scene_query_report.md",
+                    f"queries/{task_slug}/scene_query_report.md",
+                    "Human-readable scene query report with evidence and caveats.",
+                ),
+                _artifact(
+                    _artifact_name("query", task_slug, "visual_summary"),
+                    task_dir / "query_visual_summary.json",
+                    f"queries/{task_slug}/query_visual_summary.json",
+                    "Compact summary of expanded visual prompts and query-grid artifact.",
+                ),
+                _artifact(
+                    _artifact_name("query", task_slug, "grid"),
+                    task_dir / "query_grid.png",
+                    f"queries/{task_slug}/query_grid.png",
+                    "Run-scoped grid of rendered overlays for this query task.",
+                ),
+            ]
+        )
+        for result_path in sorted(task_dir.glob("*/query_result.json")):
+            expanded_slug = result_path.parent.name
+            artifacts.append(
+                _artifact(
+                    _artifact_name("query", task_slug, expanded_slug, "result"),
+                    result_path,
+                    f"queries/{task_slug}/{expanded_slug}/query_result.json",
+                    "Backend QueryResult for one expanded visual prompt.",
+                )
+            )
+    return artifacts
+
+
+def _artifact(name: str, path: Path, relative_path: str, purpose: str) -> ReproductionArtifact:
+    return ReproductionArtifact(
+        name=name,
+        path=relative_path.replace("\\", "/"),
+        exists=path.exists(),
+        purpose=purpose,
+        **_artifact_metadata(path),
+    )
+
+
+def _artifact_metadata(path: Path) -> dict[str, int | str | None]:
+    if not path.exists():
+        return {"kind": "missing"}
+    if path.is_file():
+        return {
+            "kind": "file",
+            "size_bytes": path.stat().st_size,
+            "sha256": _sha256(path),
+        }
+    if path.is_dir():
+        return {
+            "kind": "directory",
+            "file_count": sum(1 for item in path.rglob("*") if item.is_file()),
+        }
+    return {"kind": "other"}
+
+
+def _artifact_summary(artifacts: list[ReproductionArtifact]) -> dict[str, int]:
+    return {
+        "total": len(artifacts),
+        "existing": sum(1 for artifact in artifacts if artifact.exists),
+        "missing": sum(1 for artifact in artifacts if not artifact.exists),
+        "files": sum(1 for artifact in artifacts if artifact.kind == "file"),
+        "directories": sum(1 for artifact in artifacts if artifact.kind == "directory"),
+        "total_size_bytes": sum(artifact.size_bytes or 0 for artifact in artifacts),
+    }
+
+
+def _artifact_name(*parts: str) -> str:
+    cleaned = [re.sub(r"[^a-zA-Z0-9]+", "_", part).strip("_").lower() for part in parts]
+    return "_".join(part for part in cleaned if part)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _notes(*, dry_run: bool) -> list[str]:
@@ -424,10 +530,31 @@ def _command_lines(commands: list[str]) -> list[str]:
 def _artifact_lines(artifacts: list[ReproductionArtifact]) -> list[str]:
     if not artifacts:
         return ["- None."]
+    return [f"- {artifact.name}: `{artifact.path}` ({_artifact_status(artifact)}) - {artifact.purpose}" for artifact in artifacts]
+
+
+def _artifact_summary_lines(summary: dict[str, int]) -> list[str]:
+    if not summary:
+        return ["- Artifact summary unavailable."]
     return [
-        f"- {artifact.name}: `{artifact.path}` ({'found' if artifact.exists else 'missing'}) - {artifact.purpose}"
-        for artifact in artifacts
+        f"- Existing artifacts: {summary.get('existing', 0)}/{summary.get('total', 0)}",
+        f"- Files: {summary.get('files', 0)}",
+        f"- Directories: {summary.get('directories', 0)}",
+        f"- Total file bytes: {summary.get('total_size_bytes', 0)}",
     ]
+
+
+def _artifact_status(artifact: ReproductionArtifact) -> str:
+    if not artifact.exists:
+        return "missing"
+    details = [artifact.kind]
+    if artifact.size_bytes is not None:
+        details.append(f"{artifact.size_bytes} bytes")
+    if artifact.sha256:
+        details.append(f"sha256 {artifact.sha256[:12]}")
+    if artifact.file_count is not None:
+        details.append(f"{artifact.file_count} files")
+    return ", ".join(details)
 
 
 def _note_lines(notes: list[str]) -> list[str]:
