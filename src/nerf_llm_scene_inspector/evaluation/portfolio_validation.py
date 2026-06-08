@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -248,6 +249,7 @@ def _check_index(
             artifact_issues.append("portfolio_pack_index.json copied entry is missing destination.")
             continue
         _check_relative_artifact(pack_path, destination, artifact_issues, label="copied destination")
+        _check_copied_digest(pack_path, item, destination, artifact_issues, warnings)
 
     run_summary = index.get("run_summary")
     if run_summary is None:
@@ -293,6 +295,41 @@ def _check_relative_artifact(
             artifact_issues.append(f"{label} directory is empty: {relative_path}")
     elif not candidate.exists():
         artifact_issues.append(f"{label} is missing: {relative_path}")
+
+
+def _check_copied_digest(
+    pack_path: Path,
+    item: dict[str, Any],
+    destination: str,
+    artifact_issues: list[str],
+    warnings: list[str],
+) -> None:
+    candidate = pack_path / destination
+    if not candidate.is_file():
+        return
+    expected_sha = item.get("sha256")
+    expected_size = item.get("size_bytes")
+    if expected_sha is None and expected_size is None:
+        warnings.append(f"copied destination has no integrity digest: {destination}")
+        return
+    if not isinstance(expected_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
+        artifact_issues.append(f"copied destination has invalid sha256 digest: {destination}")
+    else:
+        actual_sha = _sha256(candidate)
+        if actual_sha != expected_sha:
+            artifact_issues.append(f"copied destination sha256 mismatch: {destination}")
+    if not isinstance(expected_size, int):
+        artifact_issues.append(f"copied destination has invalid size_bytes: {destination}")
+    elif candidate.stat().st_size != expected_size:
+        artifact_issues.append(f"copied destination size mismatch: {destination}")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _check_run_logs(pack_path: Path, artifact_issues: list[str]) -> None:

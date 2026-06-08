@@ -131,8 +131,9 @@ Each pipeline run stores a `provenance` block with:
 - non-fatal warnings if git metadata cannot be read
 
 The exported portfolio pack keeps the original run files but sanitizes machine-specific paths
-inside the packaged copy. The top-level `portfolio_pack_index.json` exposes only a compact,
-share-safe provenance excerpt.
+inside the packaged copy. The top-level `portfolio_pack_index.json` exposes a compact,
+share-safe provenance excerpt and records SHA256/size digests for copied files so
+`validate_portfolio_pack.py` can detect accidental edits or tampering before sharing.
 
 ## Finalize And Export
 

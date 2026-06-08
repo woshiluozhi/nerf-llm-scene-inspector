@@ -41,8 +41,6 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
             config_path=config_path,
             dry_run=True,
             analyze_relations=True,
-            skip_baseline=True,
-            skip_language=True,
         )
     )
     assert summary.success is True
@@ -72,8 +70,16 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     index = json.loads((output_dir / "portfolio_pack_index.json").read_text(encoding="utf-8"))
     assert index["missing"] == []
-    assert "baseline_train_summary" not in index["run_summary"]["artifacts"]
-    assert "language_train_summary" not in index["run_summary"]["artifacts"]
+    copied_by_destination = {item["destination"]: item for item in index["copied"]}
+    assert copied_by_destination["run/pipeline_summary.json"]["size_bytes"] > 0
+    assert len(copied_by_destination["run/pipeline_summary.json"]["sha256"]) == 64
+    assert all("sha256" in item and "size_bytes" in item for item in index["copied"])
+    assert index["run_summary"]["artifacts"]["baseline_train_summary"] == (
+        "run/training/baseline_train_summary.json"
+    )
+    assert index["run_summary"]["artifacts"]["language_train_summary"] == (
+        "run/training/language_train_summary.json"
+    )
     assert index["run_summary"]["artifacts"]["capture_manifest"] == "run/capture_manifest.md"
     assert index["run_summary"]["artifacts"]["preflight_report"] == "run/preflight_report.md"
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
@@ -101,6 +107,14 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
     assert str(tmp_path) not in packed_summary
+    packed_baseline_summary = (
+        output_dir / "run" / "training" / "baseline_train_summary.json"
+    ).read_text(encoding="utf-8")
+    assert str(tmp_path) not in packed_baseline_summary
+    packed_language_summary = (
+        output_dir / "run" / "training" / "language_train_summary.json"
+    ).read_text(encoding="utf-8")
+    assert str(tmp_path) not in packed_language_summary
     packed_log = (output_dir / "run" / "logs" / "prepare_data_command.json").read_text(encoding="utf-8")
     assert str(tmp_path) not in packed_log
     demo_log = json.loads(
@@ -123,6 +137,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "run_result_card.md").exists()
     assert (output_dir / "run" / "portfolio_page.html").exists()
     assert str(tmp_path) not in (output_dir / "run" / "portfolio_page.html").read_text(encoding="utf-8")
+    assert (output_dir / "run" / "training" / "baseline_train_summary.json").exists()
+    assert (output_dir / "run" / "training" / "language_train_summary.json").exists()
     assert (output_dir / "run_index.json").exists()
     assert (output_dir / "run_index.md").exists()
     assert (output_dir / "run_comparison.json").exists()

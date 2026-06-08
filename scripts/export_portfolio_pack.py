@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -34,7 +35,7 @@ def main() -> int:
         _clean_output(output)
     output.mkdir(parents=True, exist_ok=True)
 
-    copied: list[dict[str, str]] = []
+    copied: list[dict[str, Any]] = []
     missing: list[str] = []
     optional_missing: list[str] = []
     _copy_project_materials(output, copied, missing, optional_missing)
@@ -45,6 +46,7 @@ def main() -> int:
         run_summary = _copy_run_materials(run_dir, output, copied, missing, optional_missing)
         _copy_run_index(run_dir.parent, output, copied, optional_missing)
 
+    _add_artifact_digests(output, copied)
     archive_path = None
     if args.zip:
         archive_path = shutil.make_archive(str(output), "zip", output)
@@ -66,7 +68,7 @@ def main() -> int:
 
 def _copy_project_materials(
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
     missing: list[str],
     optional_missing: list[str],
 ) -> None:
@@ -98,7 +100,7 @@ def _copy_project_materials(
 def _copy_run_materials(
     run_dir: Path,
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
     missing: list[str],
     optional_missing: list[str],
 ) -> dict[str, Any] | None:
@@ -203,19 +205,21 @@ def _copy_run_materials(
     _copy_query_reports(run_dir, output, copied)
     _copy_prompt_sensitivity(run_dir, output, copied)
     _copy_annotation_workbench_assets(run_dir, output, copied)
-    _copy_file(
+    _copy_share_safe_file(
         run_dir / "training" / "baseline_train_summary.json",
         output / "run/training/baseline_train_summary.json",
         output,
         copied,
         missing if _step_succeeded(run_summary, "train_baseline_nerf") else optional_missing,
+        run_dir,
     )
-    _copy_file(
+    _copy_share_safe_file(
         run_dir / "training" / "language_train_summary.json",
         output / "run/training/language_train_summary.json",
         output,
         copied,
         missing if _step_succeeded(run_summary, "train_language_field") else optional_missing,
+        run_dir,
     )
     for overlay in sorted((run_dir / "demo_assets").rglob("*overlay.png"))[:8]:
         _copy_file(
@@ -246,7 +250,7 @@ def _copy_run_materials(
 def _copy_run_index(
     runs_root: Path,
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
     optional_missing: list[str],
 ) -> None:
     for source, relative_destination in (
@@ -262,7 +266,7 @@ def _copy_file(
     source: Path,
     destination: Path,
     pack_root: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
     missing: list[str],
 ) -> None:
     if source.exists():
@@ -282,7 +286,7 @@ def _copy_share_safe_file(
     source: Path,
     destination: Path,
     pack_root: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
     missing: list[str],
     sanitizer_root: Path,
 ) -> None:
@@ -321,7 +325,7 @@ def _copy_share_safe_file(
 def _copy_command_logs(
     run_dir: Path,
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
 ) -> None:
     logs_dir = run_dir / "logs"
     if not logs_dir.exists():
@@ -346,7 +350,7 @@ def _copy_command_logs(
 def _copy_query_reports(
     run_dir: Path,
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
 ) -> None:
     queries_dir = run_dir / "queries"
     if not queries_dir.exists():
@@ -361,7 +365,7 @@ def _copy_query_reports(
 def _copy_prompt_sensitivity(
     run_dir: Path,
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
 ) -> None:
     prompt_dir = run_dir / "prompt_sensitivity"
     if not prompt_dir.exists():
@@ -376,7 +380,7 @@ def _copy_prompt_sensitivity(
 def _copy_annotation_workbench_assets(
     run_dir: Path,
     output: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
 ) -> None:
     assets_dir = run_dir / "evaluation" / "annotation_workbench" / "assets"
     if not assets_dir.exists():
@@ -397,7 +401,7 @@ def _copy_pipeline_summary(
     source: Path,
     destination: Path,
     pack_root: Path,
-    copied: list[dict[str, str]],
+    copied: list[dict[str, Any]],
     missing: list[str],
     run_dir: Path,
 ) -> None:
@@ -426,6 +430,26 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
+
+
+def _add_artifact_digests(pack_root: Path, copied: list[dict[str, Any]]) -> None:
+    for item in copied:
+        destination = item.get("destination")
+        if not isinstance(destination, str) or not destination:
+            continue
+        path = pack_root / destination
+        if not path.is_file():
+            continue
+        item["size_bytes"] = path.stat().st_size
+        item["sha256"] = _sha256(path)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _is_text_like(path: Path) -> bool:

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 import sys
@@ -83,6 +84,26 @@ def test_validate_portfolio_pack_fails_blocked_result_card(tmp_path: Path) -> No
 
     assert report.ok is False
     assert "run_result_card.json result_status is blocked." in report.errors
+
+
+def test_validate_portfolio_pack_fails_digest_mismatch(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    target = pack / "run" / "pipeline_summary.json"
+    index_path = pack / "portfolio_pack_index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    for item in index["copied"]:
+        if item["destination"] == "run/pipeline_summary.json":
+            item["sha256"] = _sha256(target)
+            item["size_bytes"] = target.stat().st_size
+            break
+    index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
+    target.write_text(json.dumps({"success": True, "scene_name": "tampered"}), encoding="utf-8")
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "copied destination sha256 mismatch: run/pipeline_summary.json" in report.artifact_issues
+    assert "copied destination size mismatch: run/pipeline_summary.json" in report.artifact_issues
 
 
 def test_validate_portfolio_pack_cli_writes_report(tmp_path: Path) -> None:
@@ -265,3 +286,11 @@ def _file_payload(relative_path: str) -> str:
     if relative_path.endswith("scene_query_report.json"):
         return json.dumps({"scene_name": "desk_scene", "answer": "Likely relevant scene regions are mug."})
     return f"placeholder for {relative_path}\n"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
