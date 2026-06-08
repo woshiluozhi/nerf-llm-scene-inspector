@@ -28,6 +28,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
             "provenance": {"git_commit": "abc123"},
         },
     )
+    _write_json(tmp_path / "run_index.json", {"total_runs": 1, "entries": [{"scene_name": "run"}]})
     _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100})
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
@@ -51,6 +52,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     bundle = load_run_bundle(run_dir)
 
     assert bundle["pipeline_summary"]["success"] is True
+    assert bundle["run_index"]["total_runs"] == 1
     assert bundle["evaluation_table"][0]["query"] == "mug"
     assert bundle["annotation_template"]["queries"][0]["query"] == "mug"
     assert bundle["training_summaries"]["baseline"]["run_type"] == "baseline"

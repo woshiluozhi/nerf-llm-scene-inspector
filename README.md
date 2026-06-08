@@ -144,6 +144,7 @@ Practical one-command dry-run pipeline:
 ```bash
 python scripts/run_scene_pipeline.py --dry-run
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
+python scripts/index_runs.py --root results/pipeline_runs
 ```
 
 This writes a reproducible pipeline record to `results/pipeline_runs/desk_scene/pipeline_summary.json`.
@@ -251,6 +252,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/evaluation/eval_summary.json`
 - `results/pipeline_runs/<scene>/run_audit.json`
 - `results/pipeline_runs/<scene>/run_audit.md`
+- `results/pipeline_runs/run_index.json`
+- `results/pipeline_runs/run_index.md`
 - `results/pipeline_runs/<scene>/logs/*.json`
 - `results/pipeline_runs/<scene>/project_report.md`
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
@@ -314,6 +317,7 @@ python scripts/validate_annotations.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
 python scripts/audit_run.py --help
+python scripts/index_runs.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip

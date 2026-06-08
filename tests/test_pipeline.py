@@ -28,6 +28,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
 
     assert summary.success is True
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "pipeline_summary.json").exists()
+    assert (tmp_path / "pipeline_runs" / "run_index.json").exists()
+    assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "logs" / "prepare_data_command.json").exists()
     assert (
@@ -89,6 +91,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "project_report.md").exists()
     assert (run_dir / "run_audit.json").exists()
     assert (run_dir / "run_audit.md").exists()
+    run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
+    assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert (run_dir / "logs" / "prepare_data_command.json").exists()
     assert (run_dir / "logs" / "create_annotation_template_command.json").exists()
     assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()

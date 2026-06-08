@@ -20,6 +20,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
     return {
         "run_dir": str(root),
         "pipeline_summary": pipeline_summary,
+        "run_index": _read_json(root.parent / "run_index.json"),
         "run_audit": _read_json(root / "run_audit.json"),
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
@@ -151,6 +152,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
         col_c.metric("Findings", str(len(audit.get("findings") or [])))
         with st.expander("Run Audit Findings", expanded=audit.get("status") != "ready"):
             st.json(audit)
+    if bundle["run_index"]:
+        index = bundle["run_index"]
+        with st.expander("Run Index"):
+            st.json(
+                {
+                    "total_runs": index.get("total_runs"),
+                    "successful_runs": index.get("successful_runs"),
+                    "ready_runs": index.get("ready_runs"),
+                    "entries": index.get("entries"),
+                }
+            )
 
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})

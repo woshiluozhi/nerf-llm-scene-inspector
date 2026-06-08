@@ -14,6 +14,7 @@ from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
+from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 from nerf_llm_scene_inspector.scene_validation import inspect_processed_scene
 from nerf_llm_scene_inspector.training import train_baseline_nerf, train_language_field
@@ -122,6 +123,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     baseline_dir = Path(config.runs_root) / f"baseline_{config.scene_name}"
     language_dir = Path(config.runs_root) / f"language_{config.scene_name}"
     run_dir = Path(config.output_root) / config.scene_name
+    runs_root = Path(config.output_root)
     query_dir = run_dir / "queries"
     demo_dir = run_dir / "demo_assets"
     eval_dir = run_dir / "evaluation"
@@ -140,6 +142,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "baseline_run": str(baseline_dir),
         "language_run": str(language_dir),
         "pipeline_run": str(run_dir),
+        "run_index_json": str(runs_root / "run_index.json"),
+        "run_index_markdown": str(runs_root / "run_index.md"),
         "queries": str(query_dir),
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
@@ -427,6 +431,9 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     if audit.status == "blocked":
         summary.success = False
     summary.to_json(summary_path)
+    run_index = index_pipeline_runs(runs_root)
+    run_index.to_json(runs_root / "run_index.json")
+    run_index.to_markdown(runs_root / "run_index.md")
     return summary
 
 

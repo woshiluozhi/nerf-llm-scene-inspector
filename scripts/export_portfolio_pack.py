@@ -41,6 +41,7 @@ def main() -> int:
     run_summary: dict[str, Any] | None = None
     if run_dir is not None:
         run_summary = _copy_run_materials(run_dir, output, copied, missing, optional_missing)
+        _copy_run_index(run_dir.parent, output, copied, optional_missing)
 
     archive_path = None
     if args.zip:
@@ -147,6 +148,19 @@ def _copy_run_materials(
     return _run_summary_excerpt(run_summary)
 
 
+def _copy_run_index(
+    runs_root: Path,
+    output: Path,
+    copied: list[dict[str, str]],
+    optional_missing: list[str],
+) -> None:
+    for source, relative_destination in (
+        (runs_root / "run_index.json", "run_index.json"),
+        (runs_root / "run_index.md", "run_index.md"),
+    ):
+        _copy_file(source, output / relative_destination, output, copied, optional_missing)
+
+
 def _copy_file(
     source: Path,
     destination: Path,
@@ -232,6 +246,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         return None
     artifacts = {
         "pipeline_summary": "run/pipeline_summary.json",
+        "run_index": "run_index.md",
         "run_audit": "run/run_audit.md",
         "command_logs": "run/logs/",
         "environment_report": "run/environment_report.json",

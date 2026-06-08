@@ -42,6 +42,7 @@ python scripts/run_scene_pipeline.py \
 ## What To Inspect
 
 - `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
+- `../run_index.md`: compact comparison table across pipeline runs in the same root.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
 - `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
@@ -93,6 +94,12 @@ share-safe provenance excerpt.
 
 ```bash
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
+```
+
+Refresh the multi-run index after manual edits or copied-in run folders:
+
+```bash
+python scripts/index_runs.py --root results/pipeline_runs
 ```
 
 Share `results/portfolio_pack.zip` together with the GitHub repository link when sending a
