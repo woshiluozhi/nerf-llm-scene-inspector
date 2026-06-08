@@ -31,6 +31,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
     _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
     _write_json(run_dir / "training" / "language_train_summary.json", {"run_type": "language"})
+    _write_json(run_dir / "evaluation" / "annotation_validation.json", {"ok": True})
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"top_k_hit_rate": 1.0})
     (run_dir / "evaluation" / "eval_table.csv").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "evaluation" / "eval_table.csv").write_text(
@@ -51,6 +52,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["annotation_template"]["queries"][0]["query"] == "mug"
     assert bundle["training_summaries"]["baseline"]["run_type"] == "baseline"
     assert bundle["training_summaries"]["language"]["run_type"] == "language"
+    assert bundle["annotation_validation"]["ok"] is True
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"
     assert bundle["missing"] == []

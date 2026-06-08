@@ -26,6 +26,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
             "baseline": _read_json(root / "training" / "baseline_train_summary.json"),
             "language": _read_json(root / "training" / "language_train_summary.json"),
         },
+        "annotation_validation": _read_json(root / "evaluation" / "annotation_validation.json"),
         "evaluation_summary": _read_json(root / "evaluation" / "eval_summary.json"),
         "evaluation_table": _read_csv(root / "evaluation" / "eval_table.csv"),
         "annotation_template": _read_json(root / "annotation_template.json"),
@@ -187,6 +188,9 @@ def _render_evaluation(st: Any, bundle: dict[str, Any]) -> None:
         st.table(bundle["evaluation_table"])
 
     st.subheader("Annotation Template")
+    if bundle["annotation_validation"]:
+        with st.expander("Annotation Validation"):
+            st.json(bundle["annotation_validation"])
     if bundle["annotation_template"]:
         st.json(bundle["annotation_template"])
     else:
@@ -254,6 +258,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "environment_report.json",
         "scene_data_inspection.json",
         "annotation_template.json",
+        "evaluation/annotation_validation.json",
         "evaluation/eval_summary.json",
     ]
     if _step_succeeded(pipeline_summary, "train_baseline_nerf"):

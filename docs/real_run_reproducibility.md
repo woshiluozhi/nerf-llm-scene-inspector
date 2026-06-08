@@ -48,6 +48,7 @@ python scripts/run_scene_pipeline.py \
 - `training/language_train_summary.json`: LERF/OpenNeRF command, status, final config, and viewer command.
 - `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
+- `evaluation/annotation_validation.json`: annotation coverage, duplicate-label, bbox, and view-id checks.
 - `demo_assets/query_grid.png`: compact qualitative query visualization.
 - `evaluation/eval_summary.json`: lightweight quantitative summary when annotations are available.
 - `portfolio_result_card.md`: short result narrative suitable for a project page.
@@ -99,6 +100,12 @@ each query, fill:
 Then rerun:
 
 ```bash
+python scripts/validate_annotations.py \
+  --queries results/pipeline_runs/desk_scene/queries.yaml \
+  --annotations results/pipeline_runs/desk_scene/annotation_template.json \
+  --results results/pipeline_runs/desk_scene/queries \
+  --output results/pipeline_runs/desk_scene/evaluation/annotation_validation.json
+
 python scripts/evaluate_queries.py \
   --queries results/pipeline_runs/desk_scene/queries.yaml \
   --annotations results/pipeline_runs/desk_scene/annotation_template.json \

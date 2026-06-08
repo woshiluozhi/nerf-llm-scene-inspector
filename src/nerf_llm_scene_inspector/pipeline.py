@@ -363,6 +363,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 {
                     "eval_summary": str(eval_dir / "eval_summary.json"),
                     "eval_table": str(eval_dir / "eval_table.csv"),
+                    "annotation_validation": str(eval_dir / "annotation_validation.json"),
                     "qualitative_report": str(eval_dir / "qualitative_report.md"),
                     "project_report": str(run_dir / "project_report.md"),
                 }

@@ -81,11 +81,15 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "annotation_template.json").exists()
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
     assert (run_dir / "demo_assets" / "query_grid.png").exists()
+    assert (run_dir / "evaluation" / "annotation_validation.json").exists()
     assert (run_dir / "evaluation" / "eval_summary.json").exists()
     assert (run_dir / "evaluation" / "qualitative_report.md").exists()
     assert (run_dir / "project_report.md").exists()
     eval_step = next(step for step in summary.steps if step.name == "evaluate_queries")
     assert eval_step.outputs["eval_summary"] == str(run_dir / "evaluation" / "eval_summary.json")
+    assert eval_step.outputs["annotation_validation"] == str(
+        run_dir / "evaluation" / "annotation_validation.json"
+    )
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
 

@@ -75,6 +75,9 @@ def test_evaluate_queries_counts_only_bbox_annotated_rows(tmp_path: Path) -> Non
     )
 
     assert result.returncode == 0, result.stderr
+    validation = json.loads((output_dir / "annotation_validation.json").read_text(encoding="utf-8"))
+    assert validation["ok"] is True
+    assert validation["missing_annotations"] == ["container"]
     summary = json.loads((output_dir / "eval_summary.json").read_text(encoding="utf-8"))
     assert summary["num_result_queries"] == 3
     assert summary["num_unique_result_queries"] == 2

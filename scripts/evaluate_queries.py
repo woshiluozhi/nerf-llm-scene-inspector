@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from nerf_llm_scene_inspector.backends.base import BoundingRegion, QueryResult  # noqa: E402
 from nerf_llm_scene_inspector.config import load_mapping  # noqa: E402
 from nerf_llm_scene_inspector.evaluation.annotation_schema import load_annotations  # noqa: E402
+from nerf_llm_scene_inspector.evaluation.annotation_validation import validate_annotations  # noqa: E402
 from nerf_llm_scene_inspector.evaluation.metrics import (  # noqa: E402
     average_relevancy_score,
     qualitative_success_table,
@@ -40,6 +41,18 @@ def main() -> int:
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     try:
+        validation = validate_annotations(
+            args.annotations,
+            queries_path=args.queries,
+            results_dir=args.results,
+        )
+        validation_path = output / "annotation_validation.json"
+        validation.to_json(validation_path)
+        if not validation.ok:
+            raise RuntimeError(
+                "Annotation validation failed. See "
+                f"{validation_path}: {'; '.join(validation.errors)}"
+            )
         query_file = load_mapping(args.queries)
         annotations = load_annotations(args.annotations)
         results = _load_results(Path(args.results))
@@ -86,12 +99,14 @@ def main() -> int:
             notes=[
                 "Metrics are lightweight portfolio metrics and depend on manual annotations.",
                 "Dry-run results are synthetic and only validate the evaluation pipeline.",
+                *validation.warnings,
             ],
         )
     except Exception as exc:
         print(f"evaluate_queries failed: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(metrics, indent=2))
+    print(f"Wrote {validation_path}")
     print(f"Wrote {summary_path}")
     print(f"Wrote {table_path}")
     print(f"Wrote {qualitative_path}")

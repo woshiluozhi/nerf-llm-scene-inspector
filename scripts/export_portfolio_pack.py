@@ -111,6 +111,7 @@ def _copy_run_materials(
         (run_dir / "portfolio_result_card.md", "run/portfolio_result_card.md"),
         (run_dir / "evaluation" / "eval_summary.json", "run/evaluation/eval_summary.json"),
         (run_dir / "evaluation" / "eval_table.csv", "run/evaluation/eval_table.csv"),
+        (run_dir / "evaluation" / "annotation_validation.json", "run/evaluation/annotation_validation.json"),
         (run_dir / "evaluation" / "qualitative_report.md", "run/evaluation/qualitative_report.md"),
         (run_dir / "demo_assets" / "demo_summary.json", "run/demo_assets/demo_summary.json"),
         (run_dir / "demo_assets" / "query_grid.png", "run/demo_assets/query_grid.png"),
@@ -212,6 +213,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "project_report": "run/project_report.md",
         "portfolio_card": "run/portfolio_result_card.md",
         "evaluation_summary": "run/evaluation/eval_summary.json",
+        "annotation_validation": "run/evaluation/annotation_validation.json",
         "demo_grid": "run/demo_assets/query_grid.png",
         "demo_montage": "run/demo_assets/demo_montage.gif",
     }
