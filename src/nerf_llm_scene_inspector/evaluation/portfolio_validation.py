@@ -44,6 +44,8 @@ RUN_REQUIRED_FILES = [
     "run/run_audit.md",
     "run/run_recommendations.json",
     "run/run_recommendations.md",
+    "run/research_report.json",
+    "run/research_report.md",
     "run/reproduction_manifest.json",
     "run/reproduction_report.md",
     "run/reproduce_run.sh",

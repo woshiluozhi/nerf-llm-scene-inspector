@@ -86,6 +86,7 @@ class ProjectPortfolioSite:
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
                 _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
                 _capability("Experiment matrix", "Ablation-style JSON, CSV, and Markdown summaries across variants and query sets."),
+                _capability("Research reports", "Paper-style run summaries that combine metrics, evidence, limitations, and next steps."),
                 _capability(
                     "Evidence packaging",
                     "Capture/privacy gates, annotation QA, audits, scorecards, quality gates, and share-safe packs.",
@@ -99,7 +100,7 @@ class ProjectPortfolioSite:
                 "          <li><strong>Capture</strong><span>Slow phone video or overlapping images with structured capture metadata.</span></li>",
                 "          <li><strong>Process</strong><span>Run Nerfstudio data preparation and inspect camera pose quality.</span></li>",
                 "          <li><strong>Train</strong><span>Fit a baseline NeRF and a LERF-style language field.</span></li>",
-                "          <li><strong>Query</strong><span>Generate relevancy overlays, relation graphs, annotation QA, metrics, and portfolio artifacts.</span></li>",
+                "          <li><strong>Query</strong><span>Generate relevancy overlays, relation graphs, annotation QA, metrics, research reports, and portfolio artifacts.</span></li>",
                 "        </ol>",
                 "      </div>",
                 _code_panel(),
@@ -319,9 +320,11 @@ def _capability(title: str, description: str) -> str:
 
 def _code_panel() -> str:
     return """      <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
-python scripts/compare_runs.py --root results/pipeline_runs
+python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
+python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
+python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></pre>"""
 

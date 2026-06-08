@@ -165,12 +165,15 @@ python scripts/run_scene_pipeline.py --dry-run
 python scripts/create_capture_manifest.py --input examples --type images --scene-name desk_scene --output results/capture_manifest --allow-warnings
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
+python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk_scene
+python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
+python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/index_runs.py --root results/pipeline_runs
 python scripts/compare_runs.py --root results/pipeline_runs
-python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
+python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
@@ -366,6 +369,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/quality_gate.json`
 - `results/pipeline_runs/<scene>/quality_gate.md`
 - `results/pipeline_runs/<scene>/portfolio_page.html`
+- `results/pipeline_runs/<scene>/research_report.json`
+- `results/pipeline_runs/<scene>/research_report.md`
 - `results/pipeline_runs/<scene>/reproduction_manifest.json`
 - `results/pipeline_runs/<scene>/reproduction_report.md`
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
@@ -456,6 +461,7 @@ python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help
 python scripts/create_evidence_scorecard.py --help
 python scripts/create_reproduction_bundle.py --help
+python scripts/generate_research_report.py --help
 python scripts/index_runs.py --help
 python scripts/compare_runs.py --help
 python scripts/run_experiment_matrix.py --help

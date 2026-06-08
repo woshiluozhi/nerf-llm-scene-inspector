@@ -72,6 +72,8 @@ python scripts/run_scene_pipeline.py \
 - `evidence_scorecard.md`: conservative multi-criterion scorecard for whether the run is strong enough to share, including capture/privacy metadata readiness.
 - `quality_gate.md`: pass/warn/fail gate for smoke, real-run, or final portfolio sharing profiles.
 - `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
+- `research_report.md`: paper-style summary of run evidence, limitations, reproducibility artifacts, and next steps.
+- `research_report.json`: machine-readable version of the same research report.
 - `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
 - `reproduce_run.sh`: shell recipe that installs local dependencies, runs checks, replays the pipeline, and verifies the pack.
@@ -197,13 +199,26 @@ python scripts/audit_run.py \
 python scripts/recommend_next_steps.py \
   --run-dir results/pipeline_runs/desk_scene
 
+python scripts/generate_research_report.py \
+  --run-dir results/pipeline_runs/desk_scene
+
 python scripts/create_evidence_scorecard.py \
+  --run-dir results/pipeline_runs/desk_scene
+
+python scripts/check_run_quality.py \
+  --run-dir results/pipeline_runs/desk_scene \
+  --profile smoke
+
+python scripts/generate_research_report.py \
   --run-dir results/pipeline_runs/desk_scene
 
 python scripts/generate_portfolio_page.py \
   --run-dir results/pipeline_runs/desk_scene
 
 python scripts/create_reproduction_bundle.py \
+  --run-dir results/pipeline_runs/desk_scene
+
+python scripts/generate_research_report.py \
   --run-dir results/pipeline_runs/desk_scene
 
 python scripts/preflight_real_run.py \

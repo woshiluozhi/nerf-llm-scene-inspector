@@ -27,6 +27,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "analyze_prompt_sensitivity", "status": "success"},
                 {"name": "analyze_scene_relations", "status": "success"},
                 {"name": "review_annotations", "status": "success"},
+                {"name": "generate_research_report", "status": "success"},
             ],
             "provenance": {"git_commit": "abc123"},
         },
@@ -73,6 +74,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"scene_name": "run", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"},
     )
     (run_dir / "reproduction_report.md").write_text("# Reproduction Report\n", encoding="utf-8")
+    _write_json(run_dir / "research_report.json", {"scene_name": "run", "title": "Research"})
+    (run_dir / "research_report.md").write_text("# Research Report\n", encoding="utf-8")
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
     _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
@@ -140,6 +143,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Run Recommendations" in bundle["run_recommendations_markdown"]
     assert bundle["reproduction_manifest"]["scene_name"] == "run"
     assert "# Reproduction Report" in bundle["reproduction_report"]
+    assert bundle["research_report"]["scene_name"] == "run"
+    assert "# Research Report" in bundle["research_report_markdown"]
     assert bundle["annotation_validation"]["ok"] is True
     assert bundle["annotation_review"]["ok"] is True
     assert "# Annotation Review" in bundle["annotation_review_markdown"]

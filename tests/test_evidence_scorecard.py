@@ -135,6 +135,8 @@ def _write_run(
     _write_text(run_dir / "project_report.md", "# Report\n")
     _write_text(run_dir / "portfolio_result_card.md", "# Card\n")
     _write_text(run_dir / "run_recommendations.md", "# Recommendations\n")
+    _write_json(run_dir / "research_report.json", {"scene_name": "desk_scene"})
+    _write_text(run_dir / "research_report.md", "# Research Report\n")
     _write_json(run_dir / "reproduction_manifest.json", {"scene_name": "desk_scene"})
     _write_text(run_dir / "reproduction_report.md", "# Reproduction\n")
     _write_text(run_dir / "reproduce_run.sh", "#!/usr/bin/env bash\n")

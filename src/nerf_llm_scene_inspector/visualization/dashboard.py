@@ -39,6 +39,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
         "reproduction_manifest": _read_json(root / "reproduction_manifest.json"),
         "reproduction_report": _read_text(root / "reproduction_report.md"),
+        "research_report": _read_json(root / "research_report.json"),
+        "research_report_markdown": _read_text(root / "research_report.md"),
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
         "training_summaries": {
@@ -279,6 +281,12 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["reproduction_report"])
             else:
                 st.json(bundle["reproduction_manifest"])
+    if bundle["research_report_markdown"]:
+        with st.expander("Research Report", expanded=False):
+            st.markdown(bundle["research_report_markdown"])
+    elif bundle["research_report"]:
+        with st.expander("Research Report", expanded=False):
+            st.json(bundle["research_report"])
 
     st.subheader("Step Status")
     rows = [
@@ -452,6 +460,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "run_audit.json",
         "run_recommendations.json",
         "reproduction_manifest.json",
+        "research_report.json",
         "environment_report.json",
         "scene_data_inspection.json",
         "annotation_template.json",
@@ -485,6 +494,8 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("training/baseline_train_summary.json")
     if _step_succeeded(pipeline_summary, "train_language_field"):
         expected.append("training/language_train_summary.json")
+    if _step_succeeded(pipeline_summary, "generate_research_report"):
+        expected.append("research_report.md")
     return [relative for relative in expected if not (run_dir / relative).exists()]
 
 

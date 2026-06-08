@@ -113,6 +113,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/run_audit.md",
         "run/run_recommendations.json",
         "run/run_recommendations.md",
+        "run/research_report.json",
+        "run/research_report.md",
         "run/reproduction_manifest.json",
         "run/reproduction_report.md",
         "run/reproduce_run.sh",
@@ -168,6 +170,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "run_index": "run_index.md",
                 "run_audit": "run/run_audit.md",
                 "run_recommendations": "run/run_recommendations.md",
+                "research_report": "run/research_report.md",
                 "reproduction_report": "run/reproduction_report.md",
                 "reproduce_script": "run/reproduce_run.sh",
                 "command_logs": "run/logs/",
@@ -191,6 +194,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"status": "ready", "score": 100})
     if relative_path.endswith("run_recommendations.json"):
         return json.dumps({"readiness_level": "ready_for_portfolio", "recommendations": []})
+    if relative_path.endswith("research_report.json"):
+        return json.dumps({"scene_name": "desk_scene", "title": "NeRF-LLM Scene Inspector Research Report"})
     if relative_path.endswith("reproduction_manifest.json"):
         return json.dumps({"scene_name": "desk_scene", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"})
     if relative_path.endswith("preflight_report.json"):

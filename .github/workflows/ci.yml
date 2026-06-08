@@ -61,6 +61,7 @@ jobs:
           python scripts/create_evidence_scorecard.py --help
           python scripts/check_run_quality.py --help
           python scripts/create_reproduction_bundle.py --help
+          python scripts/generate_research_report.py --help
           python scripts/index_runs.py --help
           python scripts/compare_runs.py --help
           python scripts/run_experiment_matrix.py --help

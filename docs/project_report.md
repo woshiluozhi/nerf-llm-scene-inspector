@@ -51,6 +51,14 @@ with evidence score, prompt stability, relation-edge count, localization metrics
 to run-scoped artifacts. This is intended for reproducible comparison across variants, not as
 a benchmark claim.
 
+## Research Report
+
+Run `scripts/generate_research_report.py --run-dir results/pipeline_runs/<scene>` after a
+pipeline run to generate `research_report.md` and `research_report.json`. The report combines
+the evidence scorecard, evaluation metrics, prompt-sensitivity diagnostics, scene-relation
+analysis, reproducibility artifacts, limitations, and next steps into a paper-style project
+summary suitable for portfolio review.
+
 ## Notes
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.

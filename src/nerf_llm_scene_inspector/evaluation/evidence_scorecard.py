@@ -416,6 +416,8 @@ def _portfolio_criterion(root: Path) -> EvidenceCriterion:
         "project_report.md": 3,
         "portfolio_result_card.md": 3,
         "run_recommendations.md": 2,
+        "research_report.md": 2,
+        "research_report.json": 1,
         "reproduction_manifest.json": 2,
         "reproduction_report.md": 2,
         "reproduce_run.sh": 1,
@@ -423,12 +425,13 @@ def _portfolio_criterion(root: Path) -> EvidenceCriterion:
     }
     score = sum(points for relative, points in expected.items() if (root / relative).exists())
     missing = [relative for relative in expected if not (root / relative).exists()]
-    status = _criterion_status(score, 15)
+    max_score = sum(expected.values())
+    status = _criterion_status(score, max_score)
     return EvidenceCriterion(
         name="portfolio_packaging",
         category="presentation",
         score=score,
-        max_score=15,
+        max_score=max_score,
         status=status,
         detail="missing: " + ", ".join(missing) if missing else "portfolio-facing artifacts found",
         recommendation="" if status == "pass" else "Regenerate demo assets, reports, recommendations, and reproduction bundle.",

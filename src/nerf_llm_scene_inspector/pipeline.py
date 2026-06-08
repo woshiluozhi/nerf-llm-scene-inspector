@@ -21,6 +21,7 @@ from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
+from nerf_llm_scene_inspector.evaluation.research_report import write_research_report
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 from nerf_llm_scene_inspector.reproducibility import build_reproduction_bundle
@@ -206,6 +207,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "reproduction_manifest": str(run_dir / "reproduction_manifest.json"),
         "reproduction_report": str(run_dir / "reproduction_report.md"),
         "reproduce_script": str(run_dir / "reproduce_run.sh"),
+        "research_report_json": str(run_dir / "research_report.json"),
+        "research_report_markdown": str(run_dir / "research_report.md"),
         "project_report": str(run_dir / "project_report.md"),
         "portfolio_card": str(run_dir / "portfolio_result_card.md"),
     }
@@ -656,6 +659,9 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
+    # Seed this artifact before the evidence scorecard checks portfolio packaging.
+    # The report is rewritten after quality/reproduction artifacts are available.
+    write_research_report(run_dir)
     scorecard = build_evidence_scorecard(run_dir)
     scorecard_json = scorecard.to_json(run_dir / "evidence_scorecard.json")
     scorecard_md = scorecard.to_markdown(run_dir / "evidence_scorecard.md")
@@ -688,6 +694,23 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 "warn_count": quality_gate.warn_count,
             },
             outputs={"json": str(quality_gate_json), "markdown": str(quality_gate_md)},
+        )
+    )
+    summary.to_json(summary_path)
+    research = write_research_report(run_dir)
+    steps.append(
+        PipelineStep(
+            "generate_research_report",
+            "success",
+            summary={
+                "title": research.title,
+                "evidence_level": research.key_results.get("evidence_level"),
+                "query_count": research.key_results.get("query_count"),
+            },
+            outputs={
+                "markdown": str(run_dir / "research_report.md"),
+                "json": str(run_dir / "research_report.json"),
+            },
         )
     )
     summary.to_json(summary_path)
@@ -746,6 +769,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
+    summary.to_json(summary_path)
+    write_research_report(run_dir)
     summary.to_json(summary_path)
     return summary
 

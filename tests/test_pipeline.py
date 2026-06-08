@@ -44,6 +44,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_recommendations.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "reproduction_manifest.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "research_report.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "research_report.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "logs" / "prepare_data_command.json").exists()
     assert (
         tmp_path
@@ -131,6 +133,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "quality_gate.json").exists()
     assert (run_dir / "quality_gate.md").exists()
     assert (run_dir / "portfolio_page.html").exists()
+    assert "research_report.md" in (run_dir / "portfolio_page.html").read_text(encoding="utf-8")
     assert (run_dir / "annotation_template.json").exists()
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
     assert (run_dir / "demo_assets" / "query_grid.png").exists()
@@ -153,6 +156,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "reproduction_manifest.json").exists()
     assert (run_dir / "reproduction_report.md").exists()
     assert (run_dir / "reproduce_run.sh").exists()
+    assert (run_dir / "research_report.json").exists()
+    assert (run_dir / "research_report.md").exists()
     run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
@@ -206,6 +211,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert scorecard_step.outputs["json"] == str(run_dir / "evidence_scorecard.json")
     scorecard_payload = json.loads((run_dir / "evidence_scorecard.json").read_text(encoding="utf-8"))
     assert scorecard_payload["evidence_level"] == "dry_run_demo_ready"
+    portfolio_criterion = next(
+        criterion for criterion in scorecard_payload["criteria"] if criterion["name"] == "portfolio_packaging"
+    )
+    assert "research_report" not in portfolio_criterion["detail"]
     quality_step = next(step for step in summary.steps if step.name == "quality_gate")
     assert quality_step.outputs["json"] == str(run_dir / "quality_gate.json")
     quality_payload = json.loads((run_dir / "quality_gate.json").read_text(encoding="utf-8"))
@@ -217,6 +226,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_step.outputs["manifest"] == str(run_dir / "reproduction_manifest.json")
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
+    research_step = next(step for step in summary.steps if step.name == "generate_research_report")
+    assert research_step.outputs["markdown"] == str(run_dir / "research_report.md")
     comparison_step = next(step for step in summary.steps if step.name == "compare_runs")
     assert comparison_step.outputs["json"] == str(tmp_path / "pipeline_runs" / "run_comparison.json")
 
