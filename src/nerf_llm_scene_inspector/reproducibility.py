@@ -175,6 +175,7 @@ def _verification_commands(root: Path) -> list[str]:
     return [
         _format_command(["python", "scripts/audit_run.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/recommend_next_steps.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/create_evidence_scorecard.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/export_portfolio_pack.py", "--run-dir", run_dir, "--zip"]),
         _format_command(["python", "scripts/validate_portfolio_pack.py", "--pack", "results/portfolio_pack"]),
     ]
@@ -208,6 +209,7 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         "scene_inspection": ("scene_data_inspection.md", "Processed scene quality and pose readiness."),
         "run_audit": ("run_audit.md", "Run health audit."),
         "recommendations": ("run_recommendations.md", "Actionable next steps."),
+        "evidence_scorecard": ("evidence_scorecard.md", "Portfolio evidence quality scorecard."),
         "query_grid": ("demo_assets/query_grid.png", "Qualitative query visualization."),
         "evaluation_summary": ("evaluation/eval_summary.json", "Quantitative/qualitative metric summary."),
         "portfolio_card": ("portfolio_result_card.md", "Short project-page result narrative."),

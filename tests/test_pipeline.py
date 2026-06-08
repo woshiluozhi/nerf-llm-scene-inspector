@@ -30,6 +30,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "pipeline_summary.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.md").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.md").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.json").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
@@ -92,6 +94,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "queries.yaml").exists()
     assert (run_dir / "preflight_report.json").exists()
     assert (run_dir / "preflight_report.md").exists()
+    assert (run_dir / "evidence_scorecard.json").exists()
+    assert (run_dir / "evidence_scorecard.md").exists()
     assert (run_dir / "annotation_template.json").exists()
     assert (run_dir / "demo_assets" / "demo_summary.json").exists()
     assert (run_dir / "demo_assets" / "query_grid.png").exists()
@@ -126,6 +130,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert recommendation_step.outputs["json"] == str(run_dir / "run_recommendations.json")
     recommendation_payload = json.loads((run_dir / "run_recommendations.json").read_text(encoding="utf-8"))
     assert recommendation_payload["readiness_level"] == "dry_run_ready_for_smoke_demo"
+    scorecard_step = next(step for step in summary.steps if step.name == "create_evidence_scorecard")
+    assert scorecard_step.outputs["json"] == str(run_dir / "evidence_scorecard.json")
+    scorecard_payload = json.loads((run_dir / "evidence_scorecard.json").read_text(encoding="utf-8"))
+    assert scorecard_payload["evidence_level"] == "dry_run_demo_ready"
     reproduction_step = next(step for step in summary.steps if step.name == "create_reproduction_bundle")
     assert reproduction_step.outputs["manifest"] == str(run_dir / "reproduction_manifest.json")
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))

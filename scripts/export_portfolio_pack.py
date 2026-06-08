@@ -107,6 +107,8 @@ def _copy_run_materials(
     run_files = [
         (run_dir / "preflight_report.json", "run/preflight_report.json"),
         (run_dir / "preflight_report.md", "run/preflight_report.md"),
+        (run_dir / "evidence_scorecard.json", "run/evidence_scorecard.json"),
+        (run_dir / "evidence_scorecard.md", "run/evidence_scorecard.md"),
         (run_dir / "run_audit.json", "run/run_audit.json"),
         (run_dir / "run_audit.md", "run/run_audit.md"),
         (run_dir / "run_recommendations.json", "run/run_recommendations.json"),
@@ -300,6 +302,7 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
     artifacts = {
         "pipeline_summary": "run/pipeline_summary.json",
         "preflight_report": "run/preflight_report.md",
+        "evidence_scorecard": "run/evidence_scorecard.md",
         "run_index": "run_index.md",
         "run_audit": "run/run_audit.md",
         "run_recommendations": "run/run_recommendations.md",

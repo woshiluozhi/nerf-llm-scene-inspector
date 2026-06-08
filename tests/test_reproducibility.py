@@ -18,8 +18,10 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert bundle.dry_run is True
     assert bundle.replay_command == "python scripts/run_scene_pipeline.py --dry-run --query mug"
     assert "python scripts/audit_run.py --run-dir run" in bundle.verification_commands
+    assert "python scripts/create_evidence_scorecard.py --run-dir run" in bundle.verification_commands
     assert any(artifact.name == "pipeline_summary" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "preflight_report" and artifact.exists for artifact in bundle.artifacts)
+    assert any(artifact.name == "evidence_scorecard" and artifact.exists for artifact in bundle.artifacts)
 
 
 def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> None:
@@ -88,6 +90,7 @@ def _write_run(tmp_path: Path) -> Path:
     )
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_text(run_dir / "preflight_report.md", "# Preflight\n")
+    _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "scene_data_inspection.md", "# Scene\n")
     _write_text(run_dir / "run_audit.md", "# Audit\n")
     _write_text(run_dir / "run_recommendations.md", "# Recommendations\n")

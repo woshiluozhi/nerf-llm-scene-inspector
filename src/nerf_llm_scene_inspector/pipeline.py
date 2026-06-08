@@ -13,6 +13,7 @@ from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
 from nerf_llm_scene_inspector.data_processing import prepare_data
+from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
@@ -155,6 +156,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_queries": str(run_queries_path),
         "preflight_json": str(run_dir / "preflight_report.json"),
         "preflight_markdown": str(run_dir / "preflight_report.md"),
+        "evidence_scorecard_json": str(run_dir / "evidence_scorecard.json"),
+        "evidence_scorecard_markdown": str(run_dir / "evidence_scorecard.md"),
         "run_audit_json": str(run_dir / "run_audit.json"),
         "run_audit_markdown": str(run_dir / "run_audit.md"),
         "run_recommendations_json": str(run_dir / "run_recommendations.json"),
@@ -490,6 +493,23 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
+    scorecard = build_evidence_scorecard(run_dir)
+    scorecard_json = scorecard.to_json(run_dir / "evidence_scorecard.json")
+    scorecard_md = scorecard.to_markdown(run_dir / "evidence_scorecard.md")
+    steps.append(
+        PipelineStep(
+            "create_evidence_scorecard",
+            _scorecard_step_status(scorecard.evidence_level),
+            summary={
+                "evidence_level": scorecard.evidence_level,
+                "score": scorecard.score,
+                "max_score": scorecard.max_score,
+                "top_recommendations": scorecard.top_recommendations[:3],
+            },
+            outputs={"json": str(scorecard_json), "markdown": str(scorecard_md)},
+        )
+    )
+    summary.to_json(summary_path)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction_manifest = reproduction.to_json(run_dir / "reproduction_manifest.json")
     reproduction_report = reproduction.to_markdown(run_dir / "reproduction_report.md")
@@ -624,3 +644,9 @@ def _preflight_step_status(status: str) -> str:
     if status == "needs_attention":
         return "warning"
     return "failed"
+
+
+def _scorecard_step_status(level: str) -> str:
+    if level in {"portfolio_ready_real_run", "dry_run_demo_ready"}:
+        return "success"
+    return "warning"

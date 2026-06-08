@@ -462,6 +462,7 @@ def _key_artifacts(root: Path) -> dict[str, str]:
     candidates = {
         "pipeline_summary": "pipeline_summary.json",
         "preflight_report": "preflight_report.md",
+        "evidence_scorecard": "evidence_scorecard.md",
         "run_audit": "run_audit.json",
         "command_logs": "logs/",
         "environment_report": "environment_report.json",

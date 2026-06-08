@@ -31,6 +31,8 @@ RUN_REQUIRED_FILES = [
     "run/pipeline_summary.json",
     "run/preflight_report.json",
     "run/preflight_report.md",
+    "run/evidence_scorecard.json",
+    "run/evidence_scorecard.md",
     "run/run_audit.json",
     "run/run_audit.md",
     "run/run_recommendations.json",
@@ -137,6 +139,7 @@ def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
         _check_required_files(pack_path, RUN_REQUIRED_FILES, missing_files)
         _check_run_logs(pack_path, artifact_issues)
         _check_run_audit(pack_path, warnings, errors)
+        _check_evidence_scorecard(pack_path, warnings, errors)
         _check_annotation_validation(pack_path, warnings, errors)
     else:
         warnings.append("No run/ directory found; pack includes project materials but no run-scoped evidence.")
@@ -281,6 +284,23 @@ def _check_run_audit(pack_path: Path, warnings: list[str], errors: list[str]) ->
         warnings.append("run_audit.json status is needs_review; inspect warnings before sharing.")
     elif status and status != "ready":
         warnings.append(f"run_audit.json has unrecognized status: {status}")
+
+
+def _check_evidence_scorecard(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    scorecard = _read_json(pack_path / "run" / "evidence_scorecard.json", errors)
+    if not isinstance(scorecard, dict):
+        return
+    level = str(scorecard.get("evidence_level") or "")
+    if level == "blocked":
+        errors.append("evidence_scorecard.json level is blocked.")
+    elif level == "dry_run_demo_ready":
+        warnings.append("evidence_scorecard.json level is dry_run_demo_ready; share as a smoke demo, not a real trained-scene result.")
+    elif level in {"needs_evidence", "needs_review"}:
+        warnings.append(f"evidence_scorecard.json level is {level}; inspect scorecard before sharing.")
+    elif level and level not in {"dry_run_demo_ready", "portfolio_ready_real_run"}:
+        warnings.append(f"evidence_scorecard.json has unrecognized level: {level}")
+    if scorecard.get("dry_run") is True and level == "portfolio_ready_real_run":
+        errors.append("Dry-run scorecard cannot be portfolio_ready_real_run.")
 
 
 def _check_annotation_validation(pack_path: Path, warnings: list[str], errors: list[str]) -> None:

@@ -23,6 +23,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_index": _read_json(root.parent / "run_index.json"),
         "preflight_report": _read_json(root / "preflight_report.json"),
         "preflight_markdown": _read_text(root / "preflight_report.md"),
+        "evidence_scorecard": _read_json(root / "evidence_scorecard.json"),
+        "evidence_scorecard_markdown": _read_text(root / "evidence_scorecard.md"),
         "run_audit": _read_json(root / "run_audit.json"),
         "run_recommendations": _read_json(root / "run_recommendations.json"),
         "run_recommendations_markdown": _read_text(root / "run_recommendations.md"),
@@ -193,6 +195,18 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
             else:
                 st.json(preflight)
 
+    if bundle["evidence_scorecard"]:
+        scorecard = bundle["evidence_scorecard"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Evidence", str(scorecard.get("evidence_level", "unknown")))
+        col_b.metric("Evidence Score", f"{scorecard.get('score', 0)}/{scorecard.get('max_score', 100)}")
+        col_c.metric("Overlays", str(scorecard.get("overlay_count", 0)))
+        with st.expander("Evidence Scorecard", expanded=scorecard.get("evidence_level") == "blocked"):
+            if bundle["evidence_scorecard_markdown"]:
+                st.markdown(bundle["evidence_scorecard_markdown"])
+            else:
+                st.json(scorecard)
+
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})
     if bundle["reproduction_manifest"]:
@@ -333,6 +347,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
     expected = [
         "pipeline_summary.json",
         "preflight_report.json",
+        "evidence_scorecard.json",
         "run_audit.json",
         "run_recommendations.json",
         "reproduction_manifest.json",
