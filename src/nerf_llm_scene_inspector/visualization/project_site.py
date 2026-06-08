@@ -83,7 +83,10 @@ class ProjectPortfolioSite:
                 _capability("3D reconstruction", "Nerfstudio wrappers for data processing and baseline NeRF training."),
                 _capability("Language fields", "LERF-first semantic query path with OpenNeRF as a secondary adapter."),
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
-                _capability("Evidence packaging", "Capture manifests, annotation QA, reports, audits, scorecards, and share-safe packs."),
+                _capability(
+                    "Evidence packaging",
+                    "Capture/privacy gates, annotation QA, reports, audits, scorecards, and share-safe packs.",
+                ),
                 "      </div>",
                 "    </section>",
                 '    <section class="band split">',

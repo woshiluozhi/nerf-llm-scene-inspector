@@ -32,6 +32,19 @@ def test_evidence_scorecard_marks_complete_real_run_portfolio_ready(tmp_path: Pa
     assert scorecard.metrics["top_k_hit_rate"] == 1.0
 
 
+def test_evidence_scorecard_requires_capture_manifest_for_real_portfolio(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready", preflight_status="ready")
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "needs_review", "warn_count": 2, "fail_count": 0},
+    )
+
+    scorecard = build_evidence_scorecard(run_dir)
+
+    assert scorecard.evidence_level == "needs_review"
+    assert any(criterion.name == "capture_manifest_quality" for criterion in scorecard.criteria)
+
+
 def test_evidence_scorecard_cli_writes_outputs(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review", preflight_status="needs_attention")
     output = tmp_path / "scorecard.json"
@@ -85,6 +98,10 @@ def _write_run(
         },
     )
     _write_json(run_dir / "preflight_report.json", {"status": preflight_status})
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "ready", "warn_count": 0, "fail_count": 0},
+    )
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(
         run_dir / "scene_data_inspection.json",

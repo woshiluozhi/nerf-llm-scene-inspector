@@ -97,6 +97,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     root = Path(run_dir)
     pipeline_summary = _read_json(root / "pipeline_summary.json")
     run_audit = _read_json(root / "run_audit.json")
+    capture_validation = _read_json(root / "capture_manifest_validation.json")
     preflight_report = _read_json(root / "preflight_report.json")
     environment_report = _read_json(root / "environment_report.json")
     scene_inspection = _read_json(root / "scene_data_inspection.json")
@@ -108,6 +109,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     recommendations: list[RecommendationItem] = []
 
     _add_audit_findings(run_audit, recommendations)
+    _add_capture_manifest_actions(capture_validation, recommendations, dry_run=dry_run)
     _add_preflight_actions(preflight_report, recommendations, dry_run=dry_run)
     _add_environment_actions(environment_report, recommendations, dry_run=dry_run)
     _add_scene_actions(scene_inspection, recommendations, dry_run=dry_run)
@@ -180,6 +182,55 @@ def _add_preflight_actions(
                 rationale="Warning checks: " + ", ".join(warned[:6]),
                 command="python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/<scene>",
                 artifact="preflight_report.md",
+            )
+        )
+
+
+def _add_capture_manifest_actions(
+    validation: dict[str, Any],
+    recommendations: list[RecommendationItem],
+    *,
+    dry_run: bool,
+) -> None:
+    status = str(validation.get("status") or "")
+    if not status or status == "ready":
+        return
+    fail_count = _safe_int(validation.get("fail_count"))
+    warn_count = _safe_int(validation.get("warn_count"))
+    if status == "blocked" or fail_count:
+        recommendations.append(
+            RecommendationItem(
+                severity="critical",
+                category="capture_manifest",
+                action="Fix blocked capture-manifest checks before treating this run as reproducible evidence.",
+                rationale=(
+                    f"capture_manifest_validation.json reports status={status}, "
+                    f"failures={fail_count}, warnings={warn_count}."
+                ),
+                command=(
+                    "python scripts/create_capture_manifest.py --input path/to/video.mp4 "
+                    "--type video --scene-name <scene> --output results/capture_manifest "
+                    "--capture-device \"phone model\" --static-scene --high-overlap --privacy-reviewed"
+                ),
+                artifact="capture_manifest_validation.md",
+            )
+        )
+    elif status == "needs_review":
+        recommendations.append(
+            RecommendationItem(
+                severity="medium" if dry_run else "high",
+                category="capture_manifest",
+                action="Complete capture metadata and privacy review before sharing real-scene results.",
+                rationale=(
+                    f"capture_manifest_validation.json reports {warn_count} warning-level capture checks."
+                ),
+                command=(
+                    "python scripts/create_capture_manifest.py --input path/to/video.mp4 "
+                    "--type video --scene-name <scene> --output results/capture_manifest "
+                    "--capture-device \"phone model\" --lighting \"bright indoor\" "
+                    "--static-scene --high-overlap --privacy-reviewed"
+                ),
+                artifact="capture_manifest_validation.md",
             )
         )
 

@@ -46,7 +46,7 @@ python scripts/run_scene_pipeline.py \
 
 - `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
 - `capture_manifest.md`: capture device, scene type, lighting, camera motion, overlap, static-scene, and privacy metadata.
-- `capture_manifest_validation.md`: checks for missing capture metadata and privacy-review readiness.
+- `capture_manifest_validation.md`: checks for missing capture metadata and privacy-review readiness; non-ready status is reflected in the run audit, recommendations, and evidence scorecard.
 - `preflight_report.md`: raw input, processed scene, config path, CUDA/upstream, and backend-method readiness checks.
 - `../run_index.md`: compact comparison table across pipeline runs in the same root.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
@@ -61,7 +61,7 @@ python scripts/run_scene_pipeline.py \
 - `evaluation/annotation_review_contact_sheet.png`: contact sheet with bboxes drawn over rendered views.
 - `run_audit.md`: run-level health summary for environment, data, query, annotation, and evaluation readiness.
 - `run_recommendations.md`: prioritized next actions for turning a smoke run into stronger evidence.
-- `evidence_scorecard.md`: conservative 100-point scorecard for whether the run is strong enough to share.
+- `evidence_scorecard.md`: conservative multi-criterion scorecard for whether the run is strong enough to share, including capture/privacy metadata readiness.
 - `portfolio_page.html`: static, relative-link HTML page for reviewing or sharing run evidence.
 - `reproduction_manifest.json`: machine-readable replay command, verification commands, and key artifact map.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.

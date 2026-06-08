@@ -54,12 +54,12 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Annotation review artifacts that draw manual `bbox_2d` labels over rendered views for QA before reporting metrics.
-- Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata.
+- Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata, then feed those checks into audit/recommendation/evidence gates.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Real-run preflight reports that check raw input, processed scene data, config paths, CUDA/upstream tools, and backend method registration before expensive training.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
-- Evidence scorecards that rate a run's portfolio-readiness without claiming model performance superiority.
+- Evidence scorecards that rate a run's portfolio-readiness across pipeline integrity, capture metadata, environment, scene quality, query outputs, annotations, and presentation artifacts without claiming model performance superiority.
 - Static project-level portfolio site under `docs/index.html` for GitHub Pages or local review.
 - Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
@@ -271,6 +271,7 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/capture_manifest.json`
 - `results/pipeline_runs/<scene>/capture_manifest.md`
 - `results/pipeline_runs/<scene>/capture_manifest_validation.json`
+- `results/pipeline_runs/<scene>/capture_manifest_validation.md`
 - `results/pipeline_runs/<scene>/preflight_report.md`
 - `results/pipeline_runs/<scene>/pipeline_summary.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`

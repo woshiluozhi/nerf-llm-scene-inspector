@@ -139,6 +139,7 @@ def build_evidence_scorecard(run_dir: str | Path) -> EvidenceScorecard:
 
     criteria = [
         _pipeline_criterion(root, pipeline_summary, audit),
+        _capture_manifest_criterion(capture_validation),
         _real_run_criterion(dry_run, preflight, environment),
         _scene_criterion(scene),
         _query_criterion(query_count, query_report_count, overlay_count, evaluation),
@@ -153,6 +154,7 @@ def build_evidence_scorecard(run_dir: str | Path) -> EvidenceScorecard:
         dry_run=dry_run,
         pipeline_summary=pipeline_summary,
         preflight=preflight,
+        capture_validation=capture_validation,
         audit=audit,
     )
     top_recommendations = _top_recommendations(criteria, recommendations)
@@ -253,6 +255,39 @@ def _real_run_criterion(
             else "Run on a CUDA machine with upstream tools installed and review preflight_report.md."
         ),
         artifact="preflight_report.md",
+    )
+
+
+def _capture_manifest_criterion(validation: dict[str, Any]) -> EvidenceCriterion:
+    status_raw = str(validation.get("status") or "missing")
+    fail_count = _safe_int(validation.get("fail_count"))
+    warn_count = _safe_int(validation.get("warn_count"))
+    if status_raw == "ready":
+        score = 10
+        detail = "capture manifest is ready"
+    elif status_raw == "needs_review":
+        score = 5
+        detail = f"capture manifest needs review; warnings={warn_count}"
+    elif status_raw == "blocked" or fail_count:
+        score = 0
+        detail = f"capture manifest is blocked; failures={fail_count}, warnings={warn_count}"
+    else:
+        score = 0
+        detail = "capture manifest validation is missing"
+    status = _criterion_status(score, 10)
+    return EvidenceCriterion(
+        name="capture_manifest_quality",
+        category="capture",
+        score=score,
+        max_score=10,
+        status=status,
+        detail=detail,
+        recommendation=(
+            ""
+            if status == "pass"
+            else "Complete capture_manifest.json and confirm static-scene, overlap, and privacy-review fields."
+        ),
+        artifact="capture_manifest_validation.md",
     )
 
 
@@ -408,17 +443,22 @@ def _evidence_level(
     dry_run: bool,
     pipeline_summary: dict[str, Any],
     preflight: dict[str, Any],
+    capture_validation: dict[str, Any],
     audit: dict[str, Any],
 ) -> EvidenceLevel:
     ratio = score / max(max_score, 1)
+    capture_status = str(capture_validation.get("status") or "")
     if (
         pipeline_summary.get("success") is False
         or audit.get("status") == "blocked"
         or preflight.get("status") == "blocked"
+        or capture_status == "blocked"
     ):
         return "blocked"
     if dry_run and ratio >= 0.65:
         return "dry_run_demo_ready"
+    if not dry_run and capture_status != "ready":
+        return "needs_review"
     if not dry_run and ratio >= 0.85:
         return "portfolio_ready_real_run"
     if ratio >= 0.65:

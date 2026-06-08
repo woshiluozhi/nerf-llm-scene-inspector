@@ -111,6 +111,7 @@ def audit_pipeline_run(run_dir: str | Path) -> RunAuditReport:
     root = Path(run_dir)
     findings: list[AuditFinding] = []
     pipeline_summary = _read_json(root / "pipeline_summary.json")
+    capture_validation = _read_json(root / "capture_manifest_validation.json")
     preflight_report = _read_json(root / "preflight_report.json")
     scene_inspection = _read_json(root / "scene_data_inspection.json")
     environment_report = _read_json(root / "environment_report.json")
@@ -129,6 +130,7 @@ def audit_pipeline_run(run_dir: str | Path) -> RunAuditReport:
     _check_pipeline_summary(pipeline_summary, findings)
     _check_steps(pipeline_summary, findings)
     _check_declared_command_logs(root, pipeline_summary, findings)
+    _check_capture_manifest(capture_validation, findings, dry_run=dry_run)
     _check_preflight(preflight_report, findings, dry_run=dry_run)
     _check_environment(environment_report, findings, dry_run=dry_run)
     _check_scene_inspection(scene_inspection, findings, dry_run=dry_run)
@@ -332,8 +334,52 @@ def _check_declared_command_logs(
                     message=f"Declared command log is missing for step {step.get('name')}: {raw_log}.",
                     recommendation="Rerun the pipeline so full stdout/stderr logs are preserved.",
                     artifact=str(raw_log),
-                )
             )
+        )
+
+
+def _check_capture_manifest(
+    validation: dict[str, Any],
+    findings: list[AuditFinding],
+    *,
+    dry_run: bool,
+) -> None:
+    if not validation:
+        return
+    status = str(validation.get("status") or "")
+    fail_count = _safe_int(validation.get("fail_count"))
+    warn_count = _safe_int(validation.get("warn_count"))
+    if status == "blocked" or fail_count:
+        findings.append(
+            AuditFinding(
+                severity="blocker",
+                category="capture_manifest",
+                message=(
+                    "Capture manifest validation is blocked "
+                    f"(failures={fail_count}, warnings={warn_count})."
+                ),
+                recommendation=(
+                    "Open capture_manifest_validation.md and fix missing input, scene, "
+                    "or capture metadata before using this run as evidence."
+                ),
+                artifact="capture_manifest_validation.md",
+            )
+        )
+    elif status == "needs_review":
+        findings.append(
+            AuditFinding(
+                severity="warning",
+                category="capture_manifest",
+                message=f"Capture manifest needs review (warnings={warn_count}).",
+                recommendation=(
+                    "Fill capture device, lighting, overlap/static-scene checks, and privacy review "
+                    "before sharing a real-scene portfolio result."
+                    if not dry_run
+                    else "Dry-run capture metadata is incomplete by design; fill it for a real scene."
+                ),
+                artifact="capture_manifest_validation.md",
+            )
+        )
 
 
 def _check_environment(

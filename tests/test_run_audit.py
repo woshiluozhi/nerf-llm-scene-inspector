@@ -42,6 +42,19 @@ def test_audit_pipeline_run_blocks_missing_declared_command_log(tmp_path: Path) 
     assert any(finding.category == "command_logs" for finding in report.findings)
 
 
+def test_audit_pipeline_run_warns_on_capture_manifest_review(tmp_path: Path) -> None:
+    run_dir = _write_complete_run(tmp_path)
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "needs_review", "ok": False, "warn_count": 2, "fail_count": 0},
+    )
+
+    report = audit_pipeline_run(run_dir)
+
+    assert report.status == "needs_review"
+    assert any(finding.category == "capture_manifest" for finding in report.findings)
+
+
 def test_audit_run_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     run_dir = _write_complete_run(tmp_path)
     output = tmp_path / "audit.json"

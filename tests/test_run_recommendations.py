@@ -70,6 +70,19 @@ def test_recommendations_include_preflight_failures(tmp_path: Path) -> None:
     assert any(item.category == "preflight" for item in report.recommendations)
 
 
+def test_recommendations_include_capture_manifest_review(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "needs_review", "warn_count": 3, "fail_count": 0},
+    )
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "needs_review"
+    assert any(item.category == "capture_manifest" for item in report.recommendations)
+
+
 def test_recommend_next_steps_cli_writes_reports(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
     output = tmp_path / "recommendations.json"
@@ -115,6 +128,10 @@ def _write_run(tmp_path: Path, *, dry_run: bool, audit_status: str) -> Path:
         },
     )
     _write_json(run_dir / "preflight_report.json", {"status": "ready", "checks": []})
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "ready", "warn_count": 0, "fail_count": 0},
+    )
     _write_json(run_dir / "run_audit.json", {"status": audit_status, "findings": []})
     _write_json(run_dir / "environment_report.json", {"ok": True, "strict_failures": []})
     _write_json(
