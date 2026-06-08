@@ -172,3 +172,22 @@ def test_scene_query_report_writes_markdown(tmp_path: Path) -> None:
     assert "# Scene Query Report" in markdown
     assert "## Answer Evidence" in markdown
     assert "Coffee mug!" in markdown
+
+
+def test_scene_query_report_marks_query_purpose_in_markdown(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=MixedPurposePlanner(),
+        include_negative_queries=True,
+        scene_name="desk_scene",
+    )
+
+    report = engine.run_task("Find a cup, not a screen", tmp_path)
+    output = report.to_markdown(tmp_path / "scene_query_report.md")
+
+    markdown = output.read_text(encoding="utf-8")
+    assert "- Negative/disambiguation visual queries: screen" in markdown
+    assert "`screen` via `fake` purpose=`negative`, top_k=5" in markdown
+    assert "`screen` via `fake` (purpose=`negative`, planned_backend=`fake`)" in markdown
+    assert "excluded from positive answer evidence" in markdown

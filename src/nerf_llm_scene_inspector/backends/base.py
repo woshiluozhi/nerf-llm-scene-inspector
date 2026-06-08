@@ -317,8 +317,13 @@ def _plan_lines(plan: dict[str, Any]) -> list[str]:
         f"- Planner: `{plan.get('planner_name', 'unknown')}`",
         f"- Primary visual queries: {', '.join(map(str, plan.get('primary_visual_queries') or [])) or 'none'}",
         f"- Supporting visual queries: {', '.join(map(str, plan.get('supporting_visual_queries') or [])) or 'none'}",
+        f"- Negative/disambiguation visual queries: {', '.join(map(str, plan.get('negative_visual_queries') or [])) or 'none'}",
         f"- Relation hypotheses: {', '.join(map(str, plan.get('relation_hypotheses') or [])) or 'none'}",
     ]
+    recommended_calls = plan.get("recommended_backend_calls")
+    if isinstance(recommended_calls, list) and recommended_calls:
+        lines.append("- Recommended backend calls:")
+        lines.extend(f"  - {_planned_call_line(call)}" for call in recommended_calls)
     rationale = plan.get("rationale") if isinstance(plan.get("rationale"), list) else []
     if rationale:
         lines.append("- Planner rationale:")
@@ -331,12 +336,47 @@ def _query_result_lines(results: list[QueryResult]) -> list[str]:
         return ["- No backend results were recorded."]
     lines: list[str] = []
     for result in results:
+        call = _planner_call(result)
+        purpose = _query_purpose(result, call)
+        planned_backend = _planned_backend(result, call)
+        evidence_note = (
+            "; excluded from positive answer evidence"
+            if purpose == "negative"
+            else ""
+        )
         lines.append(
-            f"- `{result.query}` via `{result.backend_name}`: "
+            f"- `{result.query}` via `{result.backend_name}` "
+            f"(purpose=`{purpose}`, planned_backend=`{planned_backend}`): "
             f"{len(result.bounding_regions)} regions, {len(result.rendered_images)} rendered artifacts, "
-            f"confidence={result.confidence}"
+            f"confidence={result.confidence}{evidence_note}"
         )
     return lines
+
+
+def _planned_call_line(raw_call: Any) -> str:
+    if isinstance(raw_call, dict):
+        query = str(raw_call.get("query") or "")
+        backend = str(raw_call.get("backend") or "lerf")
+        purpose = str(raw_call.get("purpose") or "primary")
+        top_k = raw_call.get("top_k")
+        top_k_text = f", top_k={top_k}" if top_k is not None else ""
+        return f"`{query}` via `{backend}` purpose=`{purpose}`{top_k_text}"
+    return f"`{raw_call}` via `lerf` purpose=`primary`"
+
+
+def _planner_call(result: QueryResult) -> dict[str, Any]:
+    call = result.provenance.get("planner_backend_call")
+    return call if isinstance(call, dict) else {}
+
+
+def _query_purpose(result: QueryResult, call: dict[str, Any] | None = None) -> str:
+    call = call if call is not None else _planner_call(result)
+    return str(call.get("purpose") or result.provenance.get("planner_purpose") or "primary")
+
+
+def _planned_backend(result: QueryResult, call: dict[str, Any] | None = None) -> str:
+    call = call if call is not None else _planner_call(result)
+    return str(call.get("backend") or result.backend_name or "unknown")
 
 
 def _markdown_list(items: list[str]) -> list[str]:
