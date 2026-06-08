@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner
+from nerf_llm_scene_inspector.backends.base import SceneQueryReport
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
-from nerf_llm_scene_inspector.querying.answer_synthesis import synthesize_scene_answer
+from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
 
 
 def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
@@ -571,8 +572,14 @@ def _render_query_runner(
     save_manual_template: bool,
     strict_backend: bool,
 ) -> None:
-    query = st.text_input("Text query", value="mug")
+    query = st.text_input("Text query", value="Find objects related to making coffee.")
     output_dir = st.text_input("Output directory", value="results/dashboard_query")
+    scene_name = st.text_input("Scene name", value="dashboard_scene")
+    col_a, col_b, col_c = st.columns(3)
+    top_k = int(col_a.number_input("Top-k regions", min_value=1, max_value=50, value=5, step=1))
+    max_queries = int(col_b.number_input("Max expanded queries", min_value=1, max_value=20, value=5, step=1))
+    exact_query = col_c.checkbox("Exact query only", value=False)
+    include_negative = st.checkbox("Include negative/disambiguation queries", value=False)
 
     planner = LocalRulePlanner()
     plan = planner.plan(query)
@@ -580,34 +587,90 @@ def _render_query_runner(
     st.json(plan.to_dict())
 
     if st.button("Run query"):
-        backend = build_dashboard_backend(
-            backend_name,
+        report = run_dashboard_query(
+            config_path=config_path,
+            backend_name=backend_name,
+            query=query,
+            output_dir=output_dir,
+            scene_name=scene_name,
             dry_run=dry_run,
             num_views=num_views,
+            top_k=top_k,
+            max_queries=max_queries,
+            exact_query=exact_query,
+            include_negative_queries=include_negative,
             save_manual_template=save_manual_template,
             strict_backend=strict_backend,
         )
-        backend.load(config_path)
-        result = backend.query_text(query, output_dir, top_k=5)
-        st.subheader("QueryResult JSON")
-        st.json(result.to_dict())
-        for view in result.rendered_images:
-            if Path(view.path).exists() and view.kind in {"overlay", "relevancy", "rgb"}:
-                st.image(view.path, caption=view.caption or view.kind, use_container_width=True)
-        answer = synthesize_scene_answer(
-            task=query,
-            plan=plan.to_dict(),
-            results=[result],
-            top_k=5,
-        )
         st.subheader("Scene Answer")
-        st.write(answer.answer)
-        report_path = Path(output_dir) / "dashboard_answer.json"
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(
-            json.dumps({"answer": answer.answer, "answer_summary": answer.to_dict(), "plan": plan.to_dict()}, indent=2),
-            encoding="utf-8",
-        )
+        st.write(report.answer)
+        st.subheader("SceneQueryReport JSON")
+        st.json(report.to_dict())
+        st.caption(f"Wrote {Path(output_dir) / 'scene_query_report.json'}")
+        st.caption(f"Wrote {Path(output_dir) / 'scene_query_report.md'}")
+        for result in report.query_results:
+            with st.expander(f"Backend query: {result.query}", expanded=True):
+                st.json(result.to_dict())
+                for view in result.rendered_images:
+                    if Path(view.path).exists() and view.kind in {"overlay", "relevancy", "rgb"}:
+                        st.image(view.path, caption=view.caption or view.kind, use_container_width=True)
+
+
+def run_dashboard_query(
+    *,
+    config_path: str,
+    backend_name: str,
+    query: str,
+    output_dir: str | Path,
+    scene_name: str = "dashboard_scene",
+    dry_run: bool = True,
+    num_views: int = 1,
+    top_k: int = 5,
+    max_queries: int = 5,
+    exact_query: bool = False,
+    include_negative_queries: bool = False,
+    save_manual_template: bool = False,
+    strict_backend: bool = False,
+) -> SceneQueryReport:
+    """Run a dashboard query through the same planner-aware engine as CLI demos."""
+
+    output_path = Path(output_dir)
+    backend = build_dashboard_backend(
+        backend_name,
+        dry_run=dry_run,
+        num_views=num_views,
+        save_manual_template=save_manual_template,
+        strict_backend=strict_backend,
+    )
+    backend.load(config_path)
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=LocalRulePlanner(),
+        top_k=top_k,
+        max_queries=max_queries,
+        include_negative_queries=include_negative_queries,
+        scene_name=scene_name,
+    )
+    report = engine.run_task(query, output_path, exact_query=exact_query)
+    report.to_json(output_path / "scene_query_report.json")
+    report.to_markdown(output_path / "scene_query_report.md")
+    (output_path / "dashboard_query_summary.json").write_text(
+        json.dumps(
+            {
+                "scene_name": scene_name,
+                "query": query,
+                "backend": backend_name,
+                "dry_run": dry_run,
+                "exact_query": exact_query,
+                "include_negative_queries": include_negative_queries,
+                "num_backend_queries": len(report.query_results),
+                "scene_query_report": str(output_path / "scene_query_report.json"),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return report
 
 
 def _read_json(path: Path) -> dict[str, Any]:

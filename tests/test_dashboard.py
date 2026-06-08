@@ -7,6 +7,7 @@ from nerf_llm_scene_inspector.visualization.dashboard import (
     collect_query_reports,
     collect_run_images,
     load_run_bundle,
+    run_dashboard_query,
     submission_readiness_summary,
 )
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
@@ -286,6 +287,54 @@ def test_dashboard_builds_configured_opennerf_backend() -> None:
     assert backend.num_views == 3
     assert backend.save_manual_template is True
     assert backend.strict_backend is True
+
+
+def test_run_dashboard_query_uses_planner_and_writes_scene_report(tmp_path: Path) -> None:
+    output = tmp_path / "dashboard_query"
+
+    report = run_dashboard_query(
+        config_path=str(tmp_path / "config.yml"),
+        backend_name="lerf",
+        query="Find objects that can hold water.",
+        output_dir=output,
+        scene_name="desk_scene",
+        dry_run=True,
+        num_views=1,
+        top_k=3,
+        max_queries=2,
+    )
+
+    assert report.scene_name == "desk_scene"
+    assert [result.query for result in report.query_results] == ["cup", "mug"]
+    assert report.query_results[0].provenance["planner_backend_call"]["purpose"] == "primary"
+    assert (output / "scene_query_report.json").exists()
+    assert (output / "scene_query_report.md").exists()
+    summary = json.loads((output / "dashboard_query_summary.json").read_text(encoding="utf-8"))
+    assert summary["num_backend_queries"] == 2
+    assert summary["exact_query"] is False
+
+
+def test_run_dashboard_query_supports_exact_query_mode(tmp_path: Path) -> None:
+    output = tmp_path / "dashboard_query"
+
+    report = run_dashboard_query(
+        config_path=str(tmp_path / "config.yml"),
+        backend_name="opennerf",
+        query="mug",
+        output_dir=output,
+        scene_name="desk_scene",
+        dry_run=True,
+        num_views=2,
+        exact_query=True,
+        max_queries=5,
+    )
+
+    assert [result.query for result in report.query_results] == ["mug"]
+    assert report.query_results[0].provenance["planner_backend_call"]["purpose"] == "exact"
+    assert len([view for view in report.query_results[0].rendered_images if view.kind == "relevancy"]) == 2
+    summary = json.loads((output / "dashboard_query_summary.json").read_text(encoding="utf-8"))
+    assert summary["backend"] == "opennerf"
+    assert summary["exact_query"] is True
 
 
 def test_submission_readiness_summary_supports_legacy_packets() -> None:

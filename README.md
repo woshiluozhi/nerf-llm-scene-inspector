@@ -350,7 +350,12 @@ The dashboard can review an existing `results/pipeline_runs/<scene>` directory w
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
 artifacts, query reports, annotation templates, evaluation metrics, the run quality gate,
 submission readiness, and the multi-run comparison report used to choose a portfolio
-candidate. Install it with:
+candidate. Its Query Runner tab can also execute planner-aware dry-run or real backend
+queries: high-level tasks are expanded through `SemanticQueryEngine`, all expanded backend
+calls are shown with overlays, and `scene_query_report.json/.md` plus
+`dashboard_query_summary.json` are written to the selected output directory. Enable
+`Exact query only` in the UI when you want one prompt to map to one backend query. Install
+it with:
 
 ```bash
 python -m pip install -e ".[dashboard]"
