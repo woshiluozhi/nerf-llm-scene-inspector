@@ -20,6 +20,16 @@ Robots and embodied agents need persistent scene representations that connect ge
 
 The project now includes a deterministic relation-analysis layer that converts saved `QueryResult` regions and candidate 3D points into a compact entity-relation graph. When 3D points are available, relations are marked as `3d`; otherwise the report explicitly marks image-space heuristics as `2d_fallback`. This is useful for portfolio evidence and embodied-AI-style questions such as support, containment, proximity, and left/right layout, but it is not presented as a learned physical relation model.
 
+## Query Planning And Execution
+
+Natural-language tasks are first converted into structured query plans with primary,
+supporting, negative, and relation-hypothesis fields. The CLI and Python query engine share
+the same backend-call expansion helper so a task produces the same concrete text queries
+whether it is run from `query_scene.py` or imported as `SemanticQueryEngine`. By default,
+primary and supporting prompts are executed, negative prompts are kept for disambiguation,
+and all answers explicitly report the evidence level, limitations, and recommended follow-up
+checks.
+
 ## Experiment Matrices
 
 The experiment-matrix runner makes the project easier to treat like a small research study rather than a single demo. A YAML file defines backend variants, query sets, prompt-sensitivity suites, relation-analysis settings, and dry-run or real-run execution. The runner launches or collects pipeline runs and writes a JSON/CSV/Markdown ablation table with evidence scores, localization metrics, prompt stability, relation-edge counts, and run links.

@@ -16,6 +16,7 @@ from nerf_llm_scene_inspector.backends.base import SceneQueryReport  # noqa: E40
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend  # noqa: E402
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend  # noqa: E402
 from nerf_llm_scene_inspector.querying.answer_synthesis import synthesize_scene_answer  # noqa: E402
+from nerf_llm_scene_inspector.querying.semantic_query import planned_backend_calls  # noqa: E402
 from nerf_llm_scene_inspector.querying.spatial_reasoning import aggregate_multi_query_results  # noqa: E402
 from nerf_llm_scene_inspector.utils.paths import slugify  # noqa: E402
 
@@ -28,6 +29,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, help="Output directory for query artifacts.")
     parser.add_argument("--scene-name", default="unknown", help="Scene name stored in the query report.")
     parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument(
+        "--max-queries",
+        type=int,
+        default=5,
+        help="Maximum expanded backend text queries to run for one high-level task.",
+    )
+    parser.add_argument(
+        "--include-negative-queries",
+        action="store_true",
+        help="Also run planner negative/disambiguation prompts. They are excluded by default.",
+    )
     parser.add_argument("--prefer-llm", action="store_true", help="Use optional LLM planner when configured.")
     parser.add_argument("--exact-query", action="store_true", help="Run the query text directly without expansion.")
     parser.add_argument("--dry-run", action="store_true", help="Create mock query artifacts.")
@@ -72,9 +84,16 @@ def main() -> int:
         backend.load(args.config)
         planner = get_default_planner(prefer_llm=args.prefer_llm)
         plan = planner.plan(args.query)
-        queries = [args.query] if args.exact_query else plan.primary_visual_queries or [args.query]
+        calls = planned_backend_calls(
+            plan,
+            task=args.query,
+            exact_query=args.exact_query,
+            include_negative=args.include_negative_queries,
+            max_queries=args.max_queries,
+        )
         results = []
-        for query in queries[: args.top_k]:
+        for call in calls:
+            query = call.query
             query_dir = output / slugify(query)
             results.append(backend.query_text(query, str(query_dir), top_k=args.top_k))
         aggregate = aggregate_multi_query_results(results)

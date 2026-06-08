@@ -2,7 +2,7 @@ from pathlib import Path
 
 from nerf_llm_scene_inspector.backends.base import BoundingRegion, QueryResult, RenderedView, SemanticFieldBackend
 from nerf_llm_scene_inspector.querying.query_types import QueryPlan
-from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine
+from nerf_llm_scene_inspector.querying.semantic_query import SemanticQueryEngine, planned_backend_calls
 
 
 class FakeBackend(SemanticFieldBackend):
@@ -11,11 +11,13 @@ class FakeBackend(SemanticFieldBackend):
 
     def __init__(self) -> None:
         self.output_dirs: list[str] = []
+        self.queries: list[str] = []
 
     def load(self, config_path: str) -> None:
         self.config_path = config_path
 
     def query_text(self, query: str, output_dir: str, top_k: int = 5) -> QueryResult:
+        self.queries.append(query)
         self.output_dirs.append(output_dir)
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         return QueryResult(
@@ -53,6 +55,26 @@ class DuplicateSlugPlanner:
         )
 
 
+class MixedPurposePlanner:
+    planner_name = "mixed"
+
+    def plan(self, task: str) -> QueryPlan:
+        return QueryPlan(
+            task=task,
+            primary_visual_queries=["mug"],
+            supporting_visual_queries=["cup"],
+            negative_visual_queries=["screen"],
+            relation_hypotheses=[],
+            recommended_backend_calls=[
+                {"backend": "fake", "query": "mug", "top_k": 5, "purpose": "primary"},
+                {"backend": "fake", "query": "cup", "top_k": 5, "purpose": "supporting"},
+                {"backend": "fake", "query": "screen", "top_k": 5, "purpose": "negative"},
+            ],
+            final_answer_template="Likely items: {items}.",
+            planner_name=self.planner_name,
+        )
+
+
 def test_semantic_query_engine_records_scene_name_and_unique_query_slugs(tmp_path: Path) -> None:
     backend = FakeBackend()
     engine = SemanticQueryEngine(
@@ -70,6 +92,59 @@ def test_semantic_query_engine_records_scene_name_and_unique_query_slugs(tmp_pat
     assert report.answer_summary["support_level"] == "2d_relevancy_fallback"
     assert report.answer_summary["evidence"][0]["label"] in {"Coffee mug!", "coffee mug"}
     assert "Strongest evidence" in report.answer
+
+
+def test_planned_backend_calls_exclude_negative_queries_by_default() -> None:
+    plan = MixedPurposePlanner().plan("Find a cup, not a screen")
+
+    calls = planned_backend_calls(plan, task=plan.task)
+
+    assert [call.query for call in calls] == ["mug", "cup"]
+    assert [call.purpose for call in calls] == ["primary", "supporting"]
+
+
+def test_planned_backend_calls_tolerate_string_calls() -> None:
+    plan = QueryPlan(
+        task="Find writing tools",
+        primary_visual_queries=[],
+        recommended_backend_calls=["pen", {"query": "notebook", "purpose": "supporting"}],
+    )
+
+    calls = planned_backend_calls(plan, task=plan.task)
+
+    assert [call.to_dict() for call in calls] == [
+        {"query": "pen", "backend": "lerf", "purpose": "primary"},
+        {"query": "notebook", "backend": "lerf", "purpose": "supporting"},
+    ]
+
+
+def test_semantic_query_engine_can_include_negative_queries(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=MixedPurposePlanner(),
+        include_negative_queries=True,
+        scene_name="desk_scene",
+    )
+
+    report = engine.run_task("Find a cup, not a screen", tmp_path)
+
+    assert backend.queries == ["mug", "cup", "screen"]
+    assert len(report.query_results) == 3
+
+
+def test_semantic_query_engine_exact_query_bypasses_planner_expansion(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    engine = SemanticQueryEngine(
+        backend=backend,
+        planner=MixedPurposePlanner(),
+        scene_name="desk_scene",
+    )
+
+    report = engine.run_task("Find a cup, not a screen", tmp_path, exact_query=True)
+
+    assert backend.queries == ["Find a cup, not a screen"]
+    assert report.query_results[0].query == "Find a cup, not a screen"
 
 
 def test_scene_query_report_writes_markdown(tmp_path: Path) -> None:

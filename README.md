@@ -451,6 +451,10 @@ query results, synthesized `answer_summary`, support level, limitations, and fol
 recommendations. The paired `scene_query_report.md` is the human-readable version for
 reviewing natural-language answers alongside evidence and warnings. Stable slugged query
 directories keep artifacts traceable across repeated runs.
+For high-level tasks, `query_scene.py` runs the planner's primary and supporting backend
+calls by default; use `--max-queries` to cap prompt expansion, `--exact-query` to disable
+expansion, and `--include-negative-queries` when you explicitly want disambiguation prompts
+included in backend execution.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
