@@ -47,10 +47,7 @@ def main() -> int:
         _copy_run_index(run_dir.parent, output, copied, optional_missing)
 
     _add_artifact_digests(output, copied)
-    archive_path = None
-    if args.zip:
-        archive_path = shutil.make_archive(str(output), "zip", output)
-
+    archive_path = Path(f"{output}.zip") if args.zip else None
     index = {
         "copied": copied,
         "missing": missing,
@@ -62,6 +59,10 @@ def main() -> int:
         "recommended_demo_command": "python scripts/run_scene_pipeline.py --dry-run --query mug",
     }
     (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
+    if args.zip:
+        archive_path = Path(shutil.make_archive(str(output), "zip", output))
+        index["archive"] = _display_source_path(archive_path)
+        (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     print(json.dumps(index, indent=2))
     return 0 if not missing or args.allow_missing else 1
 

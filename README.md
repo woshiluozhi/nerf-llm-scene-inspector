@@ -444,7 +444,7 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/portfolio_result_card.md`
 - `results/portfolio_pack/portfolio_pack_index.json`
 - `results/portfolio_pack/portfolio_pack_validation.json`
-- `results/portfolio_pack.zip`
+- `results/portfolio_pack.zip` as a self-contained share archive with the pack index
 
 `scene_data_inspection` includes frame counts, missing images, invalid pose counts, camera
 translation extent, approximate path length, duplicate adjacent poses, and a pose coverage

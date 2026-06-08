@@ -134,6 +134,8 @@ The exported portfolio pack keeps the original run files but sanitizes machine-s
 inside the packaged copy. The top-level `portfolio_pack_index.json` exposes a compact,
 share-safe provenance excerpt and records SHA256/size digests for copied files so
 `validate_portfolio_pack.py` can detect accidental edits or tampering before sharing.
+When `--zip` is used, the archive is self-contained and includes the same
+`portfolio_pack_index.json` with digest metadata.
 
 ## Finalize And Export
 

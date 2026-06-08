@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 from nerf_llm_scene_inspector.evaluation.portfolio_validation import validate_portfolio_pack
@@ -25,7 +26,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     )
     annotations_path = ROOT / "examples" / "annotations_example.json"
     run_dir = tmp_path / "pipeline_runs" / "export_scene"
-    output_dir = tmp_path / "portfolio_pack"
+    output_dir = tmp_path / "portfolio_pack.bundle"
 
     summary = run_scene_pipeline(
         PipelineConfig(
@@ -60,6 +61,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
             str(run_dir),
             "--output",
             str(output_dir),
+            "--zip",
         ],
         cwd=ROOT,
         text=True,
@@ -193,3 +195,14 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert validation.path_leaks == []
     assert validation.ok is True, validation.to_dict()
     assert validation.artifact_issues == []
+    archive_path = Path(f"{output_dir}.zip")
+    assert archive_path.exists()
+    with zipfile.ZipFile(archive_path) as archive:
+        names = set(archive.namelist())
+        assert "portfolio_pack_index.json" in names
+        assert "run/pipeline_summary.json" in names
+        zipped_index = json.loads(archive.read("portfolio_pack_index.json").decode("utf-8"))
+    zipped_copied = {item["destination"]: item for item in zipped_index["copied"]}
+    assert zipped_index["archive"].endswith("portfolio_pack.bundle.zip")
+    assert len(zipped_copied["run/pipeline_summary.json"]["sha256"]) == 64
+    assert zipped_copied["run/pipeline_summary.json"]["size_bytes"] > 0
