@@ -13,6 +13,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - LERF primary backend with OpenNeRF secondary adapter.
 - Deterministic local query planner for object, affordance, material, and relation prompts.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
+- Real-scene pipeline runner with environment reports and processed-scene validation.
 
 ## Implemented
 
@@ -33,12 +34,15 @@ a trained semantic field and an NVIDIA GPU environment.
 ```bash
 python -m pip install -e ".[dev,video]"
 python scripts/run_dry_run_demo.py
+python scripts/run_scene_pipeline.py --dry-run
 ```
 
 ## Outputs
 
 - Query grid: `results\demo_assets\query_grid.png`
 - Demo montage: `results\demo_assets\demo_montage.gif`
+- Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`
+- Scene inspection: `results/pipeline_runs/desk_scene/scene_data_inspection.md`
 - Evaluation summary: `results/evaluation/eval_summary.json`
 - Qualitative report: `results/evaluation/qualitative_report.md`
 

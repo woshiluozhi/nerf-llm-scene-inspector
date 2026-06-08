@@ -27,6 +27,8 @@ def write_project_report(
         "",
         "This report summarizes a NeRF-LLM Scene Inspector run. The system is built on",
         "Nerfstudio and LERF and is intended as a reproducible research engineering demo.",
+        "For real scenes, the pipeline records environment diagnostics and processed-scene",
+        "inspection artifacts under `results/pipeline_runs/<scene>/`.",
         "",
         "## Scene",
         "",
@@ -67,6 +69,7 @@ def write_project_report(
         lines.append(
             "- This project demonstrates open-vocabulary 3D scene querying without claiming new state-of-the-art results."
         )
+    lines.append("- Review `scene_data_inspection.md` before interpreting real trained outputs.")
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")

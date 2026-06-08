@@ -4,6 +4,8 @@
 
 This report summarizes a NeRF-LLM Scene Inspector run. The system is built on
 Nerfstudio and LERF and is intended as a reproducible research engineering demo.
+For real scenes, the pipeline records environment diagnostics and processed-scene
+inspection artifacts under `results/pipeline_runs/<scene>/`.
 
 ## Scene
 
@@ -36,3 +38,4 @@ Nerfstudio and LERF and is intended as a reproducible research engineering demo.
 
 - Metrics are lightweight portfolio metrics and depend on manual annotations.
 - Dry-run results are synthetic and only validate the evaluation pipeline.
+- Review `scene_data_inspection.md` before interpreting real trained outputs.

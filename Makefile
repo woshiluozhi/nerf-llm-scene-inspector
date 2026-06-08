@@ -1,4 +1,4 @@
-.PHONY: install test lint check demo-dry-run clean-generated
+.PHONY: install test lint check demo-dry-run pipeline-dry-run clean-generated
 
 PYTHON ?= python
 
@@ -14,16 +14,21 @@ lint:
 check:
 	$(PYTHON) scripts/check_env.py --json
 	$(PYTHON) scripts/prepare_data.py --help
+	$(PYTHON) scripts/inspect_scene_data.py --help
 	$(PYTHON) scripts/train_baseline_nerf.py --help
 	$(PYTHON) scripts/train_language_field.py --help
 	$(PYTHON) scripts/query_scene.py --help
 	$(PYTHON) scripts/generate_demo_assets.py --help
 	$(PYTHON) scripts/evaluate_queries.py --help
+	$(PYTHON) scripts/run_scene_pipeline.py --help
 	$(PYTHON) scripts/run_dry_run_demo.py --help
 	$(PYTHON) -m pytest
 
 demo-dry-run:
 	$(PYTHON) scripts/run_dry_run_demo.py
+
+pipeline-dry-run:
+	$(PYTHON) scripts/run_scene_pipeline.py --dry-run --skip-demo --skip-eval
 
 clean-generated:
 	rm -rf data runs outputs viewer_logs wandb

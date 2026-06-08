@@ -37,13 +37,18 @@ jobs:
         run: |
           python scripts/check_env.py --json
           python scripts/prepare_data.py --help
+          python scripts/inspect_scene_data.py --help
           python scripts/train_baseline_nerf.py --help
           python scripts/train_language_field.py --help
           python scripts/query_scene.py --help
           python scripts/generate_demo_assets.py --help
           python scripts/evaluate_queries.py --help
           python scripts/export_portfolio_pack.py --help
+          python scripts/run_scene_pipeline.py --help
           python scripts/run_dry_run_demo.py --help
 
       - name: Run dry-run demo
         run: python scripts/run_dry_run_demo.py
+
+      - name: Run practical pipeline dry-run
+        run: python scripts/run_scene_pipeline.py --dry-run --skip-demo --skip-eval

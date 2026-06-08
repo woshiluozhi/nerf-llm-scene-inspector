@@ -94,6 +94,9 @@ def _validate_processing_prerequisites(input_path: Path, data_type: str) -> None
 
 
 def _write_mock_transforms(output_path: Path) -> None:
+    image_dir = output_path / "images"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    _write_mock_images(image_dir, count=8)
     transforms = {
         "camera_model": "OPENCV",
         "fl_x": 500.0,
@@ -102,17 +105,31 @@ def _write_mock_transforms(output_path: Path) -> None:
         "cy": 256.0,
         "w": 512,
         "h": 512,
-        "frames": [
-            {
-                "file_path": "images/frame_00000.png",
-                "transform_matrix": [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 1.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ],
-            }
+        "frames": [_mock_frame(index) for index in range(8)],
+    }
+    (output_path / "transforms.json").write_text(json.dumps(transforms, indent=2), encoding="utf-8")
+
+
+def _mock_frame(index: int) -> dict[str, object]:
+    return {
+        "file_path": f"images/frame_{index:05d}.png",
+        "transform_matrix": [
+            [1.0, 0.0, 0.0, round((index - 4) * 0.03, 4)],
+            [0.0, 1.0, 0.0, round((index % 3 - 1) * 0.02, 4)],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 1.0],
         ],
     }
-    (output_path / "images").mkdir(parents=True, exist_ok=True)
-    (output_path / "transforms.json").write_text(json.dumps(transforms, indent=2), encoding="utf-8")
+
+
+def _write_mock_images(image_dir: Path, *, count: int) -> None:
+    from PIL import Image, ImageDraw
+
+    for index in range(count):
+        image = Image.new("RGB", (512, 512), (34 + index * 8, 48, 62))
+        draw = ImageDraw.Draw(image)
+        x0 = 96 + index * 18
+        y0 = 160 + (index % 3) * 22
+        draw.rectangle((x0, y0, x0 + 150, y0 + 120), fill=(180, 206, 220), outline=(245, 245, 245))
+        draw.ellipse((280 - index * 8, 225, 370 - index * 8, 315), fill=(214, 102, 85))
+        image.save(image_dir / f"frame_{index:05d}.png")

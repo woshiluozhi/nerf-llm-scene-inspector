@@ -13,6 +13,7 @@
 
 ```bash
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
+python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50
 ```
 
 If COLMAP fails, try:
@@ -32,6 +33,26 @@ python scripts/train_language_field.py --data data/processed/desk_scene --backen
 ```
 
 Start with `lerf-lite` for smaller GPUs. Increase training iterations only after data processing and baseline rendering look reasonable.
+
+## One-Command Pipeline
+
+After `scripts/check_env.py --check-upstream --require-gpu` passes on a GPU machine, run:
+
+```bash
+python scripts/run_scene_pipeline.py \
+  --input path/to/video.mp4 \
+  --scene-name desk_scene \
+  --type video \
+  --backend lerf \
+  --variant lerf-lite \
+  --query "mug" \
+  --query "objects that can hold water" \
+  --num-views 3 \
+  --strict
+```
+
+Review `results/pipeline_runs/desk_scene/pipeline_summary.json` and
+`results/pipeline_runs/desk_scene/scene_data_inspection.md` before using the results in a portfolio report.
 
 ## LERF Prompt Examples
 

@@ -53,6 +53,8 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Typed JSON artifacts for query results and scene reports.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
+- Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
+- Practical one-command pipeline runner that records environment, data, training, query, demo, and evaluation steps.
 - GitHub Actions CI for tests, CLI help checks, environment diagnostics, and dry-run demo.
 
 ## Not Claimed
@@ -137,10 +139,19 @@ Five-minute CPU-only dry-run demo:
 python scripts/run_dry_run_demo.py
 ```
 
+Practical one-command dry-run pipeline:
+
+```bash
+python scripts/run_scene_pipeline.py --dry-run
+```
+
+This writes a reproducible pipeline record to `results/pipeline_runs/desk_scene/pipeline_summary.json`.
+
 Dry-run mode creates mock metadata and artifacts without requiring a GPU:
 
 ```bash
 python scripts/prepare_data.py --input examples --output data/processed/desk_scene --type images --dry-run
+python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 1 --allow-warnings
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene --dry-run
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene --dry-run
 python scripts/query_scene.py --config runs/language_desk_scene/config.yml --backend lerf --query "Find objects related to making coffee." --output results/query_outputs --dry-run
@@ -152,11 +163,27 @@ Real mode uses the installed upstream tools:
 
 ```bash
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
+python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
 python scripts/query_scene.py --config path/to/config.yml --backend lerf --query "mug" --output results/query_outputs --num-views 3
 streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
+```
+
+One-command real-scene pipeline after upstream tools are installed:
+
+```bash
+python scripts/run_scene_pipeline.py \
+  --input path/to/video.mp4 \
+  --scene-name desk_scene \
+  --type video \
+  --backend lerf \
+  --variant lerf-lite \
+  --query "mug" \
+  --query "objects that can hold water" \
+  --num-views 3 \
+  --strict
 ```
 
 Launch the Nerfstudio viewer for a trained run:
@@ -171,6 +198,9 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 
 - `data/processed/<scene>/transforms.json`
 - `data/processed/<scene>/scene_inspector_metadata.json`
+- `results/pipeline_runs/<scene>/pipeline_summary.json`
+- `results/pipeline_runs/<scene>/scene_data_inspection.json`
+- `results/pipeline_runs/<scene>/scene_data_inspection.md`
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - Overlay images combining RGB render, relevancy heatmap, and query caption.
@@ -201,13 +231,16 @@ The tests do not require GPU, Nerfstudio, LERF, or trained checkpoints:
 pytest
 python scripts/check_env.py --json
 python scripts/run_dry_run_demo.py
+python scripts/run_scene_pipeline.py --dry-run --skip-demo --skip-eval
 python scripts/prepare_data.py --help
+python scripts/inspect_scene_data.py --help
 python scripts/train_baseline_nerf.py --help
 python scripts/train_language_field.py --help
 python scripts/query_scene.py --help
 python scripts/generate_demo_assets.py --help
 python scripts/evaluate_queries.py --help
 python scripts/export_portfolio_pack.py --help
+python scripts/run_scene_pipeline.py --help
 ```
 
 If `ruff` is installed:
