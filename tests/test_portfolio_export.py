@@ -73,6 +73,9 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     index = json.loads((output_dir / "portfolio_pack_index.json").read_text(encoding="utf-8"))
     assert index["missing"] == []
     copied_by_destination = {item["destination"]: item for item in index["copied"]}
+    assert copied_by_destination["README.md"]["source"] == "generated"
+    assert copied_by_destination["README.md"]["size_bytes"] > 0
+    assert len(copied_by_destination["README.md"]["sha256"]) == 64
     assert copied_by_destination["run/pipeline_summary.json"]["size_bytes"] > 0
     assert len(copied_by_destination["run/pipeline_summary.json"]["sha256"]) == 64
     assert all("sha256" in item and "size_bytes" in item for item in index["copied"])
@@ -109,6 +112,13 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert str(tmp_path) not in json.dumps(index)
     packed_summary = (output_dir / "run" / "pipeline_summary.json").read_text(encoding="utf-8")
     assert str(tmp_path) not in packed_summary
+    pack_readme = (output_dir / "README.md").read_text(encoding="utf-8")
+    assert "# NeRF-LLM Scene Inspector Portfolio Pack" in pack_readme
+    assert "CPU dry-run smoke demo" in pack_readme
+    assert "project/docs/index.html" in pack_readme
+    assert "run/portfolio_page.html" in pack_readme
+    assert "state-of-the-art benchmark performance" in pack_readme
+    assert str(tmp_path) not in pack_readme
     packed_baseline_summary = (
         output_dir / "run" / "training" / "baseline_train_summary.json"
     ).read_text(encoding="utf-8")
@@ -199,11 +209,16 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert archive_path.exists()
     with zipfile.ZipFile(archive_path) as archive:
         names = set(archive.namelist())
+        assert "README.md" in names
         assert "portfolio_pack_index.json" in names
         assert "run/pipeline_summary.json" in names
         zipped_index = json.loads(archive.read("portfolio_pack_index.json").decode("utf-8"))
+        zipped_readme = archive.read("README.md").decode("utf-8")
     zipped_copied = {item["destination"]: item for item in zipped_index["copied"]}
     assert zipped_index["archive"].endswith("portfolio_pack.bundle.zip")
+    assert "portfolio_pack.bundle.zip" in zipped_readme
+    assert len(zipped_copied["README.md"]["sha256"]) == 64
+    assert zipped_copied["README.md"]["size_bytes"] > 0
     assert len(zipped_copied["run/pipeline_summary.json"]["sha256"]) == 64
     assert zipped_copied["run/pipeline_summary.json"]["size_bytes"] > 0
 

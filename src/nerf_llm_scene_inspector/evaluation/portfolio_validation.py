@@ -15,6 +15,7 @@ from nerf_llm_scene_inspector.utils.paths import utc_timestamp
 
 
 PROJECT_REQUIRED_FILES = [
+    "README.md",
     "portfolio_pack_index.json",
     "project/README.md",
     "project/LICENSE",

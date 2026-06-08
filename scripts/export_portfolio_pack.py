@@ -46,7 +46,6 @@ def main() -> int:
         run_summary = _copy_run_materials(run_dir, output, copied, missing, optional_missing)
         _copy_run_index(run_dir.parent, output, copied, optional_missing)
 
-    _add_artifact_digests(output, copied)
     archive_path = Path(f"{output}.zip") if args.zip else None
     index = {
         "copied": copied,
@@ -58,10 +57,14 @@ def main() -> int:
         "archive": _display_source_path(Path(archive_path)) if archive_path else None,
         "recommended_demo_command": "python scripts/run_scene_pipeline.py --dry-run --query mug",
     }
+    _write_pack_readme(output, index, copied)
+    _add_artifact_digests(output, copied)
     (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     if args.zip:
         archive_path = Path(shutil.make_archive(str(output), "zip", output))
         index["archive"] = _display_source_path(archive_path)
+        _write_pack_readme(output, index, copied, replace_existing=True)
+        _add_artifact_digests(output, copied)
         (output / "portfolio_pack_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     print(json.dumps(index, indent=2))
     return 0 if not missing or args.allow_missing else 1
@@ -443,6 +446,109 @@ def _add_artifact_digests(pack_root: Path, copied: list[dict[str, Any]]) -> None
             continue
         item["size_bytes"] = path.stat().st_size
         item["sha256"] = _sha256(path)
+
+
+def _write_pack_readme(
+    output: Path,
+    index: dict[str, Any],
+    copied: list[dict[str, Any]],
+    *,
+    replace_existing: bool = False,
+) -> None:
+    readme = output / "README.md"
+    readme.write_text(_pack_readme_text(index), encoding="utf-8")
+    existing = next((item for item in copied if item.get("destination") == "README.md"), None)
+    if existing is not None:
+        if replace_existing:
+            existing.pop("size_bytes", None)
+            existing.pop("sha256", None)
+        return
+    copied.append({"source": "generated", "destination": "README.md"})
+
+
+def _pack_readme_text(index: dict[str, Any]) -> str:
+    run_summary = index.get("run_summary") if isinstance(index.get("run_summary"), dict) else {}
+    artifacts = run_summary.get("artifacts") if isinstance(run_summary.get("artifacts"), dict) else {}
+    dry_run = run_summary.get("dry_run")
+    evidence_mode = "CPU dry-run smoke demo" if dry_run is True else "real-scene run" if dry_run is False else "project export"
+    scene_name = run_summary.get("scene_name") or "project-only export"
+    backend = run_summary.get("backend") or "not recorded"
+    archive = index.get("archive") or "not generated"
+    github = index.get("github") or "not recorded"
+    missing = index.get("missing") if isinstance(index.get("missing"), list) else []
+    optional_missing = index.get("optional_missing") if isinstance(index.get("optional_missing"), list) else []
+    recommended = index.get("recommended_demo_command") or "python scripts/run_scene_pipeline.py --dry-run --query mug"
+
+    lines = [
+        "# NeRF-LLM Scene Inspector Portfolio Pack",
+        "",
+        "This pack is a shareable snapshot of the NeRF-LLM Scene Inspector project and, when present, one exported pipeline run.",
+        "It is intended for professor outreach, portfolio review, and reproducibility checks.",
+        "",
+        "## At A Glance",
+        "",
+        f"- Scene: `{scene_name}`",
+        f"- Evidence mode: `{evidence_mode}`",
+        f"- Backend: `{backend}`",
+        f"- Repository: {github}",
+        f"- Archive: `{archive}`",
+        f"- Missing required files: {len(missing)}",
+        f"- Missing optional files: {len(optional_missing)}",
+        "",
+        "## Read First",
+        "",
+        "- `project/docs/index.html`: polished project site and high-level demo narrative.",
+        "- `project/README.md`: full project setup, architecture, commands, and limitations.",
+        "- `run/portfolio_page.html`: run-specific visual page, if this pack includes a run.",
+        "- `run/run_result_card.md`: concise run outcome and evidence level.",
+        "- `run/research_report.md`: method-oriented run report.",
+        "- `run/submission_packet/submission_checklist.md`: external-sharing checklist and calibrated claims.",
+        "- `portfolio_pack_index.json`: machine-readable manifest with artifact digests.",
+        "",
+        "## Evidence Notes",
+        "",
+        "This project is research engineering built on Nerfstudio and LERF-style language fields.",
+        "It demonstrates open-vocabulary 3D scene querying workflows, but does not claim a new NeRF architecture,",
+        "state-of-the-art benchmark performance, or production robotics reliability.",
+    ]
+    if dry_run is True:
+        lines.extend(
+            [
+                "",
+                "The included run is a CPU-safe dry-run smoke demo. Treat the visual/query artifacts as pipeline evidence,",
+                "not as trained LERF outputs from a real captured scene.",
+            ]
+        )
+    elif dry_run is False:
+        lines.extend(
+            [
+                "",
+                "The included run is marked as a real-scene run. Review the quality gate, claim audit, and evaluation artifacts",
+                "before citing any quantitative result.",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Reproduce Or Inspect",
+            "",
+            f"- Smoke demo command: `{recommended}`",
+            "- Validate this pack: `python scripts/validate_portfolio_pack.py --pack results/portfolio_pack`",
+            "- Validate the zip: `python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip`",
+        ]
+    )
+    if artifacts:
+        lines.extend(["", "## Run Artifact Map", ""])
+        for key in sorted(artifacts):
+            lines.append(f"- `{key}`: `{artifacts[key]}`")
+    if missing:
+        lines.extend(["", "## Required Files Missing", ""])
+        lines.extend(f"- `{item}`" for item in missing[:20])
+    if optional_missing:
+        lines.extend(["", "## Optional Files Missing", ""])
+        lines.extend(f"- `{item}`" for item in optional_missing[:20])
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _sha256(path: Path) -> str:

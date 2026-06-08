@@ -208,6 +208,7 @@ def test_validate_portfolio_pack_cli_writes_default_report_for_zip(tmp_path: Pat
 def _write_complete_pack(tmp_path: Path) -> Path:
     pack = tmp_path / "portfolio_pack"
     files = [
+        "README.md",
         "project/README.md",
         "project/LICENSE",
         "project/CITATION.cff",
