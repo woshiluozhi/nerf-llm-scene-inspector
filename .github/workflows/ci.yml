@@ -39,6 +39,7 @@ jobs:
       - name: Check CLI help
         run: |
           python scripts/check_env.py --json
+          python scripts/create_capture_manifest.py --help
           python scripts/preflight_real_run.py --help
           python scripts/prepare_data.py --help
           python scripts/inspect_scene_data.py --help

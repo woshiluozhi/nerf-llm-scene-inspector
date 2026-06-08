@@ -12,10 +12,14 @@ assignees: ""
 - Scene type:
 - Lighting:
 - Video/image count:
+- Capture manifest:
+- Privacy reviewed:
+- Static scene / high overlap:
 
 ## Commands
 
 ```bash
+python scripts/create_capture_manifest.py ...
 python scripts/prepare_data.py ...
 python scripts/train_baseline_nerf.py ...
 python scripts/train_language_field.py ...

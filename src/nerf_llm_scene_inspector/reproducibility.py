@@ -218,6 +218,11 @@ def _prerequisites(*, dry_run: bool) -> list[str]:
 def _artifacts(root: Path) -> list[ReproductionArtifact]:
     candidates = {
         "pipeline_summary": ("pipeline_summary.json", "Top-level run status and provenance."),
+        "capture_manifest": ("capture_manifest.md", "Scene-capture metadata and reproducibility context."),
+        "capture_manifest_validation": (
+            "capture_manifest_validation.md",
+            "Validation of capture conditions, overlap, static scene, and privacy review.",
+        ),
         "preflight_report": ("preflight_report.md", "Real-run readiness checks before training."),
         "environment_report": ("environment_report.json", "Runtime and upstream dependency checks."),
         "scene_inspection": ("scene_data_inspection.md", "Processed scene quality and pose readiness."),

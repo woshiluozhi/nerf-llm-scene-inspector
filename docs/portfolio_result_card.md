@@ -14,6 +14,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Deterministic local query planner for object, affordance, material, and relation prompts.
 - Typed QueryResult JSON, overlay generation, evaluation metrics, and report writing.
 - Annotation review contact sheets for checking manual `bbox_2d` labels before reporting metrics.
+- Capture manifests for device, lighting, camera motion, overlap, static-scene, and privacy metadata.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
@@ -53,6 +54,7 @@ python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_sce
 - Demo montage: `results\demo_assets\demo_montage.gif`
 - Project site: `docs/index.html`
 - Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`
+- Capture manifest: `results/pipeline_runs/desk_scene/capture_manifest.md`
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
 - Evidence scorecard: `results/pipeline_runs/desk_scene/evidence_scorecard.md`
 - Static portfolio page: `results/pipeline_runs/desk_scene/portfolio_page.html`

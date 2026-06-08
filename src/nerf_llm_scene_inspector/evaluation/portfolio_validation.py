@@ -30,6 +30,10 @@ PROJECT_REQUIRED_FILES = [
 
 RUN_REQUIRED_FILES = [
     "run/pipeline_summary.json",
+    "run/capture_manifest.json",
+    "run/capture_manifest.md",
+    "run/capture_manifest_validation.json",
+    "run/capture_manifest_validation.md",
     "run/preflight_report.json",
     "run/preflight_report.md",
     "run/evidence_scorecard.json",
@@ -145,6 +149,7 @@ def validate_portfolio_pack(pack_dir: str | Path) -> PortfolioValidationReport:
         _check_required_files(pack_path, RUN_REQUIRED_FILES, missing_files)
         _check_run_logs(pack_path, artifact_issues)
         _check_run_audit(pack_path, warnings, errors)
+        _check_capture_manifest(pack_path, warnings, errors)
         _check_evidence_scorecard(pack_path, warnings, errors)
         _check_annotation_validation(pack_path, warnings, errors)
     else:
@@ -290,6 +295,19 @@ def _check_run_audit(pack_path: Path, warnings: list[str], errors: list[str]) ->
         warnings.append("run_audit.json status is needs_review; inspect warnings before sharing.")
     elif status and status != "ready":
         warnings.append(f"run_audit.json has unrecognized status: {status}")
+
+
+def _check_capture_manifest(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    validation = _read_json(pack_path / "run" / "capture_manifest_validation.json", errors)
+    if not isinstance(validation, dict):
+        return
+    status = str(validation.get("status") or "")
+    if status == "blocked":
+        errors.append("capture_manifest_validation.json status is blocked.")
+    elif status == "needs_review":
+        warnings.append("capture_manifest_validation.json status is needs_review; fill capture metadata before sharing real results.")
+    elif status and status != "ready":
+        warnings.append(f"capture_manifest_validation.json has unrecognized status: {status}")
 
 
 def _check_evidence_scorecard(pack_path: Path, warnings: list[str], errors: list[str]) -> None:

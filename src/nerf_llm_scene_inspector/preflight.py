@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from nerf_llm_scene_inspector.capture_manifest import validate_capture_manifest
 from nerf_llm_scene_inspector.scene_validation import SceneDataInspection, inspect_processed_scene
 from nerf_llm_scene_inspector.utils.env_check import (
     CheckItem,
@@ -54,10 +55,12 @@ class PreflightReport:
     variant: str
     input_type: str
     input_path: str = ""
+    capture_manifest_path: str = ""
     data_path: str = ""
     config_path: str = ""
     dry_run: bool = False
     environment: dict[str, Any] = field(default_factory=dict)
+    capture_manifest_validation: dict[str, Any] | None = None
     scene_inspection: dict[str, Any] | None = None
     checks: list[PreflightCheck] = field(default_factory=list)
     timestamp: str = field(default_factory=utc_timestamp)
@@ -79,12 +82,14 @@ class PreflightReport:
             "variant": self.variant,
             "input_type": self.input_type,
             "input_path": self.input_path,
+            "capture_manifest_path": self.capture_manifest_path,
             "data_path": self.data_path,
             "config_path": self.config_path,
             "dry_run": self.dry_run,
             "fail_count": self.fail_count,
             "warn_count": self.warn_count,
             "environment": self.environment,
+            "capture_manifest_validation": self.capture_manifest_validation,
             "scene_inspection": self.scene_inspection,
             "checks": [check.to_dict() for check in self.checks],
             "timestamp": self.timestamp,
@@ -109,6 +114,7 @@ class PreflightReport:
             f"- Variant: {self.variant}",
             f"- Input type: {self.input_type}",
             f"- Input path: {self.input_path or 'not provided'}",
+            f"- Capture manifest: {self.capture_manifest_path or 'not provided'}",
             f"- Processed data: {self.data_path or 'not provided'}",
             f"- Config path: {self.config_path or 'not provided'}",
             f"- Dry run mode: {self.dry_run}",
@@ -119,6 +125,17 @@ class PreflightReport:
             "",
             *_check_lines(self.checks),
         ]
+        if self.capture_manifest_validation:
+            lines.extend(
+                [
+                    "",
+                    "## Capture Manifest Summary",
+                    "",
+                    f"- Status: {self.capture_manifest_validation.get('status')}",
+                    f"- Failed checks: {self.capture_manifest_validation.get('fail_count')}",
+                    f"- Warning checks: {self.capture_manifest_validation.get('warn_count')}",
+                ]
+            )
         if self.scene_inspection:
             lines.extend(
                 [
@@ -140,6 +157,7 @@ def build_real_run_preflight(
     *,
     input_path: str | Path | None = None,
     input_type: str = "video",
+    capture_manifest_path: str | Path | None = None,
     data_path: str | Path | None = None,
     config_path: str | Path | None = None,
     scene_name: str = "",
@@ -158,6 +176,27 @@ def build_real_run_preflight(
     checks: list[PreflightCheck] = []
     checks.extend(_backend_checks(backend=backend, variant=variant))
     checks.extend(_raw_input_checks(input_path, normalized_type, min_frames=min_frames, dry_run=dry_run))
+    capture_validation = None
+    if capture_manifest_path:
+        capture_validation = validate_capture_manifest(
+            capture_manifest_path,
+            min_images=min_frames,
+            require_privacy_review=not dry_run,
+        )
+        checks.append(_capture_manifest_check(capture_validation))
+    else:
+        checks.append(
+            PreflightCheck(
+                name="capture_manifest",
+                status="warn",
+                category="capture",
+                detail="No capture manifest was provided.",
+                recommendation=(
+                    "Run scripts/create_capture_manifest.py or use --capture-manifest so capture "
+                    "conditions and privacy review are reproducible."
+                ),
+            )
+        )
     env_report = _build_targeted_env_report(
         backend=backend,
         variant=variant,
@@ -200,10 +239,12 @@ def build_real_run_preflight(
         variant=variant,
         input_type=normalized_type,
         input_path=str(input_path) if input_path else "",
+        capture_manifest_path=str(capture_manifest_path) if capture_manifest_path else "",
         data_path=str(data_path) if data_path else "",
         config_path=str(config_path) if config_path else "",
         dry_run=dry_run,
         environment=env_report.to_dict(),
+        capture_manifest_validation=capture_validation.to_dict() if capture_validation else None,
         scene_inspection=scene_inspection.to_dict() if scene_inspection else None,
         checks=checks,
     )
@@ -431,6 +472,28 @@ def _env_checks(report: EnvReport) -> list[PreflightCheck]:
             )
         )
     return checks
+
+
+def _capture_manifest_check(validation: Any) -> PreflightCheck:
+    status = str(validation.status)
+    if status == "ready":
+        check_status: PreflightStatus = "pass"
+    elif status == "blocked":
+        check_status = "fail"
+    else:
+        check_status = "warn"
+    return PreflightCheck(
+        name="capture_manifest",
+        status=check_status,
+        category="capture",
+        detail=f"status={status}, warnings={validation.warn_count}, failures={validation.fail_count}",
+        recommendation=(
+            ""
+            if check_status == "pass"
+            else "Open capture_manifest_validation.md and fill missing capture/privacy fields."
+        ),
+        artifact=validation.manifest_path,
+    )
 
 
 def _scene_check(inspection: SceneDataInspection) -> PreflightCheck:

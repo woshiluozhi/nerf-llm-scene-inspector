@@ -12,6 +12,7 @@ from typing import Any
 from nerf_llm_scene_inspector.agent.planner import LocalRulePlanner
 from nerf_llm_scene_inspector.backends.lerf_backend import LERFBackend
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
+from nerf_llm_scene_inspector.capture_manifest import copy_or_create_capture_manifest
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
@@ -51,6 +52,7 @@ class PipelineConfig:
     runs_root: str | Path = "runs"
     output_root: str | Path = "results/pipeline_runs"
     annotations_path: str | Path = "examples/annotations_example.json"
+    capture_manifest_path: str | Path | None = None
     config_path: str | Path | None = None
     max_num_iterations: int | None = None
     num_views: int = 1
@@ -158,6 +160,10 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "training": str(training_dir),
         "logs": str(logs_dir),
         "run_queries": str(run_queries_path),
+        "capture_manifest_json": str(run_dir / "capture_manifest.json"),
+        "capture_manifest_markdown": str(run_dir / "capture_manifest.md"),
+        "capture_manifest_validation_json": str(run_dir / "capture_manifest_validation.json"),
+        "capture_manifest_validation_markdown": str(run_dir / "capture_manifest_validation.md"),
         "preflight_json": str(run_dir / "preflight_report.json"),
         "preflight_markdown": str(run_dir / "preflight_report.md"),
         "evidence_scorecard_json": str(run_dir / "evidence_scorecard.json"),
@@ -175,9 +181,43 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     }
 
     try:
+        (
+            capture_manifest_json,
+            capture_manifest_md,
+            capture_validation_json,
+            capture_validation_md,
+            capture_validation,
+        ) = copy_or_create_capture_manifest(
+            output_dir=run_dir,
+            input_path=config.input_path,
+            input_type=config.data_type,
+            scene_name=config.scene_name,
+            capture_manifest_path=config.capture_manifest_path,
+            min_images=1 if config.dry_run else config.min_frames,
+            require_privacy_review=config.strict and not config.dry_run,
+        )
+        steps.append(
+            PipelineStep(
+                "capture_manifest",
+                "success" if capture_validation.status == "ready" else "warning",
+                summary={
+                    "status": capture_validation.status,
+                    "ok": capture_validation.ok,
+                    "fail_count": capture_validation.fail_count,
+                    "warn_count": capture_validation.warn_count,
+                },
+                outputs={
+                    "manifest_json": str(capture_manifest_json),
+                    "manifest_markdown": str(capture_manifest_md),
+                    "validation_json": str(capture_validation_json),
+                    "validation_markdown": str(capture_validation_md),
+                },
+            )
+        )
         preflight = build_real_run_preflight(
             input_path=config.input_path,
             input_type=config.data_type,
+            capture_manifest_path=capture_manifest_json,
             data_path=processed_dir if config.skip_prepare else None,
             config_path=config.config_path,
             scene_name=config.scene_name,

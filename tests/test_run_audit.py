@@ -98,6 +98,10 @@ def _write_complete_run(tmp_path: Path) -> Path:
             "steps": steps,
         },
     )
+    _write_json(run_dir / "capture_manifest.json", {"scene_name": "desk_scene"})
+    _write_text(run_dir / "capture_manifest.md", "# Capture\n")
+    _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "ok": True})
+    _write_text(run_dir / "capture_manifest_validation.md", "# Capture Validation\n")
     _write_json(run_dir / "preflight_report.json", {"status": "ready", "ready_for_real_run": True})
     _write_text(run_dir / "preflight_report.md", "# Preflight\n")
     _write_json(run_dir / "environment_report.json", {"ok": True, "strict_failures": []})

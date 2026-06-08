@@ -34,6 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--runs-root", default="runs")
     parser.add_argument("--output-root", default="results/pipeline_runs")
     parser.add_argument("--annotations", default="examples/annotations_example.json")
+    parser.add_argument("--capture-manifest", help="Optional capture_manifest.json to copy into the run.")
     parser.add_argument("--max-num-iterations", type=int)
     parser.add_argument("--num-views", type=int, default=1)
     parser.add_argument("--top-k", type=int, default=5)
@@ -70,6 +71,7 @@ def main() -> int:
         runs_root=args.runs_root,
         output_root=args.output_root,
         annotations_path=args.annotations,
+        capture_manifest_path=args.capture_manifest,
         config_path=args.config,
         max_num_iterations=args.max_num_iterations,
         num_views=args.num_views,

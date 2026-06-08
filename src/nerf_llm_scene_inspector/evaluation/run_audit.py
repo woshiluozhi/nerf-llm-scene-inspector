@@ -172,6 +172,8 @@ def _check_required_files(
 ) -> None:
     required = [
         "pipeline_summary.json",
+        "capture_manifest.json",
+        "capture_manifest_validation.json",
         "preflight_report.json",
         "environment_report.json",
         "scene_data_inspection.json",
@@ -468,6 +470,8 @@ def _check_evaluation(summary: dict[str, Any], findings: list[AuditFinding]) -> 
 def _key_artifacts(root: Path) -> dict[str, str]:
     candidates = {
         "pipeline_summary": "pipeline_summary.json",
+        "capture_manifest": "capture_manifest.md",
+        "capture_manifest_validation": "capture_manifest_validation.md",
         "preflight_report": "preflight_report.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "run_audit": "run_audit.json",

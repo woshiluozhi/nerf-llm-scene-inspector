@@ -163,6 +163,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
 def _artifacts(run_dir: Path) -> dict[str, str]:
     candidates = {
         "pipeline_summary": "pipeline_summary.json",
+        "capture_manifest": "capture_manifest.md",
+        "capture_manifest_validation": "capture_manifest_validation.md",
         "portfolio_page": "portfolio_page.html",
         "evidence_scorecard": "evidence_scorecard.md",
         "run_audit": "run_audit.md",

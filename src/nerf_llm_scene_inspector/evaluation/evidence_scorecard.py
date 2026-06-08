@@ -120,6 +120,7 @@ def build_evidence_scorecard(run_dir: str | Path) -> EvidenceScorecard:
     root = Path(run_dir)
     pipeline_summary = _read_json(root / "pipeline_summary.json")
     preflight = _read_json(root / "preflight_report.json")
+    capture_validation = _read_json(root / "capture_manifest_validation.json")
     environment = _read_json(root / "environment_report.json")
     scene = _read_json(root / "scene_data_inspection.json")
     audit = _read_json(root / "run_audit.json")
@@ -180,6 +181,7 @@ def build_evidence_scorecard(run_dir: str | Path) -> EvidenceScorecard:
             "pose_coverage_score": scene.get("pose_coverage_score"),
             "audit_status": audit.get("status"),
             "preflight_status": preflight.get("status"),
+            "capture_manifest_status": capture_validation.get("status"),
         },
     )
 

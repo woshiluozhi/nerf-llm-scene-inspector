@@ -86,6 +86,10 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "project/docs/assets/query_grid.png",
         "project/docs/assets/demo_montage.gif",
         "run/pipeline_summary.json",
+        "run/capture_manifest.json",
+        "run/capture_manifest.md",
+        "run/capture_manifest_validation.json",
+        "run/capture_manifest_validation.md",
         "run/preflight_report.json",
         "run/preflight_report.md",
         "run/evidence_scorecard.json",
@@ -138,6 +142,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
             "backend": "lerf",
             "artifacts": {
                 "pipeline_summary": "run/pipeline_summary.json",
+                "capture_manifest": "run/capture_manifest.md",
+                "capture_manifest_validation": "run/capture_manifest_validation.md",
                 "preflight_report": "run/preflight_report.md",
                 "evidence_scorecard": "run/evidence_scorecard.md",
                 "portfolio_page": "run/portfolio_page.html",
@@ -170,6 +176,8 @@ def _file_payload(relative_path: str) -> str:
         return json.dumps({"scene_name": "desk_scene", "replay_command": "python scripts/run_scene_pipeline.py --dry-run"})
     if relative_path.endswith("preflight_report.json"):
         return json.dumps({"status": "ready", "ready_for_real_run": True})
+    if relative_path.endswith("capture_manifest_validation.json"):
+        return json.dumps({"status": "ready", "ok": True})
     if relative_path.endswith("evidence_scorecard.json"):
         return json.dumps({"evidence_level": "dry_run_demo_ready", "dry_run": True, "score": 82})
     if relative_path.endswith("annotation_validation.json"):

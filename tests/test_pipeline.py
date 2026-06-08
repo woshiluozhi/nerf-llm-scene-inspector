@@ -28,6 +28,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
 
     assert summary.success is True
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "pipeline_summary.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "capture_manifest.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "capture_manifest_validation.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "preflight_report.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.json").exists()
@@ -93,6 +95,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
 
     assert summary.success is True
     assert (run_dir / "queries.yaml").exists()
+    assert (run_dir / "capture_manifest.json").exists()
+    assert (run_dir / "capture_manifest.md").exists()
+    assert (run_dir / "capture_manifest_validation.json").exists()
+    assert (run_dir / "capture_manifest_validation.md").exists()
     assert (run_dir / "preflight_report.json").exists()
     assert (run_dir / "preflight_report.md").exists()
     assert (run_dir / "evidence_scorecard.json").exists()
@@ -117,6 +123,7 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "reproduce_run.sh").exists()
     run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
+    assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
     assert (run_dir / "logs" / "prepare_data_command.json").exists()
     assert (run_dir / "logs" / "create_annotation_template_command.json").exists()
     assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()
@@ -135,6 +142,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     )
     annotation_step = next(step for step in summary.steps if step.name == "create_annotation_template")
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
+    capture_step = next(step for step in summary.steps if step.name == "capture_manifest")
+    assert capture_step.outputs["manifest_json"] == str(run_dir / "capture_manifest.json")
     audit_step = next(step for step in summary.steps if step.name == "audit_run")
     assert audit_step.outputs["json"] == str(run_dir / "run_audit.json")
     recommendation_step = next(step for step in summary.steps if step.name == "recommend_next_steps")

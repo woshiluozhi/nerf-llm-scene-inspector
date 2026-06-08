@@ -21,6 +21,7 @@ def test_index_pipeline_runs_summarizes_runs(tmp_path: Path) -> None:
     assert index.ready_runs == 1
     assert index.entries[0].scene_name in {"scene_a", "scene_b"}
     assert index.entries[0].artifacts["pipeline_summary"] == "pipeline_summary.json"
+    assert index.entries[0].artifacts["capture_manifest"] == "capture_manifest.md"
     assert index.entries[0].artifacts["portfolio_page"] == "portfolio_page.html"
     assert index.entries[0].artifacts["annotation_review"] == "evaluation/annotation_review.md"
 
@@ -81,6 +82,8 @@ def _write_run(run_dir: Path, *, scene_name: str, audit_status: str, score: int)
     )
     (run_dir / "run_audit.md").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "run_audit.md").write_text("# Audit\n", encoding="utf-8")
+    (run_dir / "capture_manifest.md").write_text("# Capture\n", encoding="utf-8")
+    (run_dir / "capture_manifest_validation.md").write_text("# Capture Validation\n", encoding="utf-8")
     (run_dir / "portfolio_page.html").write_text("<!doctype html>\n", encoding="utf-8")
     (run_dir / "evidence_scorecard.md").write_text("# Scorecard\n", encoding="utf-8")
     (run_dir / "run_recommendations.md").write_text("# Recommendations\n", encoding="utf-8")

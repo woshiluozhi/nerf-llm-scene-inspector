@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from nerf_llm_scene_inspector.capture_manifest import build_capture_manifest, write_capture_manifest_bundle
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
 
 
@@ -18,10 +19,22 @@ def test_real_run_preflight_ready_with_processed_scene(tmp_path: Path) -> None:
     _write_images(images, count=3)
     _write_processed_scene(scene, frame_count=3)
     config.write_text("method_name: lerf-lite\n", encoding="utf-8")
+    manifest = build_capture_manifest(
+        input_path=images,
+        input_type="images",
+        scene_name="unit_scene",
+        capture_device="phone",
+        lighting="bright indoor",
+        static_scene=True,
+        high_overlap=True,
+        privacy_reviewed=True,
+    )
+    manifest_json, *_ = write_capture_manifest_bundle(manifest, tmp_path / "manifest", min_images=3)
 
     report = build_real_run_preflight(
         input_path=images,
         input_type="images",
+        capture_manifest_path=manifest_json,
         data_path=scene,
         config_path=config,
         scene_name="unit_scene",

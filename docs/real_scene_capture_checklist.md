@@ -12,14 +12,17 @@
 ## Data Processing
 
 ```bash
+python scripts/create_capture_manifest.py --input path/to/video.mp4 --type video --scene-name desk_scene --capture-device "phone model" --lighting "bright diffuse indoor" --camera-motion "slow orbit" --static-scene --high-overlap --privacy-reviewed --output results/capture_manifest
 python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
-python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/desk_scene --require-gpu
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --capture-manifest results/capture_manifest/capture_manifest.json --data data/processed/desk_scene --require-gpu
 python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50 --min-pose-extent 0.05
 ```
 
-The first preflight command checks the raw capture and upstream environment before data
-processing. The second command checks the processed Nerfstudio scene before training.
+The capture manifest records device, lighting, camera motion, overlap, static-scene status,
+and privacy review. The first preflight command checks the raw capture and upstream
+environment before data processing. The second command checks the processed Nerfstudio scene
+and capture manifest before training.
 The inspection report checks more than frame count: it reports missing images, invalid
 camera transforms, camera translation extent, approximate camera path length, median camera
 step, duplicate adjacent poses, and a pose coverage score. If pose coverage is low, the

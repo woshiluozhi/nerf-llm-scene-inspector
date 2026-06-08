@@ -22,6 +22,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert "python scripts/generate_portfolio_page.py --run-dir run" in bundle.verification_commands
     assert any("python scripts/review_annotations.py" in command for command in bundle.verification_commands)
     assert any(artifact.name == "pipeline_summary" and artifact.exists for artifact in bundle.artifacts)
+    assert any(artifact.name == "capture_manifest" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "preflight_report" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "evidence_scorecard" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "portfolio_page" and artifact.exists for artifact in bundle.artifacts)
@@ -93,6 +94,8 @@ def _write_run(tmp_path: Path) -> Path:
         },
     )
     _write_json(run_dir / "environment_report.json", {"ok": True})
+    _write_text(run_dir / "capture_manifest.md", "# Capture\n")
+    _write_text(run_dir / "capture_manifest_validation.md", "# Capture Validation\n")
     _write_text(run_dir / "preflight_report.md", "# Preflight\n")
     _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "portfolio_page.html", "<!doctype html>\n")

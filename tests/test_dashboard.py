@@ -30,6 +30,10 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         },
     )
     _write_json(tmp_path / "run_index.json", {"total_runs": 1, "entries": [{"scene_name": "run"}]})
+    _write_json(run_dir / "capture_manifest.json", {"scene_name": "run"})
+    (run_dir / "capture_manifest.md").write_text("# Capture Manifest\n", encoding="utf-8")
+    _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "ok": True})
+    (run_dir / "capture_manifest_validation.md").write_text("# Capture Validation\n", encoding="utf-8")
     _write_json(
         run_dir / "preflight_report.json",
         {"status": "ready", "fail_count": 0, "warn_count": 0},
@@ -77,6 +81,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
 
     assert bundle["pipeline_summary"]["success"] is True
     assert bundle["run_index"]["total_runs"] == 1
+    assert bundle["capture_manifest"]["scene_name"] == "run"
+    assert bundle["capture_manifest_validation"]["status"] == "ready"
     assert bundle["evaluation_table"][0]["query"] == "mug"
     assert bundle["annotation_template"]["queries"][0]["query"] == "mug"
     assert bundle["training_summaries"]["baseline"]["run_type"] == "baseline"

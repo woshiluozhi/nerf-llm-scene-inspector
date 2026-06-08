@@ -172,6 +172,8 @@ def _images(root: Path) -> list[dict[str, str]]:
 def _artifacts(root: Path) -> list[dict[str, str]]:
     candidates = {
         "Pipeline summary": "pipeline_summary.json",
+        "Capture manifest": "capture_manifest.md",
+        "Capture validation": "capture_manifest_validation.md",
         "Preflight report": "preflight_report.md",
         "Evidence scorecard": "evidence_scorecard.md",
         "Run audit": "run_audit.md",

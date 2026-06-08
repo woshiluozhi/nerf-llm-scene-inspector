@@ -106,6 +106,10 @@ def _copy_run_materials(
     run_summary = _load_json_if_exists(pipeline_summary_path)
     _copy_pipeline_summary(pipeline_summary_path, output / "run/pipeline_summary.json", output, copied, missing, run_dir)
     run_files = [
+        (run_dir / "capture_manifest.json", "run/capture_manifest.json"),
+        (run_dir / "capture_manifest.md", "run/capture_manifest.md"),
+        (run_dir / "capture_manifest_validation.json", "run/capture_manifest_validation.json"),
+        (run_dir / "capture_manifest_validation.md", "run/capture_manifest_validation.md"),
         (run_dir / "preflight_report.json", "run/preflight_report.json"),
         (run_dir / "preflight_report.md", "run/preflight_report.md"),
         (run_dir / "evidence_scorecard.json", "run/evidence_scorecard.json"),
@@ -317,6 +321,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         return None
     artifacts = {
         "pipeline_summary": "run/pipeline_summary.json",
+        "capture_manifest": "run/capture_manifest.md",
+        "capture_manifest_validation": "run/capture_manifest_validation.md",
         "preflight_report": "run/preflight_report.md",
         "evidence_scorecard": "run/evidence_scorecard.md",
         "run_index": "run_index.md",

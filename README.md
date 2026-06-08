@@ -54,6 +54,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Deterministic query planner covering object search, affordances, materials, spatial relations, and scene-level semantic expansion.
 - Spatial/evaluation utilities for boxes, relevancy ranking, 2D fallback relations, and qualitative reports.
 - Annotation review artifacts that draw manual `bbox_2d` labels over rendered views for QA before reporting metrics.
+- Capture manifests that record device, lighting, motion, overlap, static-scene, and privacy-review metadata.
 - Real-scene data inspection for `transforms.json`, frame paths, pose matrices, and training readiness.
 - Real-run preflight reports that check raw input, processed scene data, config paths, CUDA/upstream tools, and backend method registration before expensive training.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
@@ -152,6 +153,7 @@ Practical one-command dry-run pipeline:
 
 ```bash
 python scripts/run_scene_pipeline.py --dry-run
+python scripts/create_capture_manifest.py --input examples --type images --scene-name desk_scene --output results/capture_manifest --allow-warnings
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk_scene
@@ -199,8 +201,9 @@ Real mode uses the installed upstream tools:
 
 ```bash
 python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
+python scripts/create_capture_manifest.py --input path/to/video.mp4 --type video --scene-name desk_scene --capture-device "phone model" --lighting "bright diffuse indoor" --camera-motion "slow orbit" --static-scene --high-overlap --privacy-reviewed --output results/capture_manifest
 python scripts/prepare_data.py --input path/to/video.mp4 --output data/processed/desk_scene --type video
-python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --data data/processed/desk_scene --require-gpu
+python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --capture-manifest results/capture_manifest/capture_manifest.json --data data/processed/desk_scene --require-gpu
 python scripts/inspect_scene_data.py --data data/processed/desk_scene --min-frames 50 --min-pose-extent 0.05
 python scripts/train_baseline_nerf.py --data data/processed/desk_scene --method nerfacto --output runs/baseline_desk_scene
 python scripts/train_language_field.py --data data/processed/desk_scene --backend lerf --variant lerf-lite --output runs/language_desk_scene
@@ -234,6 +237,7 @@ python scripts/run_scene_pipeline.py \
   --input path/to/video.mp4 \
   --scene-name desk_scene \
   --type video \
+  --capture-manifest results/capture_manifest/capture_manifest.json \
   --backend lerf \
   --variant lerf-lite \
   --query "mug" \
@@ -264,6 +268,9 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `data/processed/<scene>/transforms.json`
 - `data/processed/<scene>/scene_inspector_metadata.json`
 - `results/pipeline_runs/<scene>/preflight_report.json`
+- `results/pipeline_runs/<scene>/capture_manifest.json`
+- `results/pipeline_runs/<scene>/capture_manifest.md`
+- `results/pipeline_runs/<scene>/capture_manifest_validation.json`
 - `results/pipeline_runs/<scene>/preflight_report.md`
 - `results/pipeline_runs/<scene>/pipeline_summary.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`
@@ -343,6 +350,7 @@ The tests do not require GPU, Nerfstudio, LERF, or trained checkpoints:
 ```bash
 pytest
 python scripts/check_env.py --json
+python scripts/create_capture_manifest.py --help
 python scripts/preflight_real_run.py --help
 python scripts/run_dry_run_demo.py
 python scripts/run_scene_pipeline.py --dry-run --query mug

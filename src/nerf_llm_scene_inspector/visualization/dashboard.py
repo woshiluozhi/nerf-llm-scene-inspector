@@ -21,6 +21,10 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "run_dir": str(root),
         "pipeline_summary": pipeline_summary,
         "run_index": _read_json(root.parent / "run_index.json"),
+        "capture_manifest": _read_json(root / "capture_manifest.json"),
+        "capture_manifest_markdown": _read_text(root / "capture_manifest.md"),
+        "capture_manifest_validation": _read_json(root / "capture_manifest_validation.json"),
+        "capture_manifest_validation_markdown": _read_text(root / "capture_manifest_validation.md"),
         "preflight_report": _read_json(root / "preflight_report.json"),
         "preflight_markdown": _read_text(root / "preflight_report.md"),
         "evidence_scorecard": _read_json(root / "evidence_scorecard.json"),
@@ -199,6 +203,15 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["preflight_markdown"])
             else:
                 st.json(preflight)
+    if bundle["capture_manifest_validation"]:
+        validation = bundle["capture_manifest_validation"]
+        with st.expander("Capture Manifest", expanded=validation.get("status") != "ready"):
+            if bundle["capture_manifest_markdown"]:
+                st.markdown(bundle["capture_manifest_markdown"])
+            if bundle["capture_manifest_validation_markdown"]:
+                st.markdown(bundle["capture_manifest_validation_markdown"])
+            else:
+                st.json(validation)
 
     if bundle["evidence_scorecard"]:
         scorecard = bundle["evidence_scorecard"]
@@ -359,6 +372,8 @@ def _read_text(path: Path) -> str:
 def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = None) -> list[str]:
     expected = [
         "pipeline_summary.json",
+        "capture_manifest.json",
+        "capture_manifest_validation.json",
         "preflight_report.json",
         "evidence_scorecard.json",
         "run_audit.json",

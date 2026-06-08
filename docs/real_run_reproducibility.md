@@ -8,6 +8,7 @@ artifact shape. For a real scene, keep the full run directory and the exported p
 ```bash
 git status --short
 python scripts/check_env.py --check-upstream --require-gpu --verbose
+python scripts/create_capture_manifest.py --input path/to/video.mp4 --type video --scene-name desk_scene --capture-device "phone model" --lighting "bright diffuse indoor" --camera-motion "slow orbit" --static-scene --high-overlap --privacy-reviewed --output results/capture_manifest
 python scripts/preflight_real_run.py --input path/to/video.mp4 --type video --require-gpu --allow-warnings
 ```
 
@@ -28,6 +29,7 @@ python scripts/run_scene_pipeline.py \
   --input path/to/video.mp4 \
   --scene-name desk_scene \
   --type video \
+  --capture-manifest results/capture_manifest/capture_manifest.json \
   --backend lerf \
   --variant lerf-lite \
   --query "mug" \
@@ -43,6 +45,8 @@ python scripts/run_scene_pipeline.py \
 ## What To Inspect
 
 - `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
+- `capture_manifest.md`: capture device, scene type, lighting, camera motion, overlap, static-scene, and privacy metadata.
+- `capture_manifest_validation.md`: checks for missing capture metadata and privacy-review readiness.
 - `preflight_report.md`: raw input, processed scene, config path, CUDA/upstream, and backend-method readiness checks.
 - `../run_index.md`: compact comparison table across pipeline runs in the same root.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.

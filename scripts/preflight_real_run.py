@@ -18,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", help="Raw phone video file or image directory.")
     parser.add_argument("--type", choices=["video", "images"], default="video")
+    parser.add_argument("--capture-manifest", help="Optional capture_manifest.json for reproducibility checks.")
     parser.add_argument("--data", help="Optional processed Nerfstudio scene directory.")
     parser.add_argument("--config", help="Optional trained language-field config.yml.")
     parser.add_argument("--scene-name", default="desk_scene")
@@ -56,6 +57,7 @@ def main() -> int:
     report = build_real_run_preflight(
         input_path=args.input,
         input_type=args.type,
+        capture_manifest_path=args.capture_manifest,
         data_path=args.data,
         config_path=args.config,
         scene_name=args.scene_name,
