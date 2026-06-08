@@ -59,6 +59,7 @@ jobs:
           python scripts/create_evidence_scorecard.py --help
           python scripts/create_reproduction_bundle.py --help
           python scripts/index_runs.py --help
+          python scripts/compare_runs.py --help
           python scripts/export_portfolio_pack.py --help
           python scripts/validate_portfolio_pack.py --help
           python scripts/run_scene_pipeline.py --help

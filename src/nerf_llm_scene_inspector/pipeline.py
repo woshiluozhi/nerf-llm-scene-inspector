@@ -16,6 +16,7 @@ from nerf_llm_scene_inspector.capture_manifest import copy_or_create_capture_man
 from nerf_llm_scene_inspector.data_processing import prepare_data
 from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidence_scorecard
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
+from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_index import index_pipeline_runs
 from nerf_llm_scene_inspector.evaluation.run_recommendations import build_run_recommendations
 from nerf_llm_scene_inspector.preflight import build_real_run_preflight
@@ -151,6 +152,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "pipeline_run": str(run_dir),
         "run_index_json": str(runs_root / "run_index.json"),
         "run_index_markdown": str(runs_root / "run_index.md"),
+        "run_comparison_json": str(runs_root / "run_comparison.json"),
+        "run_comparison_markdown": str(runs_root / "run_comparison.md"),
         "queries": str(query_dir),
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
@@ -629,6 +632,22 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     run_index = index_pipeline_runs(runs_root)
     run_index.to_json(runs_root / "run_index.json")
     run_index.to_markdown(runs_root / "run_index.md")
+    run_comparison = compare_pipeline_runs(runs_root)
+    comparison_json = run_comparison.to_json(runs_root / "run_comparison.json")
+    comparison_md = run_comparison.to_markdown(runs_root / "run_comparison.md")
+    steps.append(
+        PipelineStep(
+            "compare_runs",
+            "success" if run_comparison.total_runs else "warning",
+            summary={
+                "total_runs": run_comparison.total_runs,
+                "portfolio_candidate_count": run_comparison.portfolio_candidate_count,
+                "best_run": run_comparison.best_run,
+            },
+            outputs={"json": str(comparison_json), "markdown": str(comparison_md)},
+        )
+    )
+    summary.to_json(summary_path)
     return summary
 
 

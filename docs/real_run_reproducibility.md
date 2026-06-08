@@ -49,6 +49,7 @@ python scripts/run_scene_pipeline.py \
 - `capture_manifest_validation.md`: checks for missing capture metadata and privacy-review readiness; non-ready status is reflected in the run audit, recommendations, and evidence scorecard.
 - `preflight_report.md`: raw input, processed scene, config path, CUDA/upstream, and backend-method readiness checks.
 - `../run_index.md`: compact comparison table across pipeline runs in the same root.
+- `../run_comparison.md`: ranked comparison across repeated captures/training attempts, with dry-runs separated from real portfolio candidates.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
 - `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
@@ -114,6 +115,7 @@ Refresh the multi-run index after manual edits or copied-in run folders:
 
 ```bash
 python scripts/index_runs.py --root results/pipeline_runs
+python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 

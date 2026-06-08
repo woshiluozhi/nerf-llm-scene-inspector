@@ -20,6 +20,7 @@ check:
 	$(PYTHON) scripts/query_scene.py --help
 	$(PYTHON) scripts/generate_demo_assets.py --help
 	$(PYTHON) scripts/evaluate_queries.py --help
+	$(PYTHON) scripts/compare_runs.py --help
 	$(PYTHON) scripts/run_scene_pipeline.py --help
 	$(PYTHON) scripts/run_dry_run_demo.py --help
 	$(PYTHON) -m pytest

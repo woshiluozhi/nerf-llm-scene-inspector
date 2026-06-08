@@ -60,6 +60,7 @@ It is designed as a portfolio-quality system rather than a paper novelty claim.
 - Practical one-command pipeline runner that records environment, git/runtime provenance, data, training, query, demo, and evaluation steps.
 - Run-level recommendation reports that turn audit, environment, scene, annotation, and evaluation signals into concrete next actions.
 - Evidence scorecards that rate a run's portfolio-readiness across pipeline integrity, capture metadata, environment, scene quality, query outputs, annotations, and presentation artifacts without claiming model performance superiority.
+- Multi-run comparison reports that rank repeated captures/training attempts and identify the strongest real-run portfolio candidate.
 - Static project-level portfolio site under `docs/index.html` for GitHub Pages or local review.
 - Static run-level portfolio pages that summarize evidence, metrics, visual artifacts, and links in a shareable HTML file.
 - Reproduction manifests and replay scripts generated from each pipeline run for shareable experiment recipes.
@@ -160,6 +161,7 @@ python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
 python scripts/index_runs.py --root results/pipeline_runs
+python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 
@@ -298,6 +300,8 @@ python scripts/import_viewer_outputs.py --query "mug" --config path/to/config.ym
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
 - `results/pipeline_runs/run_index.json`
 - `results/pipeline_runs/run_index.md`
+- `results/pipeline_runs/run_comparison.json`
+- `results/pipeline_runs/run_comparison.md`
 - `docs/index.html`
 - `results/pipeline_runs/<scene>/logs/*.json`
 - `results/pipeline_runs/<scene>/project_report.md`
@@ -373,6 +377,7 @@ python scripts/recommend_next_steps.py --help
 python scripts/create_evidence_scorecard.py --help
 python scripts/create_reproduction_bundle.py --help
 python scripts/index_runs.py --help
+python scripts/compare_runs.py --help
 python scripts/export_portfolio_pack.py --help
 python scripts/validate_portfolio_pack.py --help
 python scripts/run_scene_pipeline.py --help

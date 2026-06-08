@@ -58,6 +58,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["capture_manifest"] == "run/capture_manifest.md"
     assert index["run_summary"]["artifacts"]["preflight_report"] == "run/preflight_report.md"
     assert index["run_summary"]["artifacts"]["evidence_scorecard"] == "run/evidence_scorecard.md"
+    assert index["run_summary"]["artifacts"]["run_comparison"] == "run_comparison.md"
     assert index["run_summary"]["artifacts"]["portfolio_page"] == "run/portfolio_page.html"
     assert index["run_summary"]["artifacts"]["annotation_review"] == "run/evaluation/annotation_review.md"
     assert index["run_summary"]["scene_name"] == "export_scene"
@@ -82,6 +83,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert str(tmp_path) not in (output_dir / "run" / "portfolio_page.html").read_text(encoding="utf-8")
     assert (output_dir / "run_index.json").exists()
     assert (output_dir / "run_index.md").exists()
+    assert (output_dir / "run_comparison.json").exists()
+    assert (output_dir / "run_comparison.md").exists()
     assert (output_dir / "run" / "logs" / "prepare_data_command.json").exists()
     assert (output_dir / "run" / "logs" / "generate_demo_assets_command.json").exists()
     assert (output_dir / "run" / "run_audit.json").exists()

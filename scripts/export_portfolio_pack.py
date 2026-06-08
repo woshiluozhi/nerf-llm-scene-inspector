@@ -188,6 +188,8 @@ def _copy_run_index(
     for source, relative_destination in (
         (runs_root / "run_index.json", "run_index.json"),
         (runs_root / "run_index.md", "run_index.md"),
+        (runs_root / "run_comparison.json", "run_comparison.json"),
+        (runs_root / "run_comparison.md", "run_comparison.md"),
     ):
         _copy_share_safe_file(source, output / relative_destination, output, copied, optional_missing, runs_root)
 
@@ -349,6 +351,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         artifacts["baseline_train_summary"] = "run/training/baseline_train_summary.json"
     if _step_succeeded(summary, "train_language_field"):
         artifacts["language_train_summary"] = "run/training/language_train_summary.json"
+    if _step_succeeded(summary, "compare_runs"):
+        artifacts["run_comparison"] = "run_comparison.md"
     return {
         "scene_name": summary.get("scene_name"),
         "success": summary.get("success"),

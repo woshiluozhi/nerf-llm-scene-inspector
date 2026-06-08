@@ -149,6 +149,7 @@
         </ol>
       </div>
       <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
+python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></pre>
@@ -178,7 +179,16 @@ python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></
         <h2>Recent Runs</h2>
         <p>Run-scoped summaries can be regenerated locally or after a real GPU experiment.</p>
       </div>
-      <p class="empty">No run index was supplied when this page was generated.</p>
+      <div class="table-wrap">
+        <table class="runs">
+          <thead><tr><th>Scene</th><th>Status</th><th>Backend</th><th>Mode</th><th>Queries</th><th>Audit</th><th>Top-k</th><th>IoU</th><th>Page</th></tr></thead>
+          <tbody>
+            <tr><td>desk_scene</td><td>success</td><td>lerf</td><td>dry-run</td><td>1</td><td>52</td><td>0.000</td><td>0.179</td><td><a href="../results/pipeline_runs/desk_scene/portfolio_page.html">open</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small-link"><a href="../results/pipeline_runs/run_index.json">Full run index JSON</a></p>
+      <p class="small-link"><a href="../results/pipeline_runs/run_comparison.md">Run comparison report</a></p>
     </section>
     <section class="band links">
       <h2>Portfolio Materials</h2>
@@ -190,7 +200,7 @@ python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></
         <li><a href="real_scene_capture_checklist.md">Real-scene capture checklist</a></li>
       </ul>
     </section>
-    <footer>Generated at 2026-06-08T14:37:05+00:00 from ..</footer>
+    <footer>Generated at 2026-06-08T14:47:54+00:00 from ..</footer>
   </main>
 </body>
 </html>

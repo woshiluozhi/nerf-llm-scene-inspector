@@ -70,6 +70,8 @@ Review `results/pipeline_runs/desk_scene/preflight_report.md`,
 `results/pipeline_runs/desk_scene/scene_data_inspection.md` before using the results in a portfolio report.
 Then review `results/pipeline_runs/desk_scene/evidence_scorecard.md` to see whether the run is only
 a smoke demo, still needs review, or has enough real-run evidence for portfolio sharing.
+After repeated captures or training attempts, run `python scripts/compare_runs.py --root results/pipeline_runs`
+and inspect `results/pipeline_runs/run_comparison.md` before selecting a portfolio candidate.
 Open `results/pipeline_runs/desk_scene/portfolio_page.html` for a compact static review page
 with score, metrics, visual evidence, and links to the underlying artifacts.
 The pipeline cleans the current run's `queries/`, `demo_assets/`, and `evaluation/` folders by default so

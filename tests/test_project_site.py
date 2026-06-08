@@ -38,6 +38,7 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
     }
     run_index_path = runs_root / "run_index.json"
     run_index_path.write_text(json.dumps(run_index), encoding="utf-8")
+    (runs_root / "run_comparison.md").write_text("# Comparison\n", encoding="utf-8")
     output = repo / "docs" / "index.html"
 
     site = build_project_site(output, repo_root=repo, run_index_path=run_index_path)
@@ -46,6 +47,7 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
     assert "NeRF-LLM Scene Inspector" in html
     assert "desk_scene" in html
     assert "../results/pipeline_runs/desk_scene/portfolio_page.html" in html
+    assert "../results/pipeline_runs/run_comparison.md" in html
     assert "assets/query_grid.png" in html
     assert str(tmp_path) not in html
 

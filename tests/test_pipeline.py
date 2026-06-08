@@ -37,6 +37,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "portfolio_page.html").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.json").exists()
     assert (tmp_path / "pipeline_runs" / "run_index.md").exists()
+    assert (tmp_path / "pipeline_runs" / "run_comparison.json").exists()
+    assert (tmp_path / "pipeline_runs" / "run_comparison.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_audit.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_recommendations.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "reproduction_manifest.json").exists()
@@ -124,6 +126,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     run_index = json.loads((tmp_path / "pipeline_runs" / "run_index.json").read_text(encoding="utf-8"))
     assert run_index["entries"][0]["scene_name"] == "scoped_scene"
     assert run_index["entries"][0]["artifacts"]["capture_manifest"] == "capture_manifest.md"
+    run_comparison = json.loads(
+        (tmp_path / "pipeline_runs" / "run_comparison.json").read_text(encoding="utf-8")
+    )
+    assert run_comparison["best_run"]["scene_name"] == "scoped_scene"
     assert (run_dir / "logs" / "prepare_data_command.json").exists()
     assert (run_dir / "logs" / "create_annotation_template_command.json").exists()
     assert (run_dir / "logs" / "generate_demo_assets_command.json").exists()
@@ -160,6 +166,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert reproduction_step.outputs["manifest"] == str(run_dir / "reproduction_manifest.json")
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
+    comparison_step = next(step for step in summary.steps if step.name == "compare_runs")
+    assert comparison_step.outputs["json"] == str(tmp_path / "pipeline_runs" / "run_comparison.json")
 
 
 def test_run_scene_pipeline_writes_run_scoped_training_summaries(tmp_path: Path) -> None:

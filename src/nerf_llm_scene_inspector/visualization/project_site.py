@@ -42,6 +42,7 @@ class ProjectPortfolioSite:
     overlay_images: list[dict[str, str]] = field(default_factory=list)
     run_entries: list[SiteRunEntry] = field(default_factory=list)
     run_index_link: str = ""
+    run_comparison_link: str = ""
 
     def to_html(self) -> str:
         """Render the site as static HTML with relative links."""
@@ -102,7 +103,7 @@ class ProjectPortfolioSite:
                 _code_panel(),
                 "    </section>",
                 _visual_section(self.overlay_images, self.montage_image),
-                _runs_section(self.run_entries, self.run_index_link),
+                _runs_section(self.run_entries, self.run_index_link, self.run_comparison_link),
                 '    <section class="band links">',
                 "      <h2>Portfolio Materials</h2>",
                 "      <ul>",
@@ -153,6 +154,7 @@ def build_project_site(
         overlay_images=_overlay_images(assets_dir, output_dir),
         run_entries=_run_entries(run_index, Path(run_index_path).parent if run_index_path else None, output_dir, max_runs),
         run_index_link=_optional_relative_link(Path(run_index_path), output_dir) if run_index_path else "",
+        run_comparison_link=_run_comparison_link(run_index_path, output_dir),
     )
 
 
@@ -252,7 +254,7 @@ def _visual_section(images: list[dict[str, str]], montage_image: str) -> str:
     return "\n".join(parts)
 
 
-def _runs_section(entries: list[SiteRunEntry], run_index_link: str) -> str:
+def _runs_section(entries: list[SiteRunEntry], run_index_link: str, run_comparison_link: str) -> str:
     lines = [
         '    <section class="band">',
         '      <div class="section-head">',
@@ -296,6 +298,10 @@ def _runs_section(entries: list[SiteRunEntry], run_index_link: str) -> str:
     lines.extend(["          </tbody>", "        </table>", "      </div>"])
     if run_index_link:
         lines.append(f'      <p class="small-link"><a href="{_escape(run_index_link)}">Full run index JSON</a></p>')
+    if run_comparison_link:
+        lines.append(
+            f'      <p class="small-link"><a href="{_escape(run_comparison_link)}">Run comparison report</a></p>'
+        )
     lines.append("    </section>")
     return "\n".join(lines)
 
@@ -311,9 +317,17 @@ def _capability(title: str, description: str) -> str:
 
 def _code_panel() -> str:
     return """      <pre class="commands"><code>python scripts/run_scene_pipeline.py --dry-run --query mug
+python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_scene
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack</code></pre>"""
+
+
+def _run_comparison_link(run_index_path: str | Path | None, output_dir: Path) -> str:
+    if not run_index_path:
+        return ""
+    comparison_path = Path(run_index_path).parent / "run_comparison.md"
+    return _optional_relative_link(comparison_path, output_dir)
 
 
 def _style_block() -> str:

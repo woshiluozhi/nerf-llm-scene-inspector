@@ -18,6 +18,7 @@ a trained semantic field and an NVIDIA GPU environment.
 - Real-scene pipeline runner with environment reports and processed-scene validation.
 - Real-run preflight checks for capture inputs, upstream tools, CUDA, backend registration, processed scenes, and config paths.
 - Conservative evidence scorecard that separates dry-run smoke demos from real portfolio-ready runs.
+- Multi-run comparison report for ranking repeated captures or training attempts before selecting a portfolio candidate.
 - Static project-level portfolio site for GitHub Pages or local review.
 - Static HTML portfolio page with evidence score, metrics, visual artifacts, and artifact links.
 
@@ -44,6 +45,7 @@ a trained semantic field and an NVIDIA GPU environment.
 python -m pip install -e ".[dev,video]"
 python scripts/run_dry_run_demo.py
 python scripts/run_scene_pipeline.py --dry-run
+python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_scene --zip
 ```
@@ -54,6 +56,7 @@ python scripts/export_portfolio_pack.py --run-dir results/pipeline_runs/desk_sce
 - Demo montage: `results\demo_assets\demo_montage.gif`
 - Project site: `docs/index.html`
 - Pipeline summary: `results/pipeline_runs/desk_scene/pipeline_summary.json`
+- Run comparison: `results/pipeline_runs/run_comparison.md`
 - Capture manifest: `results/pipeline_runs/desk_scene/capture_manifest.md`
 - Capture validation: `results/pipeline_runs/desk_scene/capture_manifest_validation.md`
 - Preflight report: `results/pipeline_runs/desk_scene/preflight_report.md`
