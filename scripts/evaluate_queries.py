@@ -51,13 +51,24 @@ def main() -> int:
             if not query_file.get("queries") or item.query in query_file.get("queries", [])
         }
         rows = qualitative_success_table(results, annotation_dict, k=args.top_k)
-        successes = [bool(row["topk_hit"]) for row in rows]
+        evaluated_rows = [row for row in rows if row.get("evaluation_status") == "evaluated"]
+        metric_rows = _best_rows_by_query(evaluated_rows)
+        successes = [bool(row["topk_hit"]) for row in metric_rows]
         metrics = {
-            "top_k_hit_rate": semantic_query_success_rate(successes),
-            "mean_iou_2d": _mean([float(row["best_iou_2d"]) for row in rows]),
-            "semantic_success_rate": semantic_query_success_rate(successes),
+            "top_k_hit_rate": semantic_query_success_rate(successes) if metric_rows else None,
+            "mean_iou_2d": _mean_or_none([float(row["best_iou_2d"]) for row in metric_rows]),
+            "semantic_success_rate": semantic_query_success_rate(successes) if metric_rows else None,
             "average_relevancy_score": average_relevancy_score(results),
-            "num_evaluated_queries": len(rows),
+            "num_evaluated_queries": len(metric_rows),
+            "num_result_queries": len(rows),
+            "num_unique_result_queries": len({str(row.get("query", "")) for row in rows}),
+            "num_annotated_queries": len(
+                {str(row.get("query", "")) for row in rows if row.get("annotation_available")}
+            ),
+            "num_bbox_annotated_queries": len(metric_rows),
+            "num_qualitative_only_queries": len(
+                {str(row.get("query", "")) for row in rows if row.get("evaluation_status") != "evaluated"}
+            ),
         }
         summary_path = output / "eval_summary.json"
         table_path = output / "eval_table.csv"
@@ -90,7 +101,7 @@ def main() -> int:
 def _load_results(results_dir: Path) -> list[QueryResult]:
     if not results_dir.exists():
         return []
-    return [QueryResult.from_json(path) for path in results_dir.rglob("query_result.json")]
+    return [QueryResult.from_json(path) for path in sorted(results_dir.rglob("query_result.json"))]
 
 
 def _synthetic_results_from_annotations(annotations) -> list[QueryResult]:
@@ -123,7 +134,18 @@ def _synthetic_results_from_annotations(annotations) -> list[QueryResult]:
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = ["query", "target_description", "topk_hit", "best_iou_2d", "confidence", "num_regions", "warnings"]
+    fieldnames = [
+        "query",
+        "target_description",
+        "evaluation_status",
+        "annotation_available",
+        "has_bbox_annotation",
+        "topk_hit",
+        "best_iou_2d",
+        "confidence",
+        "num_regions",
+        "warnings",
+    ]
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -153,17 +175,18 @@ def _write_qualitative_report(
             "",
             "## Query Table",
             "",
-            "| Query | Target | Top-k Hit | Best IoU | Confidence | Warnings |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Query | Target | Status | Top-k Hit | Best IoU | Confidence | Warnings |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for row in rows:
         lines.append(
-            "| {query} | {target} | {hit} | {iou:.3f} | {confidence} | {warnings} |".format(
+            "| {query} | {target} | {status} | {hit} | {iou} | {confidence} | {warnings} |".format(
                 query=row.get("query", ""),
                 target=row.get("target_description", ""),
-                hit=row.get("topk_hit", ""),
-                iou=float(row.get("best_iou_2d") or 0.0),
+                status=row.get("evaluation_status", ""),
+                hit=_display_value(row.get("topk_hit", "")),
+                iou=_display_iou(row.get("best_iou_2d")),
                 confidence=row.get("confidence", ""),
                 warnings=str(row.get("warnings", "")).replace("|", "/"),
             )
@@ -172,8 +195,34 @@ def _write_qualitative_report(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _mean(values: list[float]) -> float:
-    return sum(values) / len(values) if values else 0.0
+def _mean_or_none(values: list[float]) -> float | None:
+    return sum(values) / len(values) if values else None
+
+
+def _best_rows_by_query(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    best: dict[str, dict[str, object]] = {}
+    for row in rows:
+        query = str(row.get("query", ""))
+        if query not in best or _metric_row_score(row) > _metric_row_score(best[query]):
+            best[query] = row
+    return list(best.values())
+
+
+def _metric_row_score(row: dict[str, object]) -> tuple[int, float, float]:
+    hit_score = 1 if row.get("topk_hit") is True else 0
+    iou_score = float(row.get("best_iou_2d") or 0.0)
+    confidence = float(row.get("confidence") or 0.0)
+    return hit_score, iou_score, confidence
+
+
+def _display_value(value: object) -> str:
+    return "n/a" if value in {"", None} else str(value)
+
+
+def _display_iou(value: object) -> str:
+    if value in {"", None}:
+        return "n/a"
+    return f"{float(value):.3f}"
 
 
 if __name__ == "__main__":

@@ -183,6 +183,12 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations examples/annotations_example.json --results results/query_outputs
 ```
 
+Localization metrics such as `top_k_hit_rate` and `mean_iou_2d` are computed only for
+queries with manual `bbox_2d` annotations. Queries without bbox annotations are retained in
+the qualitative table as `unannotated` or `qualitative_only_no_bbox` instead of being counted
+as localization failures. If the same visual prompt appears in multiple expanded tasks, the
+CSV keeps all rows while summary metrics use the best row per unique query.
+
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
 artifacts, query reports, annotation templates, and evaluation metrics. Install it with:

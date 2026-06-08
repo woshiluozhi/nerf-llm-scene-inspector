@@ -132,14 +132,18 @@ def qualitative_success_table(
         annotation = annotation_by_query.get(result.query, {})
         bbox = annotation.get("bbox_2d")
         target_bbox = tuple(float(item) for item in bbox) if bbox else None
-        hit = topk_localization_hit(
-            result.bounding_regions,
-            target_bbox,
-            k=k,
-            acceptable_views=list(annotation.get("acceptable_views") or []),
-        )
-        best_iou = 0.0
+        annotation_available = bool(annotation)
+        has_bbox_annotation = target_bbox is not None
+        hit: bool | str = ""
+        best_iou: float | str = ""
+        evaluation_status = "evaluated"
         if target_bbox:
+            hit = topk_localization_hit(
+                result.bounding_regions,
+                target_bbox,
+                k=k,
+                acceptable_views=list(annotation.get("acceptable_views") or []),
+            )
             best_iou = max(
                 (
                     bbox_iou(region.bbox_2d, target_bbox)
@@ -148,12 +152,19 @@ def qualitative_success_table(
                 ),
                 default=0.0,
             )
+        elif annotation_available:
+            evaluation_status = "qualitative_only_no_bbox"
+        else:
+            evaluation_status = "unannotated"
         rows.append(
             {
                 "query": result.query,
                 "target_description": annotation.get("target_description", ""),
                 "topk_hit": hit,
                 "best_iou_2d": best_iou,
+                "evaluation_status": evaluation_status,
+                "annotation_available": annotation_available,
+                "has_bbox_annotation": has_bbox_annotation,
                 "confidence": result.confidence if result.confidence is not None else "",
                 "num_regions": len(result.bounding_regions),
                 "warnings": "; ".join(result.warnings),

@@ -1,10 +1,11 @@
-from nerf_llm_scene_inspector.backends.base import BoundingRegion
+from nerf_llm_scene_inspector.backends.base import BoundingRegion, QueryResult
 from nerf_llm_scene_inspector.evaluation.metrics import (
     bbox_area,
     bbox_center_distance,
     bbox_intersection_area,
     bbox_iou,
     containment_ratio,
+    qualitative_success_table,
     topk_localization_hit,
 )
 from nerf_llm_scene_inspector.querying.spatial_reasoning import (
@@ -55,3 +56,43 @@ def test_region_ranking_and_relations() -> None:
     contained = containment_relation(compact, large)
     assert contained is not None
     assert contained.relation == "likely-contained-in"
+
+
+def test_qualitative_success_table_separates_unannotated_queries() -> None:
+    results = [
+        QueryResult(
+            query="mug",
+            backend_name="dry-run",
+            config_path="config.yml",
+            bounding_regions=[
+                BoundingRegion(label="mug", score=0.9, bbox_2d=(0, 0, 20, 20), source_view="view_0000")
+            ],
+            confidence=0.9,
+        ),
+        QueryResult(
+            query="container",
+            backend_name="dry-run",
+            config_path="config.yml",
+            bounding_regions=[
+                BoundingRegion(label="container", score=0.5, bbox_2d=(40, 40, 80, 80), source_view="view_0000")
+            ],
+            confidence=0.5,
+        ),
+    ]
+    rows = qualitative_success_table(
+        results,
+        {
+            "mug": {
+                "target_description": "white mug",
+                "acceptable_views": ["view_0000"],
+                "bbox_2d": [0, 0, 25, 25],
+            }
+        },
+    )
+
+    assert rows[0]["evaluation_status"] == "evaluated"
+    assert rows[0]["topk_hit"] is True
+    assert rows[0]["has_bbox_annotation"] is True
+    assert rows[1]["evaluation_status"] == "unannotated"
+    assert rows[1]["topk_hit"] == ""
+    assert rows[1]["best_iou_2d"] == ""

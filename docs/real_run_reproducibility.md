@@ -104,3 +104,10 @@ python scripts/evaluate_queries.py \
   --output results/pipeline_runs/desk_scene/evaluation \
   --report-output results/pipeline_runs/desk_scene/project_report.md
 ```
+
+Only rows with a filled `bbox_2d` are included in localization metrics such as
+`top_k_hit_rate` and `mean_iou_2d`. Rows without bbox annotations stay in the qualitative
+table as `unannotated` or `qualitative_only_no_bbox`, so missing labels do not get counted as
+failed detections. If a visual prompt appears more than once because several tasks expanded
+to the same backend query, the CSV preserves all rows while summary metrics use the best row
+per unique query.

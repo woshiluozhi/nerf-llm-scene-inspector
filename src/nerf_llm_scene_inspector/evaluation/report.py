@@ -37,23 +37,24 @@ def write_project_report(
         "",
         "## Query Results",
         "",
-        "| Query | Target | Top-k Hit | Best IoU | Confidence | Warnings |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Query | Target | Status | Top-k Hit | Best IoU | Confidence | Warnings |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     if query_rows:
         for row in query_rows:
             lines.append(
-                "| {query} | {target} | {hit} | {iou:.3f} | {confidence} | {warnings} |".format(
+                "| {query} | {target} | {status} | {hit} | {iou} | {confidence} | {warnings} |".format(
                     query=row.get("query", ""),
                     target=row.get("target_description", ""),
-                    hit=row.get("topk_hit", ""),
-                    iou=float(row.get("best_iou_2d") or 0.0),
+                    status=row.get("evaluation_status", ""),
+                    hit=_display_value(row.get("topk_hit", "")),
+                    iou=_display_iou(row.get("best_iou_2d")),
                     confidence=row.get("confidence", ""),
                     warnings=str(row.get("warnings", "")).replace("|", "/"),
                 )
             )
     else:
-        lines.append("| Pending | Pending | Pending | Pending | Pending | Pending |")
+        lines.append("| Pending | Pending | Pending | Pending | Pending | Pending | Pending |")
 
     lines.extend(["", "## Evaluation Summary", "", "| Metric | Value |", "| --- | --- |"])
     if metrics:
@@ -74,3 +75,13 @@ def write_project_report(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out
+
+
+def _display_value(value: object) -> str:
+    return "n/a" if value in {"", None} else str(value)
+
+
+def _display_iou(value: object) -> str:
+    if value in {"", None}:
+        return "n/a"
+    return f"{float(value):.3f}"
