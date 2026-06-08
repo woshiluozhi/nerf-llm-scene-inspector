@@ -124,6 +124,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     query_dir = run_dir / "queries"
     demo_dir = run_dir / "demo_assets"
     eval_dir = run_dir / "evaluation"
+    training_dir = run_dir / "training"
     run_dir.mkdir(parents=True, exist_ok=True)
     if config.clean_run_outputs:
         for subdir in (query_dir, demo_dir, eval_dir):
@@ -140,6 +141,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "queries": str(query_dir),
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
+        "training": str(training_dir),
         "run_queries": str(run_queries_path),
         "project_report": str(run_dir / "project_report.md"),
         "portfolio_card": str(run_dir / "portfolio_result_card.md"),
@@ -222,8 +224,17 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 max_num_iterations=config.max_num_iterations,
                 dry_run=config.dry_run,
             )
+            baseline_summary_path = _write_step_json(
+                training_dir / "baseline_train_summary.json",
+                baseline_summary,
+            )
             steps.append(
-                PipelineStep("train_baseline_nerf", "success", summary=_small_dict(baseline_summary))
+                PipelineStep(
+                    "train_baseline_nerf",
+                    "success",
+                    summary=_small_dict(baseline_summary),
+                    outputs={"train_summary": str(baseline_summary_path)},
+                )
             )
 
         model_config_path = str(config.config_path) if config.config_path else None
@@ -239,8 +250,17 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 dry_run=config.dry_run,
             )
             model_config_path = str(language_summary.get("config_path") or model_config_path)
+            language_summary_path = _write_step_json(
+                training_dir / "language_train_summary.json",
+                language_summary,
+            )
             steps.append(
-                PipelineStep("train_language_field", "success", summary=_small_dict(language_summary))
+                PipelineStep(
+                    "train_language_field",
+                    "success",
+                    summary=_small_dict(language_summary),
+                    outputs={"train_summary": str(language_summary_path)},
+                )
             )
 
         if config.skip_queries or not config.queries:
@@ -400,6 +420,12 @@ def _write_run_queries_file(run_dir: Path, scene_name: str, queries: list[str]) 
     lines = [f"scene_name: {json.dumps(scene_name)}", "queries:"]
     lines.extend(f"  - {json.dumps(query)}" for query in queries)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def _write_step_json(path: Path, payload: dict[str, object]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
 
 

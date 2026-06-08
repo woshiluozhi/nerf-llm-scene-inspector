@@ -230,6 +230,8 @@ For LERF, enter a text prompt in the viewer and select `relevancy_0` or `composi
 - `results/pipeline_runs/<scene>/pipeline_summary.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.json`
 - `results/pipeline_runs/<scene>/scene_data_inspection.md`
+- `results/pipeline_runs/<scene>/training/baseline_train_summary.json`
+- `results/pipeline_runs/<scene>/training/language_train_summary.json`
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.json`
 - `results/pipeline_runs/<scene>/annotation_template.json`
 - `results/pipeline_runs/<scene>/demo_assets/query_grid.png`

@@ -16,11 +16,16 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
     """Load a pipeline run directory into a Streamlit-friendly payload."""
 
     root = Path(run_dir)
+    pipeline_summary = _read_json(root / "pipeline_summary.json")
     return {
         "run_dir": str(root),
-        "pipeline_summary": _read_json(root / "pipeline_summary.json"),
+        "pipeline_summary": pipeline_summary,
         "environment_report": _read_json(root / "environment_report.json"),
         "scene_inspection": _read_json(root / "scene_data_inspection.json"),
+        "training_summaries": {
+            "baseline": _read_json(root / "training" / "baseline_train_summary.json"),
+            "language": _read_json(root / "training" / "language_train_summary.json"),
+        },
         "evaluation_summary": _read_json(root / "evaluation" / "eval_summary.json"),
         "evaluation_table": _read_csv(root / "evaluation" / "eval_table.csv"),
         "annotation_template": _read_json(root / "annotation_template.json"),
@@ -28,7 +33,7 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "project_report": _read_text(root / "project_report.md"),
         "images": collect_run_images(root),
         "query_reports": collect_query_reports(root),
-        "missing": _missing_run_files(root),
+        "missing": _missing_run_files(root, pipeline_summary),
     }
 
 
@@ -140,6 +145,14 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
     if bundle["scene_inspection"]:
         st.subheader("Scene Data Inspection")
         st.json(bundle["scene_inspection"])
+    training_summaries = {
+        key: value for key, value in bundle["training_summaries"].items() if value
+    }
+    if training_summaries:
+        st.subheader("Training Summaries")
+        for name, payload in training_summaries.items():
+            with st.expander(f"{name.title()} Training Summary"):
+                st.json(payload)
     if bundle["environment_report"]:
         with st.expander("Environment Report"):
             st.json(bundle["environment_report"])
@@ -235,7 +248,7 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def _missing_run_files(run_dir: Path) -> list[str]:
+def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = None) -> list[str]:
     expected = [
         "pipeline_summary.json",
         "environment_report.json",
@@ -243,7 +256,20 @@ def _missing_run_files(run_dir: Path) -> list[str]:
         "annotation_template.json",
         "evaluation/eval_summary.json",
     ]
+    if _step_succeeded(pipeline_summary, "train_baseline_nerf"):
+        expected.append("training/baseline_train_summary.json")
+    if _step_succeeded(pipeline_summary, "train_language_field"):
+        expected.append("training/language_train_summary.json")
     return [relative for relative in expected if not (run_dir / relative).exists()]
+
+
+def _step_succeeded(pipeline_summary: dict[str, Any] | None, step_name: str) -> bool:
+    if not pipeline_summary:
+        return False
+    for step in pipeline_summary.get("steps") or []:
+        if isinstance(step, dict) and step.get("name") == step_name:
+            return step.get("status") == "success"
+    return False
 
 
 def _relative_label(path: str | Path, root: str | Path) -> str:

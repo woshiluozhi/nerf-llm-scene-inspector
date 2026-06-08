@@ -19,12 +19,18 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
             "backend": "lerf",
             "dry_run": True,
             "queries": ["mug"],
-            "steps": [{"name": "query_scene", "status": "success"}],
+            "steps": [
+                {"name": "train_baseline_nerf", "status": "success"},
+                {"name": "train_language_field", "status": "success"},
+                {"name": "query_scene", "status": "success"},
+            ],
             "provenance": {"git_commit": "abc123"},
         },
     )
     _write_json(run_dir / "environment_report.json", {"ok": True})
     _write_json(run_dir / "scene_data_inspection.json", {"ready_for_training": True})
+    _write_json(run_dir / "training" / "baseline_train_summary.json", {"run_type": "baseline"})
+    _write_json(run_dir / "training" / "language_train_summary.json", {"run_type": "language"})
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"top_k_hit_rate": 1.0})
     (run_dir / "evaluation" / "eval_table.csv").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "evaluation" / "eval_table.csv").write_text(
@@ -43,6 +49,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["pipeline_summary"]["success"] is True
     assert bundle["evaluation_table"][0]["query"] == "mug"
     assert bundle["annotation_template"]["queries"][0]["query"] == "mug"
+    assert bundle["training_summaries"]["baseline"]["run_type"] == "baseline"
+    assert bundle["training_summaries"]["language"]["run_type"] == "language"
     assert bundle["images"][0]["label"] == "demo_assets/query_grid.png"
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"
     assert bundle["missing"] == []

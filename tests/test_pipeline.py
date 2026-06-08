@@ -90,6 +90,38 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert annotation_step.outputs["annotation_template"] == str(run_dir / "annotation_template.json")
 
 
+def test_run_scene_pipeline_writes_run_scoped_training_summaries(tmp_path: Path) -> None:
+    run_dir = tmp_path / "pipeline_runs" / "training_scene"
+
+    summary = run_scene_pipeline(
+        PipelineConfig(
+            input_path=tmp_path,
+            scene_name="training_scene",
+            data_type="images",
+            queries=["mug"],
+            data_root=tmp_path / "data",
+            runs_root=tmp_path / "runs",
+            output_root=tmp_path / "pipeline_runs",
+            dry_run=True,
+            skip_queries=True,
+            skip_demo=True,
+            skip_eval=True,
+        )
+    )
+
+    assert summary.success is True
+    baseline_summary = run_dir / "training" / "baseline_train_summary.json"
+    language_summary = run_dir / "training" / "language_train_summary.json"
+    assert baseline_summary.exists()
+    assert language_summary.exists()
+    assert json.loads(baseline_summary.read_text(encoding="utf-8"))["run_type"] == "baseline"
+    assert json.loads(language_summary.read_text(encoding="utf-8"))["run_type"] == "language"
+    baseline_step = next(step for step in summary.steps if step.name == "train_baseline_nerf")
+    language_step = next(step for step in summary.steps if step.name == "train_language_field")
+    assert baseline_step.outputs["train_summary"] == str(baseline_summary)
+    assert language_step.outputs["train_summary"] == str(language_summary)
+
+
 def test_run_scene_pipeline_cleans_stale_run_outputs(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")

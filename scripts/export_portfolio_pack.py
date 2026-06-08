@@ -40,7 +40,7 @@ def main() -> int:
     run_dir = _resolve(args.run_dir) if args.run_dir else None
     run_summary: dict[str, Any] | None = None
     if run_dir is not None:
-        run_summary = _copy_run_materials(run_dir, output, copied, missing)
+        run_summary = _copy_run_materials(run_dir, output, copied, missing, optional_missing)
 
     archive_path = None
     if args.zip:
@@ -96,6 +96,7 @@ def _copy_run_materials(
     output: Path,
     copied: list[dict[str, str]],
     missing: list[str],
+    optional_missing: list[str],
 ) -> dict[str, Any] | None:
     pipeline_summary_path = run_dir / "pipeline_summary.json"
     run_summary = _load_json_if_exists(pipeline_summary_path)
@@ -117,6 +118,20 @@ def _copy_run_materials(
     ]
     for source, relative_destination in run_files:
         _copy_file(source, output / relative_destination, output, copied, missing)
+    _copy_file(
+        run_dir / "training" / "baseline_train_summary.json",
+        output / "run/training/baseline_train_summary.json",
+        output,
+        copied,
+        missing if _step_succeeded(run_summary, "train_baseline_nerf") else optional_missing,
+    )
+    _copy_file(
+        run_dir / "training" / "language_train_summary.json",
+        output / "run/training/language_train_summary.json",
+        output,
+        copied,
+        missing if _step_succeeded(run_summary, "train_language_field") else optional_missing,
+    )
     for overlay in sorted((run_dir / "demo_assets").rglob("*overlay.png"))[:8]:
         _copy_file(
             overlay,
@@ -190,6 +205,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "pipeline_summary": "run/pipeline_summary.json",
         "environment_report": "run/environment_report.json",
         "scene_data_inspection": "run/scene_data_inspection.md",
+        "baseline_train_summary": "run/training/baseline_train_summary.json",
+        "language_train_summary": "run/training/language_train_summary.json",
         "query_plan": "run/queries.yaml",
         "annotation_template": "run/annotation_template.json",
         "project_report": "run/project_report.md",
@@ -208,6 +225,15 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "artifacts": artifacts,
         "provenance": _provenance_excerpt(summary.get("provenance")),
     }
+
+
+def _step_succeeded(summary: dict[str, Any] | None, step_name: str) -> bool:
+    if not summary:
+        return False
+    for step in summary.get("steps") or []:
+        if isinstance(step, dict) and step.get("name") == step_name:
+            return step.get("status") == "success"
+    return False
 
 
 def _provenance_excerpt(raw: object) -> dict[str, Any]:

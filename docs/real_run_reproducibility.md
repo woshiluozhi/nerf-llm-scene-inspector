@@ -44,6 +44,8 @@ python scripts/run_scene_pipeline.py \
 - `pipeline_summary.json`: step status, commands, warnings, and reproducibility provenance.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
+- `training/baseline_train_summary.json`: baseline Nerfstudio command, status, final config, and viewer command.
+- `training/language_train_summary.json`: LERF/OpenNeRF command, status, final config, and viewer command.
 - `queries/<query>/scene_query_report.json`: query plan, backend outputs, warnings, and provenance.
 - `annotation_template.json`: fill-in manual annotation scaffold generated from query outputs.
 - `demo_assets/query_grid.png`: compact qualitative query visualization.
