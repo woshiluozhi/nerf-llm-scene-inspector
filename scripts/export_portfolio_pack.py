@@ -372,7 +372,6 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         "scene_data_inspection": "run/scene_data_inspection.md",
         "query_plan": "run/queries.yaml",
         "query_reports": "run/queries/",
-        "prompt_sensitivity": "run/prompt_sensitivity/",
         "annotation_template": "run/annotation_template.json",
         "project_report": "run/project_report.md",
         "portfolio_card": "run/portfolio_result_card.md",
@@ -388,6 +387,8 @@ def _run_summary_excerpt(summary: dict[str, Any] | None) -> dict[str, Any] | Non
         artifacts["baseline_train_summary"] = "run/training/baseline_train_summary.json"
     if _step_succeeded(summary, "train_language_field"):
         artifacts["language_train_summary"] = "run/training/language_train_summary.json"
+    if _step_succeeded(summary, "analyze_prompt_sensitivity"):
+        artifacts["prompt_sensitivity"] = "run/prompt_sensitivity/"
     if _step_succeeded(summary, "compare_runs"):
         artifacts["run_comparison"] = "run_comparison.md"
     return {
