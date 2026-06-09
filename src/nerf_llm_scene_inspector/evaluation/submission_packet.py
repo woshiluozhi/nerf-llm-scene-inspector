@@ -375,6 +375,14 @@ def _audit_item(audit: dict[str, Any]) -> SubmissionChecklistItem:
     status = str(audit.get("status") or "")
     if not audit:
         return SubmissionChecklistItem("run_audit", "fail", "run_audit.json missing", "Run audit_run.py.", "run_audit.md")
+    if status == "blocked" or _safe_int(audit.get("blocker_count")):
+        return SubmissionChecklistItem(
+            "run_audit",
+            "fail",
+            f"status={status}, score={audit.get('score')}, blockers={audit.get('blocker_count', 0)}",
+            "Fix blocker-level run audit findings before external sharing.",
+            "run_audit.md",
+        )
     return SubmissionChecklistItem(
         "run_audit",
         "pass" if status == "ready" else "warn",

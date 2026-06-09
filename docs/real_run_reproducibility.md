@@ -110,6 +110,9 @@ of machine-specific absolute paths.
 `run_result_card.md` consumes the same submission and query-evidence fields, so it will
 mark a run as blocked when query evidence fails or unresolved risk flags remain, even if
 the evidence scorecard is otherwise strong.
+Blocked run-audit findings and blocker-level failure diagnostics are also treated as
+external-sharing blockers in both the submission packet and the result card; refresh those
+artifacts after any manual edits or copied run folders.
 `portfolio_page.html` mirrors those fields in its top-level metrics and Sharing Readiness
 panel, including query-evidence status, counter-evidence count, and risk-flag count.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,

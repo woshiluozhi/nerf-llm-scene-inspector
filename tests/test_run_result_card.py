@@ -158,6 +158,28 @@ def test_run_result_card_blocks_failed_query_evidence_audit(tmp_path: Path) -> N
     assert any(check.name == "query_evidence" and check.status == "fail" for check in card.checks)
 
 
+def test_run_result_card_blocks_stale_submission_when_audit_is_blocked(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "run_audit.json", {"status": "blocked", "score": 35, "blocker_count": 1})
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert card.evidence_snapshot["run_audit"] == "blocked"
+    assert any(check.name == "run_audit" and check.status == "fail" for check in card.checks)
+
+
+def test_run_result_card_blocks_stale_submission_when_diagnostics_have_blockers(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "failure_diagnostics.json", {"status": "blocked", "blocker_count": 1, "warning_count": 0})
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert card.evidence_snapshot["failure_diagnostics"] == "blocked"
+    assert any(check.name == "failure_diagnostics" and check.status == "fail" for check in card.checks)
+
+
 def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     run_dir = tmp_path / "run"
     _write_json(

@@ -144,6 +144,10 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
         success=summary.get("success") is True,
         evidence_level=str(scorecard.get("evidence_level") or ""),
         quality_status=str(quality.get("status") or ""),
+        audit_status=str(audit.get("status") or ""),
+        audit_blocker_count=_safe_int(audit.get("blocker_count")),
+        diagnostics_status=str(diagnostics.get("status") or ""),
+        diagnostics_blocker_count=_safe_int(diagnostics.get("blocker_count")),
         claim_status=str(claim_audit.get("status") or ""),
         readiness=str(submission.get("readiness_level") or ""),
         query_evidence_status=query_evidence_status,
@@ -216,6 +220,10 @@ def _result_status(
     success: bool,
     evidence_level: str,
     quality_status: str,
+    audit_status: str,
+    audit_blocker_count: int,
+    diagnostics_status: str,
+    diagnostics_blocker_count: int,
     claim_status: str,
     readiness: str,
     query_evidence_status: str,
@@ -225,6 +233,10 @@ def _result_status(
     if (
         not success
         or quality_status == "fail"
+        or audit_status == "blocked"
+        or audit_blocker_count
+        or diagnostics_status == "blocked"
+        or diagnostics_blocker_count
         or claim_status == "fail"
         or readiness == "blocked"
         or query_evidence_status == "fail"

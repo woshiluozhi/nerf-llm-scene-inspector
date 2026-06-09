@@ -221,6 +221,20 @@ def test_submission_packet_warns_claim_audit_warning(tmp_path: Path) -> None:
     assert any(item.name == "claim_audit" and item.status == "warn" for item in packet.checklist)
 
 
+def test_submission_packet_blocks_blocked_run_audit(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=False)
+    validation = tmp_path / "portfolio_pack_validation.json"
+    _write_json(validation, {"ok": True, "warnings": [], "errors": [], "path_leaks": []})
+    _write_json(run_dir / "run_audit.json", {"status": "blocked", "score": 40, "blocker_count": 1})
+
+    packet = build_submission_packet(run_dir, pack_validation_path=validation)
+
+    assert packet.readiness_level == "blocked"
+    assert packet.readiness_summary["status"] == "fail"
+    assert "run_audit" in packet.readiness_summary["failed_checks"]
+    assert any(item.name == "run_audit" and item.status == "fail" for item in packet.checklist)
+
+
 def test_submission_packet_blocks_query_risk_flags(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path / "run", dry_run=False)
     validation = tmp_path / "portfolio_pack_validation.json"
