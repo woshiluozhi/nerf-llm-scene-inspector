@@ -29,6 +29,7 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
                 "backend": "lerf",
                 "query_count": 3,
                 "audit_score": 92,
+                "query_risk_flag_count": 1,
                 "top_k_hit_rate": 1.0,
                 "mean_iou_2d": 0.5,
                 "run_dir": "desk_scene",
@@ -48,6 +49,7 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
     assert "Counter-evidence answers" in html
     assert "Query evidence audit" in html
     assert "risk flags" in html
+    assert "Risk Flags" in html
     assert "desk_scene" in html
     assert "../results/pipeline_runs/desk_scene/portfolio_page.html" in html
     assert "../results/pipeline_runs/run_comparison.md" in html

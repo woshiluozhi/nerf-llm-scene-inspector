@@ -37,6 +37,9 @@ class RunComparisonEntry:
     audit_status: str = ""
     audit_score: int | None = None
     capture_manifest_status: str = ""
+    query_evidence_status: str = ""
+    query_counter_evidence_count: int = 0
+    query_risk_flag_count: int = 0
     scene_quality_score: float | None = None
     pose_coverage_score: float | None = None
     query_count: int = 0
@@ -105,14 +108,14 @@ class RunComparison:
             "",
             (
                 "| Rank | Scene | Status | Mode | Score | Evidence | Audit | Capture | "
-                "Queries | Evaluated | Top-k | IoU | Quality | Next Action | Run Dir |"
+                "Query Evidence | Risk Flags | Queries | Evaluated | Top-k | IoU | Quality | Next Action | Run Dir |"
             ),
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
                 "| {rank} | {scene} | {status} | {mode} | {score} | {evidence} | {audit} | "
-                "{capture} | {queries} | {evaluated} | {topk} | {iou} | {quality} | "
+                "{capture} | {query_evidence} | {risk_flags} | {queries} | {evaluated} | {topk} | {iou} | {quality} | "
                 "{action} | `{run_dir}` |".format(
                     rank=entry.rank,
                     scene=_cell(entry.scene_name),
@@ -122,6 +125,8 @@ class RunComparison:
                     evidence=_cell(entry.evidence_level or "unknown"),
                     audit=_cell(entry.audit_status or "unknown"),
                     capture=_cell(entry.capture_manifest_status or "unknown"),
+                    query_evidence=_cell(entry.query_evidence_status or "unknown"),
+                    risk_flags=entry.query_risk_flag_count,
                     queries=entry.query_count,
                     evaluated=entry.evaluated_queries,
                     topk=_display_float(entry.top_k_hit_rate),
@@ -180,6 +185,7 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     audit = _read_json(run_dir / "run_audit.json")
     scorecard = _read_json(run_dir / "evidence_scorecard.json")
     capture = _read_json(run_dir / "capture_manifest_validation.json")
+    query_evidence = _read_json(run_dir / "query_evidence_audit.json")
     recommendations = _read_json(run_dir / "run_recommendations.json")
     scene = _read_json(run_dir / "scene_data_inspection.json")
     evaluation = _read_json(run_dir / "evaluation" / "eval_summary.json")
@@ -189,12 +195,17 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     evidence_level = str(scorecard.get("evidence_level") or "")
     audit_status = str(audit.get("status") or "")
     capture_status = str(capture.get("status") or "")
+    query_evidence_status = str(query_evidence.get("status") or "")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
     selection_status = _selection_status(
         success=success,
         dry_run=dry_run,
         evidence_level=evidence_level,
         audit_status=audit_status,
         capture_status=capture_status,
+        query_evidence_status=query_evidence_status,
+        query_counter_evidence_count=counter_evidence_count,
+        query_risk_flag_count=risk_flag_count,
     )
     return RunComparisonEntry(
         rank=0,
@@ -209,6 +220,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
             evidence_max_score=_optional_int(scorecard.get("max_score")),
             audit_score=_optional_int(audit.get("score")),
             capture_status=capture_status,
+            query_evidence_status=query_evidence_status,
+            query_counter_evidence_count=counter_evidence_count,
+            query_risk_flag_count=risk_flag_count,
             quality_score=_optional_float(scene.get("quality_score")),
             pose_coverage_score=_optional_float(scene.get("pose_coverage_score")),
             top_k_hit_rate=_optional_float(evaluation.get("top_k_hit_rate")),
@@ -227,6 +241,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         audit_status=audit_status,
         audit_score=_optional_int(audit.get("score")),
         capture_manifest_status=capture_status,
+        query_evidence_status=query_evidence_status,
+        query_counter_evidence_count=counter_evidence_count,
+        query_risk_flag_count=risk_flag_count,
         scene_quality_score=_optional_float(scene.get("quality_score")),
         pose_coverage_score=_optional_float(scene.get("pose_coverage_score")),
         query_count=len(summary.get("queries") or []),
@@ -246,12 +263,28 @@ def _selection_status(
     evidence_level: str,
     audit_status: str,
     capture_status: str,
+    query_evidence_status: str,
+    query_counter_evidence_count: int,
+    query_risk_flag_count: int,
 ) -> SelectionStatus:
-    if not success or evidence_level == "blocked" or audit_status == "blocked" or capture_status == "blocked":
+    if (
+        not success
+        or evidence_level == "blocked"
+        or audit_status == "blocked"
+        or capture_status == "blocked"
+        or query_evidence_status == "fail"
+    ):
         return "blocked"
     if dry_run:
         return "dry_run_smoke_demo"
-    if evidence_level == "portfolio_ready_real_run" and audit_status == "ready" and capture_status == "ready":
+    if query_risk_flag_count or query_counter_evidence_count or query_evidence_status == "warn":
+        return "needs_review"
+    if (
+        evidence_level == "portfolio_ready_real_run"
+        and audit_status == "ready"
+        and capture_status == "ready"
+        and query_evidence_status == "pass"
+    ):
         return "portfolio_candidate"
     if evidence_level in {"needs_review", "dry_run_demo_ready"} or audit_status == "needs_review":
         return "needs_review"
@@ -267,6 +300,9 @@ def _portfolio_score(
     evidence_max_score: int | None,
     audit_score: int | None,
     capture_status: str,
+    query_evidence_status: str,
+    query_counter_evidence_count: int,
+    query_risk_flag_count: int,
     quality_score: float | None,
     pose_coverage_score: float | None,
     top_k_hit_rate: float | None,
@@ -291,6 +327,14 @@ def _portfolio_score(
         score += 5.0
     elif capture_status == "needs_review":
         score += 2.0
+    if query_evidence_status == "pass":
+        score += 4.0
+    elif query_evidence_status == "warn":
+        score -= 4.0
+    elif query_evidence_status == "fail":
+        score -= 12.0
+    score -= min(10.0, 2.0 * max(query_counter_evidence_count, 0))
+    score -= min(25.0, 6.0 * max(query_risk_flag_count, 0))
     if dry_run:
         score = min(score, 65.0)
     if selection_status == "blocked":
@@ -343,6 +387,26 @@ def _safe_int(value: object) -> int:
         return 0
 
 
+def _query_evidence_counts(audit: dict[str, Any]) -> tuple[int, int]:
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter = _safe_int(totals.get("counter_evidence_count"))
+    risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
+
+
 def _optional_float(value: object) -> float | None:
     if value is None:
         return None
@@ -374,6 +438,8 @@ def _best_run_lines(best_run: dict[str, object] | None) -> list[str]:
         f"- Status: {status}",
         f"- Score: {best_run.get('portfolio_score')}/100",
         f"- Evidence: {best_run.get('evidence_level') or 'unknown'}",
+        f"- Query evidence: {best_run.get('query_evidence_status') or 'unknown'}",
+        f"- Query risk flags: {best_run.get('query_risk_flag_count') or 0}",
     ]
     action = str(best_run.get("top_next_action") or "")
     if action:

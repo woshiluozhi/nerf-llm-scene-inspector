@@ -25,6 +25,9 @@ class RunIndexEntry:
     audit_score: int | None = None
     blocker_count: int = 0
     warning_count: int = 0
+    query_evidence_status: str = ""
+    query_counter_evidence_count: int = 0
+    query_risk_flag_count: int = 0
     quality_score: float | None = None
     pose_coverage_score: float | None = None
     evaluated_queries: int = 0
@@ -78,17 +81,19 @@ class RunIndex:
             f"- Successful runs: {self.successful_runs}",
             f"- Ready runs: {self.ready_runs}",
             "",
-            "| Scene | Status | Audit | Score | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| Scene | Status | Audit | Score | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
+            "| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
-                "| {scene} | {success} | {audit} | {score} | {backend} | {dry_run} | {queries} | "
-                "{evaluated} | {topk} | {iou} | {quality} | `{run_dir}` |".format(
+                "| {scene} | {success} | {audit} | {score} | {query_evidence} | {risk_flags} | "
+                "{backend} | {dry_run} | {queries} | {evaluated} | {topk} | {iou} | {quality} | `{run_dir}` |".format(
                     scene=entry.scene_name,
                     success="success" if entry.success else "failed",
                     audit=entry.audit_status or "unknown",
                     score=_display(entry.audit_score),
+                    query_evidence=entry.query_evidence_status or "unknown",
+                    risk_flags=entry.query_risk_flag_count,
                     backend=entry.backend or "unknown",
                     dry_run=entry.dry_run,
                     queries=entry.query_count,
@@ -135,9 +140,11 @@ def index_pipeline_runs(root: str | Path) -> RunIndex:
 def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
     summary = _read_json(run_dir / "pipeline_summary.json")
     audit = _read_json(run_dir / "run_audit.json")
+    query_evidence = _read_json(run_dir / "query_evidence_audit.json")
     scene = _read_json(run_dir / "scene_data_inspection.json")
     evaluation = _read_json(run_dir / "evaluation" / "eval_summary.json")
     scene_name = str(summary.get("scene_name") or run_dir.name)
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
     return RunIndexEntry(
         scene_name=scene_name,
         run_dir=_relative_to_root(run_dir, root),
@@ -150,6 +157,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
         audit_score=_optional_int(audit.get("score")),
         blocker_count=_safe_int(audit.get("blocker_count")),
         warning_count=_safe_int(audit.get("warning_count")),
+        query_evidence_status=str(query_evidence.get("status") or ""),
+        query_counter_evidence_count=counter_evidence_count,
+        query_risk_flag_count=risk_flag_count,
         quality_score=_optional_float(scene.get("quality_score")),
         pose_coverage_score=_optional_float(scene.get("pose_coverage_score")),
         evaluated_queries=_safe_int(evaluation.get("num_evaluated_queries")),
@@ -213,6 +223,26 @@ def _safe_int(value: object) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _query_evidence_counts(audit: dict[str, Any]) -> tuple[int, int]:
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter = _safe_int(totals.get("counter_evidence_count"))
+    risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
 
 
 def _optional_int(value: object) -> int | None:

@@ -24,6 +24,8 @@ def test_index_pipeline_runs_summarizes_runs(tmp_path: Path) -> None:
     assert index.entries[0].artifacts["capture_manifest"] == "capture_manifest.md"
     assert index.entries[0].artifacts["portfolio_page"] == "portfolio_page.html"
     assert index.entries[0].artifacts["annotation_review"] == "evaluation/annotation_review.md"
+    assert index.entries[0].query_evidence_status == "pass"
+    assert index.entries[0].query_risk_flag_count == 0
 
 
 def test_index_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -79,6 +81,10 @@ def _write_run(run_dir: Path, *, scene_name: str, audit_status: str, score: int)
     _write_json(
         run_dir / "evaluation" / "eval_summary.json",
         {"num_evaluated_queries": 1, "top_k_hit_rate": 1.0, "mean_iou_2d": 0.7},
+    )
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {"status": "pass", "ok": True, "task_count": 1, "fail_count": 0, "totals": {}},
     )
     (run_dir / "run_audit.md").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "run_audit.md").write_text("# Audit\n", encoding="utf-8")

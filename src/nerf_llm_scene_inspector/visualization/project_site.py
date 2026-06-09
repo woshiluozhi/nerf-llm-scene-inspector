@@ -25,6 +25,7 @@ class SiteRunEntry:
     dry_run: bool
     query_count: int
     audit_score: str
+    query_risk_flag_count: int
     top_k_hit_rate: str
     mean_iou_2d: str
     link: str = ""
@@ -151,7 +152,7 @@ class ProjectPortfolioSite:
 
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self.to_html(), encoding="utf-8")
+        path.write_text(self.to_html() + "\n", encoding="utf-8")
         return path
 
 
@@ -210,6 +211,7 @@ def _run_entries(
                 dry_run=bool(raw.get("dry_run")),
                 query_count=_safe_int(raw.get("query_count")),
                 audit_score=_display(raw.get("audit_score")),
+                query_risk_flag_count=_safe_int(raw.get("query_risk_flag_count")),
                 top_k_hit_rate=_display_float(raw.get("top_k_hit_rate")),
                 mean_iou_2d=_display_float(raw.get("mean_iou_2d")),
                 link=link,
@@ -300,7 +302,7 @@ def _runs_section(entries: list[SiteRunEntry], run_index_link: str, run_comparis
             '      <div class="table-wrap">',
             '        <table class="runs">',
             "          <thead><tr><th>Scene</th><th>Status</th><th>Backend</th><th>Mode</th>"
-            "<th>Queries</th><th>Audit</th><th>Top-k</th><th>IoU</th><th>Page</th></tr></thead>",
+            "<th>Queries</th><th>Audit</th><th>Risk Flags</th><th>Top-k</th><th>IoU</th><th>Page</th></tr></thead>",
             "          <tbody>",
         ]
     )
@@ -315,6 +317,7 @@ def _runs_section(entries: list[SiteRunEntry], run_index_link: str, run_comparis
             f"<td>{mode}</td>"
             f"<td>{entry.query_count}</td>"
             f"<td>{_escape(entry.audit_score)}</td>"
+            f"<td>{entry.query_risk_flag_count}</td>"
             f"<td>{_escape(entry.top_k_hit_rate)}</td>"
             f"<td>{_escape(entry.mean_iou_2d)}</td>"
             f"<td>{page_cell}</td>"
