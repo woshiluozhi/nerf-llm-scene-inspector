@@ -93,6 +93,73 @@ def test_create_real_run_plan_cli(tmp_path: Path) -> None:
     assert payload["commands"][0]["status"] == "ready"
 
 
+def test_real_run_plan_blocks_stale_ready_count_artifacts(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    _write_json(
+        run_dir / "pipeline_summary.json",
+        {
+            "scene_name": "desk_scene",
+            "success": True,
+            "dry_run": False,
+            "backend": "lerf",
+            "queries": ["mug"],
+            "paths": {"processed_data": "data/processed/desk_scene"},
+        },
+    )
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "ready", "fail_count": "1", "warn_count": "2"},
+    )
+    _write_json(
+        run_dir / "preflight_report.json",
+        {"status": "ready", "fail_count": "1", "warn_count": "3"},
+    )
+    _write_json(
+        run_dir / "quality_gate.json",
+        {"status": "pass", "fail_count": "1", "warn_count": "4"},
+    )
+    _write_json(run_dir / "run_audit.json", {"status": "ready", "blocker_count": "1"})
+    _write_json(
+        run_dir / "failure_diagnostics.json",
+        {"status": "clear", "blocker_count": "1", "warning_count": "5"},
+    )
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {"status": "pass", "totals": {"risk_flag_count": "1"}},
+    )
+    _write_json(run_dir / "run_readiness.json", {"readiness_level": "blocked"})
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {"readiness_level": "portfolio_ready"},
+    )
+
+    plan = build_real_run_plan(run_dir)
+    blockers = {issue.category for issue in plan.issues if issue.severity == "blocker"}
+
+    assert {
+        "capture",
+        "preflight",
+        "quality_gate",
+        "run_audit",
+        "failure_diagnostics",
+        "query_evidence",
+        "run_readiness",
+    }.issubset(blockers)
+    assert plan.blocker_count >= 7
+
+
+def test_real_run_plan_warns_on_missing_capture_validation(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    (run_dir / "capture_manifest_validation.json").unlink()
+
+    plan = build_real_run_plan(run_dir)
+
+    assert any(
+        issue.category == "capture" and issue.severity == "warning" and "missing" in issue.message
+        for issue in plan.issues
+    )
+
+
 def _write_run(tmp_path: Path) -> Path:
     run_dir = tmp_path / "pipeline_runs" / "desk_scene"
     _write_json(

@@ -156,6 +156,10 @@ def build_real_run_plan(
     preflight = _read_json(root / "preflight_report.json")
     scene = _read_json(root / "scene_data_inspection.json")
     quality = _read_json(root / "quality_gate.json")
+    run_audit = _read_json(root / "run_audit.json")
+    failure_diagnostics = _read_json(root / "failure_diagnostics.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
+    run_readiness = _read_json(root / "run_readiness.json")
     recommendations = _read_json(root / "run_recommendations.json")
     submission = (
         _read_json(submission_packet_path)
@@ -182,6 +186,7 @@ def build_real_run_plan(
     current_mode = "dry-run smoke demo" if bool(summary.get("dry_run")) else "real run"
     readiness = str(
         submission.get("readiness_level")
+        or run_readiness.get("readiness_level")
         or recommendations.get("readiness_level")
         or quality.get("status")
         or "unknown"
@@ -193,6 +198,10 @@ def build_real_run_plan(
         preflight=preflight,
         scene=scene,
         quality=quality,
+        run_audit=run_audit,
+        failure_diagnostics=failure_diagnostics,
+        query_evidence=query_evidence,
+        run_readiness=run_readiness,
         submission=submission,
     )
     commands = _commands(
@@ -272,6 +281,10 @@ def _issues(
     preflight: dict[str, Any],
     scene: dict[str, Any],
     quality: dict[str, Any],
+    run_audit: dict[str, Any],
+    failure_diagnostics: dict[str, Any],
+    query_evidence: dict[str, Any],
+    run_readiness: dict[str, Any],
     submission: dict[str, Any],
 ) -> list[RealRunIssue]:
     issues: list[RealRunIssue] = []
@@ -296,12 +309,24 @@ def _issues(
             )
         )
     capture_status = str(capture_validation.get("status") or "")
-    if capture_status == "blocked":
+    capture_fail_count = _safe_int(capture_validation.get("fail_count"))
+    capture_warn_count = _safe_int(capture_validation.get("warn_count"))
+    if not capture_validation:
+        issues.append(
+            RealRunIssue(
+                "capture",
+                "warning",
+                "Capture manifest validation is missing.",
+                "Create or refresh capture_manifest_validation.json before using this run as a real-run template.",
+                "capture_manifest_validation.md",
+            )
+        )
+    elif capture_status == "blocked" or capture_fail_count:
         issues.append(
             RealRunIssue(
                 "capture",
                 "blocker",
-                "Capture manifest validation is blocked.",
+                f"Capture manifest validation is blocked or has {capture_fail_count} failed checks.",
                 "Fix missing/invalid capture metadata and privacy review before training.",
                 "capture_manifest_validation.md",
             )
@@ -316,13 +341,25 @@ def _issues(
                 "capture_manifest_validation.md",
             )
         )
+    elif capture_warn_count:
+        issues.append(
+            RealRunIssue(
+                "capture",
+                "warning",
+                f"Capture manifest validation has {capture_warn_count} warning-level checks.",
+                "Review capture metadata warnings before spending GPU time.",
+                "capture_manifest_validation.md",
+            )
+        )
     preflight_status = str(preflight.get("status") or "")
-    if preflight_status == "blocked":
+    preflight_fail_count = _safe_int(preflight.get("fail_count"))
+    preflight_warn_count = _safe_int(preflight.get("warn_count"))
+    if preflight_status == "blocked" or preflight_fail_count:
         issues.append(
             RealRunIssue(
                 "preflight",
                 "blocker",
-                "Real-run preflight reported blocker-level checks.",
+                f"Real-run preflight reported blocker-level checks or {preflight_fail_count} failures.",
                 "Resolve missing upstream tools, GPU, input, processed data, or backend registration.",
                 "preflight_report.md",
             )
@@ -333,6 +370,16 @@ def _issues(
                 "preflight",
                 "warning",
                 f"Real-run preflight status is {preflight_status}.",
+                "Review preflight warnings before spending GPU time.",
+                "preflight_report.md",
+            )
+        )
+    elif preflight_warn_count:
+        issues.append(
+            RealRunIssue(
+                "preflight",
+                "warning",
+                f"Real-run preflight has {preflight_warn_count} warning-level checks.",
                 "Review preflight warnings before spending GPU time.",
                 "preflight_report.md",
             )
@@ -348,24 +395,107 @@ def _issues(
             )
         )
     quality_status = str(quality.get("status") or "")
-    if quality_status == "fail":
+    quality_fail_count = _safe_int(quality.get("fail_count"))
+    quality_warn_count = _safe_int(quality.get("warn_count"))
+    if quality_status == "fail" or quality_fail_count:
         issues.append(
             RealRunIssue(
                 "quality_gate",
                 "blocker",
-                "Quality gate reports a failed profile.",
+                f"Quality gate reports a failed profile or {quality_fail_count} failed checks.",
                 "Open quality_gate.md and resolve failed criteria before sharing.",
                 "quality_gate.md",
             )
         )
-    elif quality_status == "warn":
+    elif quality_status == "warn" or quality_warn_count:
         issues.append(
             RealRunIssue(
                 "quality_gate",
                 "warning",
-                "Quality gate has warning-level criteria.",
+                f"Quality gate has warning-level criteria or {quality_warn_count} warnings.",
                 "Review quality_gate.md and decide whether each warning is acceptable for a smoke demo or real run.",
                 "quality_gate.md",
+            )
+        )
+    audit_status = str(run_audit.get("status") or "")
+    audit_blocker_count = _safe_int(run_audit.get("blocker_count"))
+    if audit_status == "blocked" or audit_blocker_count:
+        issues.append(
+            RealRunIssue(
+                "run_audit",
+                "blocker",
+                f"Run audit reports status={audit_status or 'unknown'} with {audit_blocker_count} blockers.",
+                "Open run_audit.md and resolve run-level blockers before treating the run as real-run evidence.",
+                "run_audit.md",
+            )
+        )
+    elif audit_status and audit_status != "ready":
+        issues.append(
+            RealRunIssue(
+                "run_audit",
+                "warning",
+                f"Run audit status is {audit_status}.",
+                "Review run_audit.md before sharing or rerunning.",
+                "run_audit.md",
+            )
+        )
+    diagnostics_status = str(failure_diagnostics.get("status") or "")
+    diagnostics_blocker_count = _safe_int(failure_diagnostics.get("blocker_count"))
+    diagnostics_warning_count = _safe_int(failure_diagnostics.get("warning_count"))
+    if diagnostics_status == "blocked" or diagnostics_blocker_count:
+        issues.append(
+            RealRunIssue(
+                "failure_diagnostics",
+                "blocker",
+                (
+                    f"Failure diagnostics report status={diagnostics_status or 'unknown'} "
+                    f"with {diagnostics_blocker_count} blockers."
+                ),
+                "Open failure_diagnostics.md and resolve classified runtime or artifact failures first.",
+                "failure_diagnostics.md",
+            )
+        )
+    elif diagnostics_status and diagnostics_status != "clear":
+        issues.append(
+            RealRunIssue(
+                "failure_diagnostics",
+                "warning",
+                f"Failure diagnostics status is {diagnostics_status}.",
+                "Review failure_diagnostics.md warnings before rerunning or sharing.",
+                "failure_diagnostics.md",
+            )
+        )
+    elif diagnostics_warning_count:
+        issues.append(
+            RealRunIssue(
+                "failure_diagnostics",
+                "warning",
+                f"Failure diagnostics contain {diagnostics_warning_count} warning-level items.",
+                "Review failure_diagnostics.md warnings before rerunning or sharing.",
+                "failure_diagnostics.md",
+            )
+        )
+    query_status = str(query_evidence.get("status") or "")
+    query_risk_count = _query_risk_count(query_evidence)
+    if query_status == "fail" or query_risk_count:
+        issues.append(
+            RealRunIssue(
+                "query_evidence",
+                "blocker",
+                f"Query evidence reports status={query_status or 'unknown'} with {query_risk_count} risk flags.",
+                "Resolve overlapping counter-evidence or missing query artifacts before external sharing.",
+                "query_evidence_audit.md",
+            )
+        )
+    run_readiness_level = str(run_readiness.get("readiness_level") or "")
+    if run_readiness_level == "blocked":
+        issues.append(
+            RealRunIssue(
+                "run_readiness",
+                "blocker",
+                "Run readiness gate reports blocked.",
+                "Open run_readiness.md and resolve failed launch or external-review gates.",
+                "run_readiness.md",
             )
         )
     readiness = str(submission.get("readiness_level") or "")
@@ -640,6 +770,23 @@ def _read_json(path: str | Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _query_risk_count(query_evidence: dict[str, Any]) -> int:
+    totals = query_evidence.get("totals")
+    if isinstance(totals, dict) and totals.get("risk_flag_count") is not None:
+        return _safe_int(totals.get("risk_flag_count"))
+    tasks = query_evidence.get("tasks")
+    if isinstance(tasks, list):
+        return sum(_safe_int(task.get("risk_flag_count")) for task in tasks if isinstance(task, dict))
+    return _safe_int(query_evidence.get("risk_flag_count"))
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _display_run_dir(path: Path) -> str:

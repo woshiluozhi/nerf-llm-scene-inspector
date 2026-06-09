@@ -63,7 +63,7 @@ The submission-packet step converts run evidence into a claim-calibrated sharing
 
 ## Real-Run Action Plans
 
-Each run can also produce `real_run_plan.md` and `real_run_plan.json`, a concrete playbook for moving from smoke evidence to a real CUDA/Nerfstudio/LERF run. The plan reads the existing pipeline summary, preflight report, capture validation, quality gate, recommendations, and submission packet, then emits phased commands for capture metadata, preflight, data processing, training, annotation review, quality gates, pack validation, and sharing.
+Each run can also produce `real_run_plan.md` and `real_run_plan.json`, a concrete playbook for moving from smoke evidence to a real CUDA/Nerfstudio/LERF run. The plan reads the existing pipeline summary, preflight report, capture validation, run audit, failure diagnostics, query-evidence audit, run-readiness gate, quality gate, recommendations, and submission packet. It checks both status fields and blocker/failure counts, so stale ready-looking artifacts with nonzero `blocker_count`, `fail_count`, or query risk flags are surfaced before the command playbook. It then emits phased commands for capture metadata, preflight, data processing, training, annotation review, quality gates, pack validation, and sharing.
 
 ## Claim Audits
 

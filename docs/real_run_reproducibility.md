@@ -102,6 +102,12 @@ For external sharing, start with `submission_packet/submission_checklist.md`. It
 `Readiness Summary` section is the compact send/no-send view: failed checks, warning checks,
 pack validation state, capture-manifest status/failure count, query-evidence counter/risk
 counts, and the recommended next action.
+
+The real-run action plan reads the same audit evidence before recommending the next GPU
+run. Capture-validation `fail_count`, preflight `fail_count`, quality-gate `fail_count`,
+run-audit `blocker_count`, failure-diagnostics `blocker_count`, query-evidence risk flags,
+and a blocked run-readiness gate are all surfaced as blocker-level plan issues even when a
+status string still looks ready.
 Unresolved query risk flags are treated as a blocker in this packet; non-overlapping
 counter-evidence is retained as a warning for calibrated review. The same information is available in
 `submission_packet/submission_packet.json` under `readiness_summary` and the top-level

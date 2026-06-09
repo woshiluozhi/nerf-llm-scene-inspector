@@ -201,6 +201,9 @@ for debugging Nerfstudio, LERF, annotation, demo, and evaluation failures.
 Run `diagnose_run_failures.py` when a real run fails or falls back to manual viewer
 workflow: it summarizes common CUDA, LERF registration, COLMAP/FFmpeg, missing-config,
 and query-rendering failure modes in `failure_diagnostics.md`.
+The real-run action plan reads those diagnostics together with run audit, capture
+validation, preflight, query-evidence, and readiness gates; nonzero blocker/failure/risk
+counts are surfaced as plan issues even when a stale status string still looks ready.
 
 Run prompt-sensitivity analysis when you want to check whether several prompts for the
 same concept localize the same scene region:
