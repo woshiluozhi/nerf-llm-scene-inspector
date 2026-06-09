@@ -185,6 +185,10 @@ Use `--require-all` when every expanded prompt should have manually saved viewer
 Without it, missing query folders are kept as original results and recorded as warnings.
 Portfolio-pack export keeps `viewer_repair_summary.json` and `viewer_import_summary.json`;
 pack validation treats incomplete required repairs as share-blocking evidence issues.
+The query-evidence audit separates recovery artifacts from visual evidence: viewer fallback
+Markdown files and manual templates are counted as fallback artifacts, not rendered images.
+A fallback-only query report fails query evidence until RGB/relevancy/overlay outputs are
+imported from the viewer.
 
 ## Provenance Fields
 

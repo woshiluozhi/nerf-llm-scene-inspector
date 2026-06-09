@@ -219,6 +219,8 @@ def query_evidence_rows(audit: dict[str, Any]) -> list[dict[str, Any]]:
                 "overlays": task.get("overlay_count", 0),
                 "rendered": task.get("existing_rendered_image_count", 0),
                 "missing_renders": task.get("missing_rendered_image_count", 0),
+                "diagnostic_artifacts": task.get("diagnostic_artifact_count", 0),
+                "fallback_artifacts": task.get("fallback_artifact_count", 0),
                 "regions_2d": task.get("image_region_count", 0),
                 "regions_3d": task.get("region_3d_count", 0),
                 "points_3d": task.get("candidate_point_count", 0),
@@ -648,10 +650,14 @@ def _render_query_evidence_summary(st: Any, bundle: dict[str, Any]) -> None:
     col_d.metric("3D Points", str(totals.get("candidate_point_count", 0)))
 
     col_a, col_b, col_c, col_d = st.columns(4)
-    col_a.metric("Counter-evidence", str(totals.get("counter_evidence_count", 0)))
-    col_b.metric("Risk Flags", str(totals.get("risk_flag_count", 0)))
-    col_c.metric("Tasks With Counter", str(totals.get("tasks_with_counter_evidence", 0)))
-    col_d.metric("Tasks With Risk", str(totals.get("tasks_with_risk_flags", 0)))
+    col_a.metric("Fallback Artifacts", str(totals.get("fallback_artifact_count", 0)))
+    col_b.metric("Diagnostic Artifacts", str(totals.get("diagnostic_artifact_count", 0)))
+    col_c.metric("Counter-evidence", str(totals.get("counter_evidence_count", 0)))
+    col_d.metric("Risk Flags", str(totals.get("risk_flag_count", 0)))
+
+    col_a, col_b = st.columns(2)
+    col_a.metric("Tasks With Counter", str(totals.get("tasks_with_counter_evidence", 0)))
+    col_b.metric("Tasks With Risk", str(totals.get("tasks_with_risk_flags", 0)))
 
 
 def _render_artifacts(st: Any, bundle: dict[str, Any]) -> None:

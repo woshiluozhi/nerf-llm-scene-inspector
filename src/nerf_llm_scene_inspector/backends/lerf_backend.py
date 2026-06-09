@@ -173,7 +173,16 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
 
     def _write_viewer_fallback(self, query: str, output: Path) -> list[RenderedView]:
         fallback = output / "interactive_viewer_workflow.md"
-        template_path = write_query_report_template(query, self.config_path or "", output)
+        template_path = (
+            write_query_report_template(query, self.config_path or "", output)
+            if self.save_manual_template
+            else None
+        )
+        template_lines = (
+            [f"5. Fill or edit this JSON template: `{template_path.name}`."]
+            if template_path is not None
+            else ["5. Use the import command below to convert saved viewer files into a structured QueryResult."]
+        )
         fallback.write_text(
             "\n".join(
                 [
@@ -192,7 +201,7 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
                     f"3. Save screenshots or camera-path renders into: `{output}`",
                     "4. Name screenshots like `view_0000_rgb.png`, `view_0000_relevancy.png`,",
                     "   and `view_0000_overlay.png` when possible.",
-                    f"5. Fill or edit this JSON template: `{template_path.name}`.",
+                    *template_lines,
                     "6. Convert saved viewer files into a structured QueryResult:",
                     "",
                     "```bash",
@@ -212,20 +221,24 @@ class LERFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
             ),
             encoding="utf-8",
         )
-        return [
+        views = [
             RenderedView(
                 path=str(fallback),
                 kind="viewer_fallback",
                 query=query,
                 caption="Interactive LERF viewer workflow",
             ),
-            RenderedView(
-                path=str(template_path),
-                kind="manual_template",
-                query=query,
-                caption="Manual QueryResult JSON template",
-            )
         ]
+        if template_path is not None:
+            views.append(
+                RenderedView(
+                    path=str(template_path),
+                    kind="manual_template",
+                    query=query,
+                    caption="Manual QueryResult JSON template",
+                )
+            )
+        return views
 
     def _render_with_lerf_internal_api(self, query: str, output: Path) -> list[RenderedView]:
         """Best-effort internal LERF renderer.

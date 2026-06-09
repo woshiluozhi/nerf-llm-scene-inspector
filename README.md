@@ -463,6 +463,10 @@ This updates `scene_query_report.json`, rewrites `scene_query_report.md`, and re
 `viewer_repair_summary.json` so annotation, evaluation, and portfolio reports can use the
 manual LERF evidence. Portfolio-pack export keeps these summaries, and pack validation fails
 when a `--require-all` repair left required queries unresolved.
+Viewer fallback workflow files and manual templates are recovery artifacts, not visual
+evidence. `audit_query_evidence.py` counts only RGB/relevancy/overlay-style renders as
+rendered image evidence and fails fallback-only query reports until real viewer outputs are
+imported.
 
 ## Expected Outputs
 

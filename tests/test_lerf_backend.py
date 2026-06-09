@@ -37,6 +37,23 @@ def test_lerf_fallback_artifacts(monkeypatch, tmp_path: Path) -> None:
     assert (tmp_path / "query" / "interactive_viewer_workflow.md").exists()
 
 
+def test_lerf_fallback_respects_manual_template_flag(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "config.yml"
+    config.write_text("method_name: lerf\n", encoding="utf-8")
+    backend = LERFBackend(dry_run=False, save_manual_template=False)
+    backend.load(str(config))
+
+    def fail_render(_query: str, _output: Path):
+        raise RuntimeError("mock upstream failure")
+
+    monkeypatch.setattr(backend, "_render_with_lerf_internal_api", fail_render)
+    result = backend.query_text("mug", str(tmp_path / "query"))
+
+    assert any(view.kind == "viewer_fallback" for view in result.rendered_images)
+    assert not any(view.kind == "manual_template" for view in result.rendered_images)
+    assert not (tmp_path / "query" / "mug_manual_report_template.json").exists()
+
+
 def test_lerf_strict_backend_raises(monkeypatch, tmp_path: Path) -> None:
     config = tmp_path / "config.yml"
     config.write_text("method_name: lerf\n", encoding="utf-8")

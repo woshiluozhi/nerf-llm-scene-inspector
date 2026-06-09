@@ -36,6 +36,19 @@ def test_opennerf_fallback_writes_repair_workflow_and_template(tmp_path: Path) -
     assert (tmp_path / "query" / "mug_opennerf_manual_report_template.json").exists()
 
 
+def test_opennerf_fallback_respects_manual_template_flag(tmp_path: Path) -> None:
+    config = tmp_path / "config.yml"
+    config.write_text("method_name: opennerf\n", encoding="utf-8")
+    backend = OpenNeRFBackend(dry_run=False, save_manual_template=False)
+    backend.load(str(config))
+
+    result = backend.query_text("mug", str(tmp_path / "query"))
+
+    assert any(view.kind == "viewer_fallback" for view in result.rendered_images)
+    assert not any(view.kind == "manual_template" for view in result.rendered_images)
+    assert not (tmp_path / "query" / "mug_opennerf_manual_report_template.json").exists()
+
+
 def test_opennerf_strict_backend_raises(tmp_path: Path) -> None:
     config = tmp_path / "config.yml"
     config.write_text("method_name: opennerf\n", encoding="utf-8")

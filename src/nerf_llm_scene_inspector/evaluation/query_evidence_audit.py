@@ -12,6 +12,18 @@ from nerf_llm_scene_inspector.utils.paths import project_root, utc_timestamp
 
 EvidenceAuditStatus = Literal["pass", "warn", "fail"]
 EvidenceMode = Literal["3d", "2d_fallback", "render_only", "missing"]
+VISUAL_RENDER_KINDS = {
+    "rgb",
+    "relevancy",
+    "overlay",
+    "composited",
+    "heatmap",
+    "mask",
+    "semantic",
+    "segmentation",
+    "depth",
+}
+FALLBACK_ARTIFACT_KINDS = {"viewer_fallback", "manual_template"}
 
 
 @dataclass
@@ -29,6 +41,8 @@ class QueryEvidenceTask:
     rendered_image_count: int = 0
     existing_rendered_image_count: int = 0
     missing_rendered_image_count: int = 0
+    diagnostic_artifact_count: int = 0
+    fallback_artifact_count: int = 0
     overlay_count: int = 0
     relevancy_count: int = 0
     rgb_count: int = 0
@@ -105,6 +119,8 @@ class QueryEvidenceAudit:
             f"- Pass/warn/fail: {self.pass_count}/{self.warn_count}/{self.fail_count}",
             f"- Rendered images: {self.totals.get('rendered_image_count', 0)}",
             f"- Existing rendered images: {self.totals.get('existing_rendered_image_count', 0)}",
+            f"- Diagnostic artifacts: {self.totals.get('diagnostic_artifact_count', 0)}",
+            f"- Viewer fallback/manual artifacts: {self.totals.get('fallback_artifact_count', 0)}",
             f"- Overlays: {self.totals.get('overlay_count', 0)}",
             f"- Bounding regions: {self.totals.get('bounding_region_count', 0)}",
             f"- Candidate 3D points: {self.totals.get('candidate_point_count', 0)}",
@@ -203,9 +219,12 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
         for view in result.get("rendered_images") or []
         if isinstance(view, dict)
     ]
+    visual_rendered_images = [view for view in rendered_images if _is_visual_render(view)]
+    fallback_artifacts = [view for view in rendered_images if _is_fallback_artifact(view)]
+    diagnostic_artifact_count = len(rendered_images) - len(visual_rendered_images)
     missing_images = [
         str(view.get("path") or "")
-        for view in rendered_images
+        for view in visual_rendered_images
         if view.get("path") and not _resolve_artifact_path(str(view["path"]), run_dir, task_dir).exists()
     ]
     bounding_regions = [
@@ -224,7 +243,7 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
     confidences = [value for value in confidences if value is not None]
     region_scores = [_safe_float(region.get("score")) for region in bounding_regions]
     region_scores = [value for value in region_scores if value is not None]
-    overlay_count = _kind_count(rendered_images, "overlay")
+    overlay_count = _kind_count(visual_rendered_images, "overlay")
     image_region_count = sum(1 for region in bounding_regions if str(region.get("coordinate_frame") or "image") == "image")
     region_3d_count = sum(1 for region in bounding_regions if _region_has_3d_evidence(region))
     support_level = _support_level(payload)
@@ -240,6 +259,11 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
     for result in results:
         for warning in result.get("warnings") or []:
             warnings.append(f"{result.get('query') or 'query'}: {warning}")
+    if fallback_artifacts:
+        warnings.append(
+            f"{len(fallback_artifacts)} viewer fallback/manual artifact(s) were recorded; these are not visual evidence."
+        )
+        recommendations.append("Import saved viewer RGB/relevancy outputs or rerun the backend before using this query as evidence.")
     if missing_images:
         warnings.append(f"{len(missing_images)} rendered image reference(s) do not exist on disk.")
         recommendations.append("Regenerate query artifacts or import the missing viewer outputs.")
@@ -262,14 +286,14 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
         recommendations.append("Resolve or document risk flags before using this answer for safety-sensitive scene guidance.")
 
     evidence_mode = _evidence_mode(
-        rendered_image_count=len(rendered_images),
+        rendered_image_count=len(visual_rendered_images),
         bounding_region_count=len(bounding_regions),
         candidate_point_count=len(candidate_points),
         region_3d_count=region_3d_count,
     )
     status = _task_status(
         result_count=len(results),
-        rendered_image_count=len(rendered_images),
+        rendered_image_count=len(visual_rendered_images),
         overlay_count=overlay_count,
         evidence_mode=evidence_mode,
         missing_image_count=len(missing_images),
@@ -287,12 +311,14 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
         support_level=support_level,
         result_count=len(results),
         expanded_queries=expanded_queries,
-        rendered_image_count=len(rendered_images),
-        existing_rendered_image_count=len(rendered_images) - len(missing_images),
+        rendered_image_count=len(visual_rendered_images),
+        existing_rendered_image_count=len(visual_rendered_images) - len(missing_images),
         missing_rendered_image_count=len(missing_images),
+        diagnostic_artifact_count=diagnostic_artifact_count,
+        fallback_artifact_count=len(fallback_artifacts),
         overlay_count=overlay_count,
-        relevancy_count=_kind_count(rendered_images, "relevancy"),
-        rgb_count=_kind_count(rendered_images, "rgb"),
+        relevancy_count=_kind_count(visual_rendered_images, "relevancy"),
+        rgb_count=_kind_count(visual_rendered_images, "rgb"),
         bounding_region_count=len(bounding_regions),
         image_region_count=image_region_count,
         region_3d_count=region_3d_count,
@@ -350,6 +376,8 @@ def _totals(tasks: list[QueryEvidenceTask]) -> dict[str, Any]:
         "rendered_image_count": sum(task.rendered_image_count for task in tasks),
         "existing_rendered_image_count": sum(task.existing_rendered_image_count for task in tasks),
         "missing_rendered_image_count": sum(task.missing_rendered_image_count for task in tasks),
+        "diagnostic_artifact_count": sum(task.diagnostic_artifact_count for task in tasks),
+        "fallback_artifact_count": sum(task.fallback_artifact_count for task in tasks),
         "overlay_count": sum(task.overlay_count for task in tasks),
         "relevancy_count": sum(task.relevancy_count for task in tasks),
         "rgb_count": sum(task.rgb_count for task in tasks),
@@ -438,6 +466,14 @@ def _risk_flags(payload: dict[str, Any]) -> list[str]:
 
 def _kind_count(rendered_images: list[dict[str, Any]], kind: str) -> int:
     return sum(1 for image in rendered_images if str(image.get("kind") or "") == kind)
+
+
+def _is_visual_render(view: dict[str, Any]) -> bool:
+    return str(view.get("kind") or "") in VISUAL_RENDER_KINDS
+
+
+def _is_fallback_artifact(view: dict[str, Any]) -> bool:
+    return str(view.get("kind") or "") in FALLBACK_ARTIFACT_KINDS
 
 
 def _region_has_3d_evidence(region: dict[str, Any]) -> bool:

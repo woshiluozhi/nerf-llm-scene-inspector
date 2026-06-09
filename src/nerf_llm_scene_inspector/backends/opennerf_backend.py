@@ -134,7 +134,16 @@ class OpenNeRFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
             "Use the OpenNeRF viewer and repair the scene query report from manually saved outputs."
         )
         fallback = output / "opennerf_viewer_workflow.md"
-        template_path = write_opennerf_query_template(query, self.config_path or "", output)
+        template_path = (
+            write_opennerf_query_template(query, self.config_path or "", output)
+            if self.save_manual_template
+            else None
+        )
+        template_lines = (
+            [f"4. Fill or edit this JSON template if needed: `{template_path.name}`."]
+            if template_path is not None
+            else ["4. Use `scripts/import_viewer_outputs.py` for a single query directory if needed."]
+        )
         fallback.write_text(
             "\n".join(
                 [
@@ -152,7 +161,7 @@ class OpenNeRFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
                     f"2. Save RGB and semantic/relevancy outputs into: `{output}`",
                     "3. Name screenshots like `view_0000_rgb.png`, `view_0000_relevancy.png`,",
                     "   and `view_0000_overlay.png` when possible.",
-                    f"4. Fill or edit this JSON template if needed: `{template_path.name}`.",
+                    *template_lines,
                     "5. Repair the full scene query report after saving all prompt folders:",
                     "",
                     "```bash",
@@ -167,7 +176,7 @@ class OpenNeRFBackend(NerfstudioConfigMixin, SemanticFieldBackend):
             encoding="utf-8",
         )
         views = [RenderedView(str(fallback), "viewer_fallback", query, "OpenNeRF viewer workflow")]
-        if self.save_manual_template:
+        if template_path is not None:
             views.append(RenderedView(str(template_path), "manual_template", query, "Manual OpenNeRF QueryResult template"))
         return views
 

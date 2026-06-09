@@ -58,6 +58,21 @@ def test_query_evidence_audit_warns_on_counter_evidence_risk_flags(tmp_path: Pat
     assert any("counter-evidence" in item for item in audit.tasks[0].recommendations)
 
 
+def test_query_evidence_audit_fails_viewer_fallback_without_visual_outputs(tmp_path: Path) -> None:
+    run_dir = _write_viewer_fallback_report(tmp_path)
+
+    audit = audit_query_evidence(run_dir)
+
+    assert audit.ok is False
+    assert audit.status == "fail"
+    assert audit.tasks[0].status == "fail"
+    assert audit.tasks[0].evidence_mode == "missing"
+    assert audit.tasks[0].rendered_image_count == 0
+    assert audit.tasks[0].fallback_artifact_count == 2
+    assert audit.totals["fallback_artifact_count"] == 2
+    assert any("not visual evidence" in warning for warning in audit.tasks[0].warnings)
+
+
 def test_query_evidence_audit_fails_missing_reports(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     (run_dir / "queries").mkdir(parents=True)
@@ -172,6 +187,40 @@ def _write_query_report(
             }
         ],
         "answer_summary": answer_summary,
+        "warnings": [],
+    }
+    (task_dir / "scene_query_report.json").write_text(json.dumps(report), encoding="utf-8")
+    return run_dir
+
+
+def _write_viewer_fallback_report(tmp_path: Path) -> Path:
+    run_dir = tmp_path / "run"
+    task_dir = run_dir / "queries" / "mug"
+    expanded_dir = task_dir / "mug"
+    expanded_dir.mkdir(parents=True)
+    workflow = expanded_dir / "interactive_viewer_workflow.md"
+    template = expanded_dir / "mug_manual_report_template.json"
+    workflow.write_text("# Viewer fallback\n", encoding="utf-8")
+    template.write_text("{}", encoding="utf-8")
+    report = {
+        "scene_name": "unit_scene",
+        "task": "mug",
+        "query_results": [
+            {
+                "query": "mug",
+                "backend_name": "lerf",
+                "config_path": "config.yml",
+                "rendered_images": [
+                    {"path": str(workflow), "kind": "viewer_fallback", "query": "mug"},
+                    {"path": str(template), "kind": "manual_template", "query": "mug"},
+                ],
+                "candidate_points": [],
+                "bounding_regions": [],
+                "confidence": None,
+                "warnings": ["Automated LERF rendering failed; wrote viewer fallback instructions."],
+            }
+        ],
+        "answer_summary": {"support_level": "no_localization_evidence"},
         "warnings": [],
     }
     (task_dir / "scene_query_report.json").write_text(json.dumps(report), encoding="utf-8")
