@@ -365,6 +365,7 @@ def _entry_from_run(run_dir: Path, raw: dict[str, Any], output: Path) -> Experim
             prompt,
             relations,
             success,
+            dry_run,
             audit,
             capture,
             diagnostics,
@@ -425,6 +426,7 @@ def _portfolio_score(
     prompt: dict[str, Any],
     relations: dict[str, Any],
     success: bool,
+    dry_run: bool,
     audit: dict[str, Any],
     capture: dict[str, Any],
     diagnostics: dict[str, Any],
@@ -442,9 +444,14 @@ def _portfolio_score(
         return 0.0
     if _safe_int(audit.get("blocker_count")) or str(audit.get("status") or "") == "blocked":
         return 0.0
-    if _safe_int(capture.get("fail_count")) or str(capture.get("status") or "") == "blocked":
+    capture_status = str(capture.get("status") or "")
+    if _safe_int(capture.get("fail_count")) or capture_status == "blocked" or (not dry_run and capture_status != "ready"):
         return 0.0
-    if _safe_int(diagnostics.get("blocker_count")) or readiness.get("readiness_level") == "blocked":
+    if (
+        _safe_int(diagnostics.get("blocker_count"))
+        or str(diagnostics.get("status") or "") == "blocked"
+        or readiness.get("readiness_level") == "blocked"
+    ):
         return 0.0
     if quality_gate.get("status") == "fail" or quality_gate.get("passed") is False:
         return 0.0
@@ -506,9 +513,14 @@ def _candidate_status(
         return "blocked"
     if str(audit.get("status") or "") == "blocked" or _safe_int(audit.get("blocker_count")):
         return "blocked"
-    if str(capture.get("status") or "") == "blocked" or _safe_int(capture.get("fail_count")):
+    capture_status = str(capture.get("status") or "")
+    if (
+        capture_status == "blocked"
+        or _safe_int(capture.get("fail_count"))
+        or (not dry_run and capture_status != "ready")
+    ):
         return "blocked"
-    if _safe_int(diagnostics.get("blocker_count")):
+    if str(diagnostics.get("status") or "") == "blocked" or _safe_int(diagnostics.get("blocker_count")):
         return "blocked"
     if dry_run:
         return "dry_run_smoke"
@@ -562,11 +574,16 @@ def _blocking_reasons(
     if audit_blockers:
         reasons.append(f"run audit blockers={audit_blockers}")
     capture_failures = _safe_int(capture.get("fail_count"))
-    if str(capture.get("status") or "") == "blocked":
+    capture_status = str(capture.get("status") or "")
+    if capture_status == "blocked":
         reasons.append("capture manifest is blocked")
+    if not bool(summary.get("dry_run")) and capture_status != "ready":
+        reasons.append(f"capture manifest status={capture_status or 'missing'}")
     if capture_failures:
         reasons.append(f"capture manifest failures={capture_failures}")
     blocker_count = _safe_int(diagnostics.get("blocker_count"))
+    if str(diagnostics.get("status") or "") == "blocked":
+        reasons.append("failure diagnostics is blocked")
     if blocker_count:
         reasons.append(f"failure diagnostics blockers={blocker_count}")
     if readiness.get("readiness_level") == "blocked":

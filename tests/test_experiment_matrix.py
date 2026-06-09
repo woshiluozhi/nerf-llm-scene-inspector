@@ -277,6 +277,78 @@ def test_experiment_matrix_blocks_stale_capture_manifest_fail_count(tmp_path: Pa
     assert "capture manifest failures=1" in entry.blocking_reasons
 
 
+def test_experiment_matrix_blocks_real_run_capture_needs_review(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: unready_capture_matrix\n"
+        "experiments:\n"
+        "  - name: unready_capture\n"
+        "    scene_name: unready_capture_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "unready_capture_scene",
+        scene_name="unready_capture_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        capture_status="needs_review",
+        capture_fail_count=0,
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.portfolio_score == 0.0
+    assert entry.capture_manifest_status == "needs_review"
+    assert "capture manifest status=needs_review" in entry.blocking_reasons
+
+
+def test_experiment_matrix_blocks_failure_diagnostics_blocked_status(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: blocked_diagnostics_matrix\n"
+        "experiments:\n"
+        "  - name: blocked_diagnostics\n"
+        "    scene_name: blocked_diagnostics_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "blocked_diagnostics_scene",
+        scene_name="blocked_diagnostics_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="blocked",
+        diagnostics_blockers=0,
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.portfolio_score == 0.0
+    assert entry.failure_diagnostics_status == "blocked"
+    assert entry.failure_blocker_count == 0
+    assert "failure diagnostics is blocked" in entry.blocking_reasons
+
+
 def test_run_experiment_matrix_cli_dry_run(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")

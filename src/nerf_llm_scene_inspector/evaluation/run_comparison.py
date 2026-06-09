@@ -37,6 +37,8 @@ class RunComparisonEntry:
     audit_status: str = ""
     audit_blocker_count: int = 0
     audit_score: int | None = None
+    failure_diagnostics_status: str = ""
+    failure_diagnostics_blocker_count: int = 0
     capture_manifest_status: str = ""
     capture_manifest_fail_count: int = 0
     result_status: str = ""
@@ -112,15 +114,15 @@ class RunComparison:
             "",
             (
                 "| Rank | Scene | Status | Result | Submission | Mode | Score | Evidence | Audit | Audit Blockers | "
-                "Capture | Capture Fails | Query Evidence | Risk Flags | Queries | Evaluated | Top-k | IoU | "
+                "Diagnostics | Diagnostic Blockers | Capture | Capture Fails | Query Evidence | Risk Flags | Queries | Evaluated | Top-k | IoU | "
                 "Quality | Next Action | Run Dir |"
             ),
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
                 "| {rank} | {scene} | {status} | {result} | {submission} | {mode} | {score} | "
-                "{evidence} | {audit} | {audit_blockers} | {capture} | {capture_fails} | {query_evidence} | "
+                "{evidence} | {audit} | {audit_blockers} | {diagnostics} | {diagnostic_blockers} | {capture} | {capture_fails} | {query_evidence} | "
                 "{risk_flags} | {queries} | {evaluated} | {topk} | {iou} | {quality} | {action} | `{run_dir}` |".format(
                     rank=entry.rank,
                     scene=_cell(entry.scene_name),
@@ -132,6 +134,8 @@ class RunComparison:
                     evidence=_cell(entry.evidence_level or "unknown"),
                     audit=_cell(entry.audit_status or "unknown"),
                     audit_blockers=entry.audit_blocker_count,
+                    diagnostics=_cell(entry.failure_diagnostics_status or "unknown"),
+                    diagnostic_blockers=entry.failure_diagnostics_blocker_count,
                     capture=_cell(entry.capture_manifest_status or "unknown"),
                     capture_fails=entry.capture_manifest_fail_count,
                     query_evidence=_cell(entry.query_evidence_status or "unknown"),
@@ -193,6 +197,7 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     summary = _read_json(run_dir / "pipeline_summary.json")
     audit = _read_json(run_dir / "run_audit.json")
     scorecard = _read_json(run_dir / "evidence_scorecard.json")
+    diagnostics = _read_json(run_dir / "failure_diagnostics.json")
     capture = _read_json(run_dir / "capture_manifest_validation.json")
     query_evidence = _read_json(run_dir / "query_evidence_audit.json")
     result_card = _read_json(run_dir / "run_result_card.json")
@@ -206,6 +211,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     evidence_level = str(scorecard.get("evidence_level") or "")
     audit_status = str(audit.get("status") or "")
     audit_blocker_count = _safe_int(audit.get("blocker_count"))
+    diagnostics_status = str(diagnostics.get("status") or "")
+    diagnostics_blocker_count = _safe_int(diagnostics.get("blocker_count"))
     capture_status = str(capture.get("status") or "")
     capture_fail_count = _safe_int(capture.get("fail_count"))
     query_evidence_status = str(query_evidence.get("status") or "")
@@ -218,6 +225,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         evidence_level=evidence_level,
         audit_status=audit_status,
         audit_blocker_count=audit_blocker_count,
+        diagnostics_status=diagnostics_status,
+        diagnostics_blocker_count=diagnostics_blocker_count,
         capture_status=capture_status,
         capture_fail_count=capture_fail_count,
         result_status=result_status,
@@ -238,6 +247,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
             evidence_score=_optional_int(scorecard.get("score")),
             evidence_max_score=_optional_int(scorecard.get("max_score")),
             audit_score=_optional_int(audit.get("score")),
+            diagnostics_status=diagnostics_status,
+            diagnostics_blocker_count=diagnostics_blocker_count,
             capture_status=capture_status,
             result_status=result_status,
             submission_readiness_level=submission_readiness_level,
@@ -262,6 +273,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         audit_status=audit_status,
         audit_blocker_count=audit_blocker_count,
         audit_score=_optional_int(audit.get("score")),
+        failure_diagnostics_status=diagnostics_status,
+        failure_diagnostics_blocker_count=diagnostics_blocker_count,
         capture_manifest_status=capture_status,
         capture_manifest_fail_count=capture_fail_count,
         result_status=result_status,
@@ -288,6 +301,8 @@ def _selection_status(
     evidence_level: str,
     audit_status: str,
     audit_blocker_count: int,
+    diagnostics_status: str,
+    diagnostics_blocker_count: int,
     capture_status: str,
     capture_fail_count: int,
     result_status: str,
@@ -301,8 +316,11 @@ def _selection_status(
         or evidence_level == "blocked"
         or audit_status == "blocked"
         or audit_blocker_count
+        or diagnostics_status == "blocked"
+        or diagnostics_blocker_count
         or capture_status == "blocked"
         or capture_fail_count
+        or (not dry_run and capture_status != "ready")
         or result_status == "blocked"
         or submission_readiness_level == "blocked"
         or query_evidence_status == "fail"
@@ -336,6 +354,8 @@ def _portfolio_score(
     evidence_score: int | None,
     evidence_max_score: int | None,
     audit_score: int | None,
+    diagnostics_status: str,
+    diagnostics_blocker_count: int,
     capture_status: str,
     result_status: str,
     submission_readiness_level: str,
@@ -366,6 +386,10 @@ def _portfolio_score(
         score += 5.0
     elif capture_status == "needs_review":
         score += 2.0
+    if diagnostics_status == "clear" and diagnostics_blocker_count == 0:
+        score += 5.0
+    elif diagnostics_status == "blocked" or diagnostics_blocker_count:
+        score -= 20.0
     if result_status == "portfolio_ready":
         score += 4.0
     elif result_status == "blocked":

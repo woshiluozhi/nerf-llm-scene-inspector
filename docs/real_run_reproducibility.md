@@ -251,7 +251,8 @@ run-audit blocker counts, failure-diagnostics blocker counts, and capture-manife
 counts. A real run with unresolved query risk flags is never selected as a
 `portfolio_candidate`; comparison reports rank it as `needs_review`, and the experiment
 matrix treats risk flags as an external-sharing blocker. Nonzero run-audit blockers,
-failure-diagnostics blockers, or capture-manifest failures also block candidate selection,
+blocked failure diagnostics, failure-diagnostics blockers, capture-manifest failures, or
+real-run capture validation that is missing/not `ready` also block candidate selection,
 even if a stale status field still says ready. A real run is only ranked as a portfolio
 candidate when the result card, submission packet, query-evidence audit, run audit,
 failure diagnostics, and capture manifest are clean. The run-index `ready_runs` count is

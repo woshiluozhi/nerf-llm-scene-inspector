@@ -245,10 +245,12 @@ The run index, project site, comparison reports, and experiment matrix include r
 status, submission readiness, query-evidence status, audit/diagnostic/capture blocker
 counts, and risk-flag counts. Real runs with unresolved query risk flags are not promoted to
 `portfolio_candidate`; comparison reports label them `needs_review`, while the experiment
-matrix marks risk-flagged runs blocked for external sharing. Nonzero run-audit blockers
-or capture-manifest failures also block candidate selection, even if a stale status field
-still says ready. A real run is only ranked as a portfolio candidate when the result card,
-submission packet, query-evidence audit, run audit, and capture manifest are clean.
+matrix marks risk-flagged runs blocked for external sharing. Nonzero run-audit blockers,
+blocked failure diagnostics, or capture-manifest failures also block candidate selection,
+even if a stale status field still says ready. Real runs with capture validation that is
+missing or not `ready` are blocked before portfolio selection. A real run is only ranked as
+a portfolio candidate when the result card, submission packet, query-evidence audit, run
+audit, failure diagnostics, and capture manifest are clean.
 The run-index `ready_runs` count is intentionally strict: it counts only successful
 non-dry-run entries with `portfolio_ready` result/submission status, passing query evidence,
 clear failure diagnostics, clean run audit, and ready capture validation.

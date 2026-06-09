@@ -47,7 +47,7 @@ def test_compare_pipeline_runs_prefers_real_portfolio_candidate(tmp_path: Path) 
     assert comparison.best_run["scene_name"] == "real_scene"
 
 
-def test_compare_pipeline_runs_marks_unready_real_run_for_review(tmp_path: Path) -> None:
+def test_compare_pipeline_runs_blocks_unready_real_capture(tmp_path: Path) -> None:
     root = tmp_path / "pipeline_runs"
     _write_run(
         root / "real_review",
@@ -63,7 +63,7 @@ def test_compare_pipeline_runs_marks_unready_real_run_for_review(tmp_path: Path)
 
     comparison = compare_pipeline_runs(root)
 
-    assert comparison.entries[0].selection_status == "needs_review"
+    assert comparison.entries[0].selection_status == "blocked"
     assert comparison.portfolio_candidate_count == 0
 
 
@@ -190,6 +190,31 @@ def test_compare_pipeline_runs_blocks_capture_manifest_fail_count(tmp_path: Path
     assert comparison.portfolio_candidate_count == 0
 
 
+def test_compare_pipeline_runs_blocks_failure_diagnostics_blocker_count(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "stale_diagnostics_scene",
+        scene_name="stale_diagnostics_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        capture_status="ready",
+        diagnostics_status="clear",
+        diagnostics_blockers=1,
+    )
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "blocked"
+    assert entry.failure_diagnostics_status == "clear"
+    assert entry.failure_diagnostics_blocker_count == 1
+    assert comparison.portfolio_candidate_count == 0
+
+
 def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     root = tmp_path / "pipeline_runs"
     _write_run(
@@ -230,6 +255,7 @@ def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "# Pipeline Run Comparison" in markdown_text
     assert "Risk Flags" in markdown_text
     assert "Submission" in markdown_text
+    assert "Diagnostic Blockers" in markdown_text
 
 
 def test_compare_runs_cli_strict_requires_real_candidate(tmp_path: Path) -> None:
@@ -270,6 +296,8 @@ def _write_run(
     capture_status: str,
     audit_blockers: int = 0,
     capture_fail_count: int = 0,
+    diagnostics_status: str = "clear",
+    diagnostics_blockers: int = 0,
     query_risk_flags: int = 0,
     result_status: str | None = None,
     submission_readiness: str | None = None,
@@ -304,6 +332,10 @@ def _write_run(
     _write_json(
         run_dir / "capture_manifest_validation.json",
         {"status": capture_status, "fail_count": capture_fail_count},
+    )
+    _write_json(
+        run_dir / "failure_diagnostics.json",
+        {"status": diagnostics_status, "blocker_count": diagnostics_blockers, "warning_count": 0},
     )
     _write_json(run_dir / "run_result_card.json", {"result_status": result_status})
     _write_json(
