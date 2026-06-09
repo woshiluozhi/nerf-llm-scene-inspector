@@ -65,6 +65,8 @@ def test_experiment_matrix_collects_existing_runs(tmp_path: Path) -> None:
     assert rows[0]["experiment_name"] == "lerf_lite"
     assert rows[0]["candidate_status"] == "portfolio_candidate"
     assert rows[0]["failure_diagnostics_status"] == "clear"
+    assert rows[0]["real_run_plan_status"] == "ready"
+    assert rows[0]["real_run_plan_blocker_count"] == "0"
     assert rows[0]["query_evidence_status"] == "pass"
     assert rows[0]["query_risk_flag_count"] == "0"
     assert rows[0]["relation_edge_count"] == "4"
@@ -74,6 +76,7 @@ def test_experiment_matrix_collects_existing_runs(tmp_path: Path) -> None:
     markdown = (output / "experiment_matrix_report.md").read_text(encoding="utf-8")
     assert "## Selection Summary" in markdown
     assert "Query Evidence" in markdown
+    assert "Plan Blockers" in markdown
     assert "Recommended portfolio run" in markdown
 
 
@@ -349,6 +352,42 @@ def test_experiment_matrix_blocks_failure_diagnostics_blocked_status(tmp_path: P
     assert "failure diagnostics is blocked" in entry.blocking_reasons
 
 
+def test_experiment_matrix_blocks_real_run_plan_blocker_count(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: blocked_plan_matrix\n"
+        "experiments:\n"
+        "  - name: blocked_plan\n"
+        "    scene_name: blocked_plan_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "blocked_plan_scene",
+        scene_name="blocked_plan_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        real_run_plan_blocker_count=1,
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.portfolio_score == 0.0
+    assert entry.real_run_plan_status == "blocked"
+    assert entry.real_run_plan_blocker_count == 1
+    assert "real-run plan blockers=1" in entry.blocking_reasons
+
+
 def test_run_experiment_matrix_cli_dry_run(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")
@@ -422,7 +461,11 @@ def _write_run(
     query_evidence_status: str = "pass",
     query_counter_evidence_count: int = 0,
     query_risk_flag_count: int = 0,
+    real_run_plan_blocker_count: int = 0,
+    real_run_plan_warning_count: int | None = None,
 ) -> None:
+    if real_run_plan_warning_count is None:
+        real_run_plan_warning_count = 1 if dry_run else 0
     _write_json(
         run_dir / "pipeline_summary.json",
         {
@@ -447,6 +490,13 @@ def _write_run(
             "status": diagnostics_status,
             "blocker_count": diagnostics_blockers,
             "warning_count": diagnostics_warnings,
+        },
+    )
+    _write_json(
+        run_dir / "real_run_plan" / "real_run_plan.json",
+        {
+            "blocker_count": real_run_plan_blocker_count,
+            "warning_count": real_run_plan_warning_count,
         },
     )
     _write_json(

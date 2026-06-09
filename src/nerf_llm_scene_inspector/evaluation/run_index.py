@@ -30,6 +30,9 @@ class RunIndexEntry:
     failure_diagnostics_blocker_count: int = 0
     capture_manifest_status: str = ""
     capture_manifest_fail_count: int = 0
+    real_run_plan_status: str = ""
+    real_run_plan_blocker_count: int = 0
+    real_run_plan_warning_count: int = 0
     result_status: str = ""
     submission_readiness_level: str = ""
     query_evidence_status: str = ""
@@ -88,13 +91,13 @@ class RunIndex:
             f"- Successful runs: {self.successful_runs}",
             f"- Ready runs: {self.ready_runs}",
             "",
-            "| Scene | Status | Result | Submission | Audit | Score | Audit Blockers | Diagnostics | Diagnostic Blockers | Capture | Capture Fails | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
-            "| --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| Scene | Status | Result | Submission | Audit | Score | Audit Blockers | Diagnostics | Diagnostic Blockers | Capture | Capture Fails | Real-Run Plan | Plan Blockers | Plan Warnings | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
+            "| --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | ---: | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
                 "| {scene} | {success} | {result} | {submission} | {audit} | {score} | "
-                "{audit_blockers} | {diagnostics} | {diagnostic_blockers} | {capture} | {capture_fails} | {query_evidence} | {risk_flags} | {backend} | {dry_run} | {queries} | "
+                "{audit_blockers} | {diagnostics} | {diagnostic_blockers} | {capture} | {capture_fails} | {plan} | {plan_blockers} | {plan_warnings} | {query_evidence} | {risk_flags} | {backend} | {dry_run} | {queries} | "
                 "{evaluated} | {topk} | {iou} | {quality} | `{run_dir}` |".format(
                     scene=entry.scene_name,
                     success="success" if entry.success else "failed",
@@ -107,6 +110,9 @@ class RunIndex:
                     diagnostic_blockers=entry.failure_diagnostics_blocker_count,
                     capture=entry.capture_manifest_status or "unknown",
                     capture_fails=entry.capture_manifest_fail_count,
+                    plan=entry.real_run_plan_status or "unknown",
+                    plan_blockers=entry.real_run_plan_blocker_count,
+                    plan_warnings=entry.real_run_plan_warning_count,
                     query_evidence=entry.query_evidence_status or "unknown",
                     risk_flags=entry.query_risk_flag_count,
                     backend=entry.backend or "unknown",
@@ -157,6 +163,7 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
     audit = _read_json(run_dir / "run_audit.json")
     diagnostics = _read_json(run_dir / "failure_diagnostics.json")
     capture = _read_json(run_dir / "capture_manifest_validation.json")
+    real_run_plan = _read_json(run_dir / "real_run_plan" / "real_run_plan.json")
     query_evidence = _read_json(run_dir / "query_evidence_audit.json")
     result_card = _read_json(run_dir / "run_result_card.json")
     submission = _read_json(run_dir / "submission_packet" / "submission_packet.json")
@@ -165,6 +172,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
     scene_name = str(summary.get("scene_name") or run_dir.name)
     counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
     audit_blocker_count = _safe_int(audit.get("blocker_count"))
+    plan_blocker_count = _safe_int(real_run_plan.get("blocker_count"))
+    plan_warning_count = _safe_int(real_run_plan.get("warning_count"))
     return RunIndexEntry(
         scene_name=scene_name,
         run_dir=_relative_to_root(run_dir, root),
@@ -182,6 +191,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
         failure_diagnostics_blocker_count=_safe_int(diagnostics.get("blocker_count")),
         capture_manifest_status=str(capture.get("status") or ""),
         capture_manifest_fail_count=_safe_int(capture.get("fail_count")),
+        real_run_plan_status=_real_run_plan_status(real_run_plan),
+        real_run_plan_blocker_count=plan_blocker_count,
+        real_run_plan_warning_count=plan_warning_count,
         result_status=str(result_card.get("result_status") or ""),
         submission_readiness_level=str(submission.get("readiness_level") or ""),
         query_evidence_status=str(query_evidence.get("status") or ""),
@@ -209,6 +221,8 @@ def _is_ready_entry(entry: RunIndexEntry) -> bool:
         and entry.failure_diagnostics_blocker_count == 0
         and entry.capture_manifest_status == "ready"
         and entry.capture_manifest_fail_count == 0
+        and entry.real_run_plan_status == "ready"
+        and entry.real_run_plan_blocker_count == 0
         and entry.query_evidence_status == "pass"
         and entry.query_risk_flag_count == 0
     )
@@ -249,6 +263,18 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _real_run_plan_status(plan: dict[str, Any]) -> str:
+    if not plan:
+        return "missing"
+    blocker_count = _safe_int(plan.get("blocker_count"))
+    warning_count = _safe_int(plan.get("warning_count"))
+    if blocker_count:
+        return "blocked"
+    if warning_count:
+        return "needs_review"
+    return "ready"
 
 
 def _relative_to_root(path: Path, root: Path) -> str:

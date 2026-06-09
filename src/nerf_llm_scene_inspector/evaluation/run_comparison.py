@@ -41,6 +41,9 @@ class RunComparisonEntry:
     failure_diagnostics_blocker_count: int = 0
     capture_manifest_status: str = ""
     capture_manifest_fail_count: int = 0
+    real_run_plan_status: str = ""
+    real_run_plan_blocker_count: int = 0
+    real_run_plan_warning_count: int = 0
     result_status: str = ""
     submission_readiness_level: str = ""
     query_evidence_status: str = ""
@@ -114,15 +117,15 @@ class RunComparison:
             "",
             (
                 "| Rank | Scene | Status | Result | Submission | Mode | Score | Evidence | Audit | Audit Blockers | "
-                "Diagnostics | Diagnostic Blockers | Capture | Capture Fails | Query Evidence | Risk Flags | Queries | Evaluated | Top-k | IoU | "
+                "Diagnostics | Diagnostic Blockers | Capture | Capture Fails | Real-Run Plan | Plan Blockers | Plan Warnings | Query Evidence | Risk Flags | Queries | Evaluated | Top-k | IoU | "
                 "Quality | Next Action | Run Dir |"
             ),
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | ---: | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
                 "| {rank} | {scene} | {status} | {result} | {submission} | {mode} | {score} | "
-                "{evidence} | {audit} | {audit_blockers} | {diagnostics} | {diagnostic_blockers} | {capture} | {capture_fails} | {query_evidence} | "
+                "{evidence} | {audit} | {audit_blockers} | {diagnostics} | {diagnostic_blockers} | {capture} | {capture_fails} | {plan} | {plan_blockers} | {plan_warnings} | {query_evidence} | "
                 "{risk_flags} | {queries} | {evaluated} | {topk} | {iou} | {quality} | {action} | `{run_dir}` |".format(
                     rank=entry.rank,
                     scene=_cell(entry.scene_name),
@@ -138,6 +141,9 @@ class RunComparison:
                     diagnostic_blockers=entry.failure_diagnostics_blocker_count,
                     capture=_cell(entry.capture_manifest_status or "unknown"),
                     capture_fails=entry.capture_manifest_fail_count,
+                    plan=_cell(entry.real_run_plan_status or "unknown"),
+                    plan_blockers=entry.real_run_plan_blocker_count,
+                    plan_warnings=entry.real_run_plan_warning_count,
                     query_evidence=_cell(entry.query_evidence_status or "unknown"),
                     risk_flags=entry.query_risk_flag_count,
                     queries=entry.query_count,
@@ -199,6 +205,7 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     scorecard = _read_json(run_dir / "evidence_scorecard.json")
     diagnostics = _read_json(run_dir / "failure_diagnostics.json")
     capture = _read_json(run_dir / "capture_manifest_validation.json")
+    real_run_plan = _read_json(run_dir / "real_run_plan" / "real_run_plan.json")
     query_evidence = _read_json(run_dir / "query_evidence_audit.json")
     result_card = _read_json(run_dir / "run_result_card.json")
     submission = _read_json(run_dir / "submission_packet" / "submission_packet.json")
@@ -215,6 +222,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     diagnostics_blocker_count = _safe_int(diagnostics.get("blocker_count"))
     capture_status = str(capture.get("status") or "")
     capture_fail_count = _safe_int(capture.get("fail_count"))
+    plan_status = _real_run_plan_status(real_run_plan)
+    plan_blocker_count = _safe_int(real_run_plan.get("blocker_count"))
+    plan_warning_count = _safe_int(real_run_plan.get("warning_count"))
     query_evidence_status = str(query_evidence.get("status") or "")
     result_status = str(result_card.get("result_status") or "")
     submission_readiness_level = str(submission.get("readiness_level") or "")
@@ -229,6 +239,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         diagnostics_blocker_count=diagnostics_blocker_count,
         capture_status=capture_status,
         capture_fail_count=capture_fail_count,
+        plan_status=plan_status,
+        plan_blocker_count=plan_blocker_count,
+        plan_warning_count=plan_warning_count,
         result_status=result_status,
         submission_readiness_level=submission_readiness_level,
         query_evidence_status=query_evidence_status,
@@ -250,6 +263,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
             diagnostics_status=diagnostics_status,
             diagnostics_blocker_count=diagnostics_blocker_count,
             capture_status=capture_status,
+            plan_status=plan_status,
+            plan_blocker_count=plan_blocker_count,
+            plan_warning_count=plan_warning_count,
             result_status=result_status,
             submission_readiness_level=submission_readiness_level,
             query_evidence_status=query_evidence_status,
@@ -277,6 +293,9 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         failure_diagnostics_blocker_count=diagnostics_blocker_count,
         capture_manifest_status=capture_status,
         capture_manifest_fail_count=capture_fail_count,
+        real_run_plan_status=plan_status,
+        real_run_plan_blocker_count=plan_blocker_count,
+        real_run_plan_warning_count=plan_warning_count,
         result_status=result_status,
         submission_readiness_level=submission_readiness_level,
         query_evidence_status=query_evidence_status,
@@ -305,6 +324,9 @@ def _selection_status(
     diagnostics_blocker_count: int,
     capture_status: str,
     capture_fail_count: int,
+    plan_status: str,
+    plan_blocker_count: int,
+    plan_warning_count: int,
     result_status: str,
     submission_readiness_level: str,
     query_evidence_status: str,
@@ -321,6 +343,8 @@ def _selection_status(
         or capture_status == "blocked"
         or capture_fail_count
         or (not dry_run and capture_status != "ready")
+        or plan_status == "blocked"
+        or plan_blocker_count
         or result_status == "blocked"
         or submission_readiness_level == "blocked"
         or query_evidence_status == "fail"
@@ -328,12 +352,19 @@ def _selection_status(
         return "blocked"
     if dry_run:
         return "dry_run_smoke_demo"
-    if query_risk_flag_count or query_counter_evidence_count or query_evidence_status == "warn":
+    if (
+        plan_warning_count
+        or plan_status in {"missing", "needs_review"}
+        or query_risk_flag_count
+        or query_counter_evidence_count
+        or query_evidence_status == "warn"
+    ):
         return "needs_review"
     if (
         evidence_level == "portfolio_ready_real_run"
         and audit_status == "ready"
         and capture_status == "ready"
+        and plan_status == "ready"
         and result_status == "portfolio_ready"
         and submission_readiness_level == "portfolio_ready"
         and query_evidence_status == "pass"
@@ -357,6 +388,9 @@ def _portfolio_score(
     diagnostics_status: str,
     diagnostics_blocker_count: int,
     capture_status: str,
+    plan_status: str,
+    plan_blocker_count: int,
+    plan_warning_count: int,
     result_status: str,
     submission_readiness_level: str,
     query_evidence_status: str,
@@ -390,6 +424,12 @@ def _portfolio_score(
         score += 5.0
     elif diagnostics_status == "blocked" or diagnostics_blocker_count:
         score -= 20.0
+    if plan_status == "ready" and plan_blocker_count == 0:
+        score += 4.0
+    elif plan_status == "blocked" or plan_blocker_count:
+        score -= 20.0
+    elif plan_status in {"missing", "needs_review"} or plan_warning_count:
+        score -= 4.0
     if result_status == "portfolio_ready":
         score += 4.0
     elif result_status == "blocked":
@@ -440,6 +480,18 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _real_run_plan_status(plan: dict[str, Any]) -> str:
+    if not plan:
+        return "missing"
+    blocker_count = _safe_int(plan.get("blocker_count"))
+    warning_count = _safe_int(plan.get("warning_count"))
+    if blocker_count:
+        return "blocked"
+    if warning_count:
+        return "needs_review"
+    return "ready"
 
 
 def _relative_to_root(path: Path, root: Path) -> str:

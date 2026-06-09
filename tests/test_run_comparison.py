@@ -42,6 +42,7 @@ def test_compare_pipeline_runs_prefers_real_portfolio_candidate(tmp_path: Path) 
     assert comparison.entries[0].selection_status == "portfolio_candidate"
     assert comparison.entries[0].result_status == "portfolio_ready"
     assert comparison.entries[0].submission_readiness_level == "portfolio_ready"
+    assert comparison.entries[0].real_run_plan_status == "ready"
     assert comparison.entries[1].selection_status == "dry_run_smoke_demo"
     assert comparison.best_run is not None
     assert comparison.best_run["scene_name"] == "real_scene"
@@ -215,6 +216,54 @@ def test_compare_pipeline_runs_blocks_failure_diagnostics_blocker_count(tmp_path
     assert comparison.portfolio_candidate_count == 0
 
 
+def test_compare_pipeline_runs_blocks_real_run_plan_blocker_count(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "plan_blocked_scene",
+        scene_name="plan_blocked_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        capture_status="ready",
+        plan_blockers=1,
+    )
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "blocked"
+    assert entry.real_run_plan_status == "blocked"
+    assert entry.real_run_plan_blocker_count == 1
+    assert comparison.portfolio_candidate_count == 0
+
+
+def test_compare_pipeline_runs_demotes_missing_real_run_plan(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    run_dir = root / "missing_plan_scene"
+    _write_run(
+        run_dir,
+        scene_name="missing_plan_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        capture_status="ready",
+    )
+    (run_dir / "real_run_plan" / "real_run_plan.json").unlink()
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "needs_review"
+    assert entry.real_run_plan_status == "missing"
+    assert comparison.portfolio_candidate_count == 0
+
+
 def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     root = tmp_path / "pipeline_runs"
     _write_run(
@@ -256,6 +305,7 @@ def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "Risk Flags" in markdown_text
     assert "Submission" in markdown_text
     assert "Diagnostic Blockers" in markdown_text
+    assert "Plan Blockers" in markdown_text
 
 
 def test_compare_runs_cli_strict_requires_real_candidate(tmp_path: Path) -> None:
@@ -298,6 +348,8 @@ def _write_run(
     capture_fail_count: int = 0,
     diagnostics_status: str = "clear",
     diagnostics_blockers: int = 0,
+    plan_blockers: int = 0,
+    plan_warnings: int | None = None,
     query_risk_flags: int = 0,
     result_status: str | None = None,
     submission_readiness: str | None = None,
@@ -306,6 +358,8 @@ def _write_run(
         result_status = "shareable_smoke_demo" if dry_run else "portfolio_ready"
     if submission_readiness is None:
         submission_readiness = "shareable_smoke_demo" if dry_run else "portfolio_ready"
+    if plan_warnings is None:
+        plan_warnings = 1 if dry_run else 0
     _write_json(
         run_dir / "pipeline_summary.json",
         {
@@ -336,6 +390,10 @@ def _write_run(
     _write_json(
         run_dir / "failure_diagnostics.json",
         {"status": diagnostics_status, "blocker_count": diagnostics_blockers, "warning_count": 0},
+    )
+    _write_json(
+        run_dir / "real_run_plan" / "real_run_plan.json",
+        {"blocker_count": plan_blockers, "warning_count": plan_warnings},
     )
     _write_json(run_dir / "run_result_card.json", {"result_status": result_status})
     _write_json(

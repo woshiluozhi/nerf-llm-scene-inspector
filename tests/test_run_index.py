@@ -33,6 +33,8 @@ def test_index_pipeline_runs_summarizes_runs(tmp_path: Path) -> None:
     assert index.entries[0].failure_diagnostics_blocker_count == 0
     assert index.entries[0].capture_manifest_status == "ready"
     assert index.entries[0].capture_manifest_fail_count == 0
+    assert index.entries[0].real_run_plan_status == "ready"
+    assert index.entries[0].real_run_plan_blocker_count == 0
 
 
 def test_index_pipeline_runs_exposes_audit_and_capture_counts(tmp_path: Path) -> None:
@@ -80,6 +82,25 @@ def test_index_pipeline_runs_ready_runs_require_external_sharing_gates(tmp_path:
     assert entry.failure_diagnostics_blocker_count == 1
 
 
+def test_index_pipeline_runs_ready_runs_require_clean_real_run_plan(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "plan_blocked_scene",
+        scene_name="plan_blocked_scene",
+        audit_status="ready",
+        score=96,
+        dry_run=False,
+        plan_blockers=1,
+    )
+
+    index = index_pipeline_runs(root)
+
+    entry = index.entries[0]
+    assert index.ready_runs == 0
+    assert entry.real_run_plan_status == "blocked"
+    assert entry.real_run_plan_blocker_count == 1
+
+
 def test_index_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     root = tmp_path / "pipeline_runs"
     _write_run(root / "scene_a", scene_name="scene_a", audit_status="ready", score=100, dry_run=False)
@@ -112,6 +133,7 @@ def test_index_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "Audit Blockers" in markdown_text
     assert "Diagnostic Blockers" in markdown_text
     assert "Capture Fails" in markdown_text
+    assert "Plan Blockers" in markdown_text
 
 
 def _write_run(
@@ -124,8 +146,12 @@ def _write_run(
     capture_status: str = "ready",
     capture_fail_count: int = 0,
     failure_blockers: int = 0,
+    plan_blockers: int = 0,
+    plan_warnings: int | None = None,
     dry_run: bool = True,
 ) -> None:
+    if plan_warnings is None:
+        plan_warnings = 1 if dry_run else 0
     _write_json(
         run_dir / "pipeline_summary.json",
         {
@@ -154,6 +180,10 @@ def _write_run(
         run_dir / "failure_diagnostics.json",
         {"status": "clear", "blocker_count": failure_blockers, "warning_count": 0},
     )
+    _write_json(
+        run_dir / "real_run_plan" / "real_run_plan.json",
+        {"blocker_count": plan_blockers, "warning_count": plan_warnings},
+    )
     _write_json(run_dir / "scene_data_inspection.json", {"quality_score": 0.9, "pose_coverage_score": 1.0})
     _write_json(
         run_dir / "evaluation" / "eval_summary.json",
@@ -178,6 +208,7 @@ def _write_run(
     (run_dir / "portfolio_page.html").write_text("<!doctype html>\n", encoding="utf-8")
     (run_dir / "evidence_scorecard.md").write_text("# Scorecard\n", encoding="utf-8")
     (run_dir / "run_recommendations.md").write_text("# Recommendations\n", encoding="utf-8")
+    (run_dir / "real_run_plan" / "real_run_plan.md").write_text("# Real-Run Plan\n", encoding="utf-8")
     (run_dir / "evaluation" / "annotation_review.md").write_text("# Annotation Review\n", encoding="utf-8")
     (run_dir / "evaluation" / "annotation_review_contact_sheet.png").write_text("image", encoding="utf-8")
 

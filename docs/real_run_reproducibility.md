@@ -254,18 +254,19 @@ python scripts/generate_project_site.py --run-index results/pipeline_runs/run_in
 
 The index, project site, comparison reports, and experiment matrix surface result status,
 submission readiness, query-evidence status, counter-evidence counts, risk-flag counts,
-run-audit blocker counts, failure-diagnostics blocker counts, and capture-manifest failure
-counts. A real run with unresolved query risk flags is never selected as a
+run-audit blocker counts, failure-diagnostics blocker counts, capture-manifest failure
+counts, and real-run-plan blocker/warning counts. A real run with unresolved query risk flags is never selected as a
 `portfolio_candidate`; comparison reports rank it as `needs_review`, and the experiment
 matrix treats risk flags as an external-sharing blocker. Nonzero run-audit blockers,
 blocked failure diagnostics, failure-diagnostics blockers, capture-manifest failures, or
-real-run capture validation that is missing/not `ready` also block candidate selection,
+real-run-plan blockers also block candidate selection. Real-run capture validation that is
+missing/not `ready` also blocks candidate selection,
 even if a stale status field still says ready. A real run is only ranked as a portfolio
 candidate when the result card, submission packet, query-evidence audit, run audit,
-failure diagnostics, and capture manifest are clean. The run-index `ready_runs` count is
+failure diagnostics, real-run plan, and capture manifest are clean. The run-index `ready_runs` count is
 also strict: it only counts successful non-dry-run runs with `portfolio_ready`
 result/submission status, passing query evidence, clear failure diagnostics, clean run
-audit, and ready capture validation.
+audit, clean real-run plan, and ready capture validation.
 
 For a small ablation-style table across variants or query sets, run:
 

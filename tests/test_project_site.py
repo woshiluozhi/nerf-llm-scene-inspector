@@ -32,6 +32,8 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
                 "audit_blocker_count": 1,
                 "failure_diagnostics_blocker_count": 3,
                 "capture_manifest_fail_count": 2,
+                "real_run_plan_blocker_count": 4,
+                "real_run_plan_warning_count": 5,
                 "result_status": "blocked",
                 "submission_readiness_level": "blocked",
                 "query_risk_flag_count": 1,
@@ -58,12 +60,16 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
     assert "Audit Blockers" in html
     assert "Diagnostic Blockers" in html
     assert "Capture Fails" in html
+    assert "Plan Blockers" in html
+    assert "Plan Warnings" in html
     assert "Result" in html
     assert "Submission" in html
     assert "blocked" in html
     assert "<td>1</td>" in html
     assert "<td>2</td>" in html
     assert "<td>3</td>" in html
+    assert "<td>4</td>" in html
+    assert "<td>5</td>" in html
     assert "desk_scene" in html
     assert "../results/pipeline_runs/desk_scene/portfolio_page.html" in html
     assert "../results/pipeline_runs/run_comparison.md" in html
