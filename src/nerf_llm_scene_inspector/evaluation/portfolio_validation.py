@@ -438,8 +438,11 @@ def _check_run_audit(pack_path: Path, warnings: list[str], errors: list[str]) ->
     if not isinstance(audit, dict):
         return
     status = str(audit.get("status") or "")
+    blocker_count = _safe_int(audit.get("blocker_count"))
     if status == "blocked":
         errors.append("run_audit.json status is blocked.")
+    elif blocker_count:
+        errors.append(f"run_audit.json reports {blocker_count} blocker finding(s).")
     elif status == "needs_review":
         warnings.append("run_audit.json status is needs_review; inspect warnings before sharing.")
     elif status and status != "ready":
@@ -475,8 +478,11 @@ def _check_failure_diagnostics(pack_path: Path, warnings: list[str], errors: lis
     if not isinstance(diagnostics, dict):
         return
     status = str(diagnostics.get("status") or "")
+    blocker_count = _safe_int(diagnostics.get("blocker_count"))
     if status == "blocked":
         errors.append("failure_diagnostics.json status is blocked.")
+    elif blocker_count:
+        errors.append(f"failure_diagnostics.json reports {blocker_count} blocker finding(s).")
     elif status == "needs_attention":
         warnings.append("failure_diagnostics.json status is needs_attention; inspect repair actions before sharing.")
     elif status and status != "clear":
@@ -488,8 +494,11 @@ def _check_capture_manifest(pack_path: Path, warnings: list[str], errors: list[s
     if not isinstance(validation, dict):
         return
     status = str(validation.get("status") or "")
+    fail_count = _safe_int(validation.get("fail_count"))
     if status == "blocked":
         errors.append("capture_manifest_validation.json status is blocked.")
+    elif fail_count:
+        errors.append(f"capture_manifest_validation.json reports {fail_count} failed check(s).")
     elif status == "needs_review":
         warnings.append("capture_manifest_validation.json status is needs_review; fill capture metadata before sharing real results.")
     elif status and status != "ready":

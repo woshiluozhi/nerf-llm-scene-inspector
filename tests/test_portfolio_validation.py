@@ -125,6 +125,45 @@ def test_validate_portfolio_pack_fails_blocked_failure_diagnostics(tmp_path: Pat
     assert "failure_diagnostics.json status is blocked." in report.errors
 
 
+def test_validate_portfolio_pack_fails_run_audit_blocker_count(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "run_audit.json").write_text(
+        json.dumps({"status": "ready", "score": 90, "blocker_count": 1}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "run_audit.json reports 1 blocker finding(s)." in report.errors
+
+
+def test_validate_portfolio_pack_fails_failure_diagnostics_blocker_count(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "failure_diagnostics.json").write_text(
+        json.dumps({"status": "clear", "blocker_count": 1, "warning_count": 0}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "failure_diagnostics.json reports 1 blocker finding(s)." in report.errors
+
+
+def test_validate_portfolio_pack_fails_capture_manifest_fail_count(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "capture_manifest_validation.json").write_text(
+        json.dumps({"status": "ready", "ok": True, "fail_count": 1}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "capture_manifest_validation.json reports 1 failed check(s)." in report.errors
+
+
 def test_validate_portfolio_pack_fails_incomplete_viewer_repair(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     repair_summary = pack / "run" / "queries" / "mug" / "viewer_repair_summary.json"

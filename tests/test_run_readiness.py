@@ -90,6 +90,42 @@ def test_run_readiness_warns_claim_audit_warning_without_blocking(tmp_path: Path
     assert claim_gate.status == "warn"
 
 
+def test_run_readiness_blocks_capture_fail_count(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "fail_count": 1})
+
+    report = build_run_readiness(run_dir)
+
+    capture_gate = next(gate for gate in report.gates if gate.name == "capture_manifest")
+    assert report.readiness_level == "blocked"
+    assert report.ready_to_start_real_run is False
+    assert capture_gate.status == "fail"
+
+
+def test_run_readiness_blocks_run_audit_blockers(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 90, "blocker_count": 1})
+
+    report = build_run_readiness(run_dir)
+
+    audit_gate = next(gate for gate in report.gates if gate.name == "run_audit")
+    assert report.readiness_level == "blocked"
+    assert report.ready_for_external_review is False
+    assert audit_gate.status == "fail"
+
+
+def test_run_readiness_blocks_blocked_result_card(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "run_result_card.json", {"dry_run": False, "result_status": "blocked"})
+
+    report = build_run_readiness(run_dir)
+
+    result_gate = next(gate for gate in report.gates if gate.name == "run_result_card")
+    assert report.readiness_level == "blocked"
+    assert report.ready_for_external_review is False
+    assert result_gate.status == "fail"
+
+
 def test_write_run_readiness_outputs_json_and_markdown(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True)
 
@@ -168,6 +204,7 @@ def _write_run(tmp_path: Path, *, dry_run: bool) -> Path:
         {"status": "pass", "ok": True, "task_count": 1, "fail_count": 0, "totals": {}},
     )
     _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True})
+    _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100, "blocker_count": 0})
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
         {

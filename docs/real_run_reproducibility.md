@@ -117,9 +117,11 @@ artifacts after any manual edits or copied run folders.
 panel, including query-evidence status, counter-evidence count, and risk-flag count.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,
 dry-run/real-run mode, capture metadata, preflight status, GPU/upstream environment checks,
-language training, query evidence risk flags, failure diagnostics, quality gates, claim audit, submission packet, and portfolio pack
-validation into two explicit booleans: `ready_to_start_real_run` and
-`ready_for_external_review`.
+language training, query evidence risk flags, run audit, failure diagnostics, quality gates,
+claim audit, submission packet, result card, and portfolio pack validation into two explicit
+booleans: `ready_to_start_real_run` and `ready_for_external_review`. Readiness checks both
+status fields and blocker/failure counts, so stale artifacts with nonzero blockers cannot
+be promoted by a ready-looking status string.
 
 You can inspect these files in one place with the Streamlit dashboard:
 
@@ -199,6 +201,8 @@ inside one top-level `portfolio_pack/` directory. Pack validation fails on unres
 query risk flags from `query_evidence_audit.json`, because those conflicts should not be
 sent as clean scene-understanding evidence. Counter-evidence without risk flags remains a
 warning for reviewer calibration.
+It also fails on nonzero run-audit blocker counts, failure-diagnostic blocker counts, and
+capture-manifest failure counts even if the corresponding status field was not refreshed.
 
 ## Finalize And Export
 

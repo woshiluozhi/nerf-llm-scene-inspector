@@ -276,9 +276,11 @@ The generated `portfolio_page.html` surfaces the same result status and query-ri
 near the top of the page, so a reviewer sees blocked evidence without opening raw JSON.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
 time or send the run externally. It consolidates pipeline success, evidence mode, capture,
-preflight, environment, language training, quality gate, claim audit, submission packet,
-failure diagnostics, and portfolio pack validation into `ready_to_start_real_run` and `ready_for_external_review`
-decisions.
+preflight, environment, language training, query evidence, run audit, failure diagnostics,
+quality gate, claim audit, submission packet, result card, and portfolio pack validation
+into `ready_to_start_real_run` and `ready_for_external_review` decisions. The gates check
+both status fields and blocker/failure counts, so stale JSON with a ready-looking status
+but nonzero blockers is treated as blocked.
 
 The validation step verifies that required project/run artifacts exist, indexed artifact paths
 resolve inside the pack, copied-file SHA256/size digests still match, and text/JSON files do
@@ -287,6 +289,9 @@ directory or the final `.zip` archive, including archives whose contents are wra
 top-level `portfolio_pack/` folder. It also reads `query_evidence_audit.json`: unresolved
 query risk flags make the pack validation fail, while non-overlapping counter-evidence
 remains a warning that should be reviewed before writing scene-answer claims.
+It also treats nonzero `run_audit.blocker_count`, `failure_diagnostics.blocker_count`,
+and `capture_manifest_validation.fail_count` as validation errors even when the status
+field was not refreshed.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
 evidence, passing query-evidence audit, no unresolved query risk flags, and a validated

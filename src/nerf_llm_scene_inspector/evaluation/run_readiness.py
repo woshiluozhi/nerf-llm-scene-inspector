@@ -146,6 +146,7 @@ def build_run_readiness(
     scene = _read_json(root / "scene_data_inspection.json")
     language = _read_json(root / "training" / "language_train_summary.json")
     query_evidence = _read_json(root / "query_evidence_audit.json")
+    run_audit = _read_json(root / "run_audit.json")
     failure_diagnostics = _read_json(root / "failure_diagnostics.json")
     quality = _read_json(root / "quality_gate.json")
     claim_audit = _read_json(root / "claim_audit.json")
@@ -166,10 +167,12 @@ def build_run_readiness(
         _scene_gate(scene),
         _language_training_gate(language, dry_run=dry_run),
         _query_evidence_gate(query_evidence),
+        _run_audit_gate(run_audit),
         _failure_diagnostics_gate(failure_diagnostics),
         _quality_gate(quality),
         _claim_audit_gate(claim_audit),
         _submission_gate(submission),
+        _result_card_gate(result_card),
         _portfolio_pack_gate(submission, pack_validation),
     ]
     ready_to_start_real_run = _ready_to_start_real_run(gates, dry_run=dry_run)
@@ -250,6 +253,7 @@ def _evidence_mode_gate(dry_run: bool) -> ReadinessGate:
 
 def _capture_gate(capture: dict[str, Any]) -> ReadinessGate:
     status = str(capture.get("status") or "")
+    fail_count = _safe_int(capture.get("fail_count"))
     if not capture:
         return ReadinessGate(
             "capture_manifest",
@@ -258,13 +262,13 @@ def _capture_gate(capture: dict[str, Any]) -> ReadinessGate:
             "Create or copy capture metadata before a real run.",
             "capture_manifest_validation.md",
         )
-    if status == "ready":
+    if status == "ready" and not fail_count:
         return ReadinessGate("capture_manifest", "pass", "Capture manifest validation is ready.", artifact="capture_manifest_validation.md")
-    if status == "blocked":
+    if status == "blocked" or fail_count:
         return ReadinessGate(
             "capture_manifest",
             "fail",
-            "Capture manifest validation is blocked.",
+            f"Capture manifest validation is blocked or has {fail_count} failed check(s).",
             "Fix capture metadata, privacy review, or static-scene fields.",
             "capture_manifest_validation.md",
         )
@@ -457,6 +461,36 @@ def _query_evidence_gate(audit: dict[str, Any]) -> ReadinessGate:
     )
 
 
+def _run_audit_gate(run_audit: dict[str, Any]) -> ReadinessGate:
+    status = str(run_audit.get("status") or "")
+    blocker_count = _safe_int(run_audit.get("blocker_count"))
+    if not run_audit:
+        return ReadinessGate(
+            "run_audit",
+            "warn",
+            "Run audit report is missing.",
+            "Run scripts/audit_run.py before launch or sharing.",
+            "run_audit.md",
+        )
+    if status == "ready" and not blocker_count:
+        return ReadinessGate("run_audit", "pass", "Run audit is ready.", artifact="run_audit.md")
+    if status == "blocked" or blocker_count:
+        return ReadinessGate(
+            "run_audit",
+            "fail",
+            f"Run audit found blocker-level issues (blockers={blocker_count}).",
+            "Open run_audit.md and resolve blocker-level findings before sharing or launching follow-up runs.",
+            "run_audit.md",
+        )
+    return ReadinessGate(
+        "run_audit",
+        "warn",
+        f"Run audit status is {status or 'unknown'}.",
+        "Review run_audit.md warnings before spending GPU time or sharing externally.",
+        "run_audit.md",
+    )
+
+
 def _quality_gate(quality: dict[str, Any]) -> ReadinessGate:
     status = str(quality.get("status") or "")
     if not quality:
@@ -580,6 +614,40 @@ def _submission_gate(submission: dict[str, Any]) -> ReadinessGate:
         f"Submission packet readiness is {readiness or 'unknown'}.",
         "Refresh submission packet after pack validation.",
         "submission_packet/submission_checklist.md",
+    )
+
+
+def _result_card_gate(result_card: dict[str, Any]) -> ReadinessGate:
+    status = str(result_card.get("result_status") or "")
+    if not result_card:
+        return ReadinessGate(
+            "run_result_card",
+            "warn",
+            "Run result card is missing.",
+            "Run scripts/create_run_result_card.py before external sharing.",
+            "run_result_card.md",
+        )
+    if status == "blocked":
+        return ReadinessGate(
+            "run_result_card",
+            "fail",
+            "Run result card is blocked.",
+            "Resolve failed result-card evidence checks, then regenerate readiness.",
+            "run_result_card.md",
+        )
+    if status in {"portfolio_ready", "shareable_smoke_demo", "dry_run_smoke_demo", "real_run_review_ready"}:
+        return ReadinessGate(
+            "run_result_card",
+            "pass",
+            f"Run result card status is {status}.",
+            artifact="run_result_card.md",
+        )
+    return ReadinessGate(
+        "run_result_card",
+        "warn",
+        f"Run result card status is {status or 'unknown'}.",
+        "Review run_result_card.md before external sharing.",
+        "run_result_card.md",
     )
 
 
