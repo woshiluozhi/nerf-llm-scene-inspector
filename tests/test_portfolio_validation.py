@@ -164,6 +164,45 @@ def test_validate_portfolio_pack_fails_capture_manifest_fail_count(tmp_path: Pat
     assert "capture_manifest_validation.json reports 1 failed check(s)." in report.errors
 
 
+def test_validate_portfolio_pack_fails_real_run_plan_blocker_count(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "real_run_plan" / "real_run_plan.json").write_text(
+        json.dumps({"status": "ready", "blocker_count": 1, "warning_count": 0}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "real_run_plan.json reports 1 blocker issue(s)." in report.errors
+
+
+def test_validate_portfolio_pack_fails_real_run_plan_blocker_issue_without_count(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "real_run_plan" / "real_run_plan.json").write_text(
+        json.dumps({"status": "ready", "issues": [{"severity": "blocker", "category": "capture"}]}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is False
+    assert "real_run_plan.json reports 1 blocker issue(s)." in report.errors
+
+
+def test_validate_portfolio_pack_warns_real_run_plan_warning_count(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "real_run_plan" / "real_run_plan.json").write_text(
+        json.dumps({"status": "ready", "blocker_count": 0, "warning_count": 2}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is True
+    assert any("real_run_plan.json reports 2 warning issue" in warning for warning in report.warnings)
+
+
 def test_validate_portfolio_pack_fails_incomplete_viewer_repair(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     repair_summary = pack / "run" / "queries" / "mug" / "viewer_repair_summary.json"
@@ -526,7 +565,15 @@ def _file_payload(relative_path: str) -> str:
     if relative_path.endswith("research_report.json"):
         return json.dumps({"scene_name": "desk_scene", "title": "NeRF-LLM Scene Inspector Research Report"})
     if relative_path.endswith("real_run_plan.json"):
-        return json.dumps({"scene_name": "desk_scene", "current_mode": "dry-run smoke demo"})
+        return json.dumps(
+            {
+                "scene_name": "desk_scene",
+                "current_mode": "dry-run smoke demo",
+                "blocker_count": 0,
+                "warning_count": 0,
+                "issues": [],
+            }
+        )
     if relative_path.endswith("submission_packet.json"):
         return json.dumps({"scene_name": "desk_scene", "readiness_level": "shareable_smoke_demo"})
     if relative_path.endswith("reproduction_manifest.json"):

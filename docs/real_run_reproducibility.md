@@ -128,6 +128,10 @@ The run quality gate applies the same count-based check: nonzero
 `run_audit.blocker_count`, `failure_diagnostics.blocker_count`, or
 `capture_manifest_validation.fail_count` fails the gate even if a stale status field still
 looks ready.
+Portfolio-pack validation also reads `real_run_plan/real_run_plan.json`: nonzero
+`real_run_plan.blocker_count` fails the shareable pack, while nonzero
+`real_run_plan.warning_count` remains a warning to review the next-run playbook before
+outreach.
 `portfolio_page.html` mirrors those fields in its top-level metrics and Sharing Readiness
 panel, including capture validation status/failures, query-evidence status,
 counter-evidence count, and risk-flag count. It also reads local capture validation before

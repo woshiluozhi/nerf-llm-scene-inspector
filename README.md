@@ -305,8 +305,10 @@ top-level `portfolio_pack/` folder. It also reads `query_evidence_audit.json`: u
 query risk flags make the pack validation fail, while non-overlapping counter-evidence
 remains a warning that should be reviewed before writing scene-answer claims.
 It also treats nonzero `run_audit.blocker_count`, `failure_diagnostics.blocker_count`,
-and `capture_manifest_validation.fail_count` as validation errors even when the status
-field was not refreshed.
+`capture_manifest_validation.fail_count`, and `real_run_plan.blocker_count` as validation
+errors even when the status field was not refreshed. Nonzero `real_run_plan.warning_count`
+keeps the pack structurally valid but adds a sharing warning so the next-run playbook is
+reviewed before outreach.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
 evidence, passing query-evidence audit, no unresolved query risk flags, and a validated

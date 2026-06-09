@@ -219,6 +219,7 @@ def _validate_portfolio_directory(
         _check_query_evidence_audit(pack_path, warnings, errors)
         _check_failure_diagnostics(pack_path, warnings, errors)
         _check_capture_manifest(pack_path, warnings, errors)
+        _check_real_run_plan(pack_path, warnings, errors)
         _check_evidence_scorecard(pack_path, warnings, errors)
         _check_quality_gate(pack_path, warnings, errors)
         _check_claim_audit(pack_path, warnings, errors)
@@ -505,6 +506,24 @@ def _check_capture_manifest(pack_path: Path, warnings: list[str], errors: list[s
         warnings.append(f"capture_manifest_validation.json has unrecognized status: {status}")
 
 
+def _check_real_run_plan(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    plan = _read_json(pack_path / "run" / "real_run_plan" / "real_run_plan.json", errors)
+    if not isinstance(plan, dict):
+        return
+    status = str(plan.get("status") or "")
+    blocker_count, warning_count = _real_run_plan_counts(plan)
+    if status == "blocked":
+        errors.append("real_run_plan.json status is blocked.")
+    elif blocker_count:
+        errors.append(f"real_run_plan.json reports {blocker_count} blocker issue(s).")
+    elif status in {"needs_review", "needs_attention"}:
+        warnings.append(f"real_run_plan.json status is {status}; inspect the real-run action plan before sharing.")
+    elif status and status != "ready":
+        warnings.append(f"real_run_plan.json has unrecognized status: {status}")
+    if warning_count:
+        warnings.append(f"real_run_plan.json reports {warning_count} warning issue(s); review the next-run playbook.")
+
+
 def _check_evidence_scorecard(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
     scorecard = _read_json(pack_path / "run" / "evidence_scorecard.json", errors)
     if not isinstance(scorecard, dict):
@@ -650,6 +669,26 @@ def _query_evidence_counts(audit: dict[str, object]) -> tuple[int, int]:
             if isinstance(task, dict)
         )
     return counter, risk
+
+
+def _real_run_plan_counts(plan: dict[str, object]) -> tuple[int, int]:
+    blocker_count = _safe_int(plan.get("blocker_count"))
+    warning_count = _safe_int(plan.get("warning_count"))
+    issues = plan.get("issues")
+    if isinstance(issues, list):
+        if not blocker_count:
+            blocker_count = sum(
+                1
+                for issue in issues
+                if isinstance(issue, dict) and str(issue.get("severity") or "") == "blocker"
+            )
+        if not warning_count:
+            warning_count = sum(
+                1
+                for issue in issues
+                if isinstance(issue, dict) and str(issue.get("severity") or "") == "warning"
+            )
+    return blocker_count, warning_count
 
 
 def _read_json(path: Path, errors: list[str]) -> Any:
