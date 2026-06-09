@@ -88,6 +88,75 @@ def test_quality_gate_portfolio_fails_on_query_risk_flags(tmp_path: Path) -> Non
     assert "physical-action" in criterion.recommendation
 
 
+def test_quality_gate_blocks_stale_ready_run_audit_blockers(tmp_path: Path) -> None:
+    run_dir = _write_portfolio_run(tmp_path)
+    _write_query_evidence_pass(run_dir)
+    _write_json(run_dir / "run_audit.json", {"status": "ready", "score": 100, "blocker_count": "1"})
+
+    report = check_run_quality(
+        run_dir,
+        profile="portfolio",
+        require_pack=False,
+        min_query_reports=3,
+        min_evaluated_queries=3,
+    )
+
+    criterion = next(item for item in report.criteria if item.name == "run_audit")
+    payload = report.to_dict()
+    assert report.passed is False
+    assert report.status == "fail"
+    assert report.audit_blocker_count == 1
+    assert payload["audit_blocker_count"] == 1
+    assert criterion.status == "fail"
+    assert "blockers=1" in criterion.message
+
+
+def test_quality_gate_blocks_stale_ready_capture_failures(tmp_path: Path) -> None:
+    run_dir = _write_portfolio_run(tmp_path)
+    _write_query_evidence_pass(run_dir)
+    _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "warn_count": 0, "fail_count": "2"})
+
+    report = check_run_quality(
+        run_dir,
+        profile="portfolio",
+        require_pack=False,
+        min_query_reports=3,
+        min_evaluated_queries=3,
+    )
+
+    criterion = next(item for item in report.criteria if item.name == "capture_manifest")
+    payload = report.to_dict()
+    assert report.passed is False
+    assert report.status == "fail"
+    assert report.capture_manifest_fail_count == 2
+    assert payload["capture_manifest_fail_count"] == 2
+    assert criterion.status == "fail"
+    assert "failures=2" in criterion.message
+
+
+def test_quality_gate_blocks_stale_clear_failure_diagnostics_blockers(tmp_path: Path) -> None:
+    run_dir = _write_portfolio_run(tmp_path)
+    _write_query_evidence_pass(run_dir)
+    _write_json(run_dir / "failure_diagnostics.json", {"status": "clear", "blocker_count": "1", "warning_count": "0"})
+
+    report = check_run_quality(
+        run_dir,
+        profile="portfolio",
+        require_pack=False,
+        min_query_reports=3,
+        min_evaluated_queries=3,
+    )
+
+    criterion = next(item for item in report.criteria if item.name == "failure_diagnostics")
+    payload = report.to_dict()
+    assert report.passed is False
+    assert report.status == "fail"
+    assert report.failure_diagnostics_blocker_count == 1
+    assert payload["failure_diagnostics_blocker_count"] == 1
+    assert criterion.status == "fail"
+    assert "blockers=1" in criterion.message
+
+
 def test_check_run_quality_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     run_dir = _write_smoke_run(tmp_path)
     output = tmp_path / "gate.json"
@@ -192,6 +261,19 @@ def _write_portfolio_run(tmp_path: Path) -> Path:
     for query in ("mug", "laptop", "safe_place"):
         _write_json(run_dir / "queries" / query / "scene_query_report.json", {"query": query})
     return run_dir
+
+
+def _write_query_evidence_pass(run_dir: Path) -> None:
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "pass",
+            "ok": True,
+            "task_count": 3,
+            "fail_count": 0,
+            "totals": {"counter_evidence_count": 0, "risk_flag_count": 0},
+        },
+    )
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

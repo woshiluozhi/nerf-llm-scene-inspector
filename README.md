@@ -297,7 +297,10 @@ field was not refreshed.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
 evidence, passing query-evidence audit, no unresolved query risk flags, and a validated
-shareable pack:
+shareable pack.
+It reads both status fields and count fields, so nonzero `run_audit.blocker_count`,
+`failure_diagnostics.blocker_count`, or `capture_manifest_validation.fail_count` will fail
+the gate even if an older status field still says ready.
 
 ```bash
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack

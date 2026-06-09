@@ -102,7 +102,10 @@ class QualityGateReport:
     evidence_score: int = 0
     evidence_max_score: int = 0
     audit_status: str = ""
+    audit_blocker_count: int = 0
+    failure_diagnostics_blocker_count: int = 0
     capture_manifest_status: str = ""
+    capture_manifest_fail_count: int = 0
     query_evidence_status: str = ""
     query_counter_evidence_count: int = 0
     query_risk_flag_count: int = 0
@@ -131,7 +134,10 @@ class QualityGateReport:
             "evidence_score": self.evidence_score,
             "evidence_max_score": self.evidence_max_score,
             "audit_status": self.audit_status,
+            "audit_blocker_count": self.audit_blocker_count,
+            "failure_diagnostics_blocker_count": self.failure_diagnostics_blocker_count,
             "capture_manifest_status": self.capture_manifest_status,
+            "capture_manifest_fail_count": self.capture_manifest_fail_count,
             "query_evidence_status": self.query_evidence_status,
             "query_counter_evidence_count": self.query_counter_evidence_count,
             "query_risk_flag_count": self.query_risk_flag_count,
@@ -163,7 +169,10 @@ class QualityGateReport:
             f"- Evidence level: {self.evidence_level or 'unknown'}",
             f"- Evidence score: {self.evidence_score}/{self.evidence_max_score}",
             f"- Audit status: {self.audit_status or 'unknown'}",
+            f"- Audit blockers: {self.audit_blocker_count}",
+            f"- Failure-diagnostics blockers: {self.failure_diagnostics_blocker_count}",
             f"- Capture manifest: {self.capture_manifest_status or 'unknown'}",
+            f"- Capture manifest failed checks: {self.capture_manifest_fail_count}",
             f"- Query evidence: {self.query_evidence_status or 'unknown'}",
             f"- Query counter-evidence items: {self.query_counter_evidence_count}",
             f"- Query risk flags: {self.query_risk_flag_count}",
@@ -209,6 +218,9 @@ def check_run_quality(
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
     counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
+    audit_blocker_count = _safe_int(audit.get("blocker_count"))
+    diagnostics_blocker_count = _safe_int(diagnostics.get("blocker_count"))
+    capture_fail_count = _safe_int(capture.get("fail_count"))
 
     criteria = [
         _pipeline_criterion(pipeline),
@@ -235,7 +247,10 @@ def check_run_quality(
         evidence_score=_safe_int(scorecard.get("score")),
         evidence_max_score=_safe_int(scorecard.get("max_score")),
         audit_status=str(audit.get("status") or ""),
+        audit_blocker_count=audit_blocker_count,
+        failure_diagnostics_blocker_count=diagnostics_blocker_count,
         capture_manifest_status=str(capture.get("status") or ""),
+        capture_manifest_fail_count=capture_fail_count,
         query_evidence_status=str(query_evidence.get("status") or ""),
         query_counter_evidence_count=counter_evidence_count,
         query_risk_flag_count=risk_flag_count,
@@ -326,11 +341,12 @@ def _audit_criterion(audit: dict[str, Any], policy: GatePolicy) -> QualityGateCr
             "run_audit.json",
         )
     status = str(audit.get("status") or "")
-    if status == "blocked":
+    blocker_count = _safe_int(audit.get("blocker_count"))
+    if status == "blocked" or blocker_count:
         return QualityGateCriterion(
             "run_audit",
             "fail",
-            "Run audit reports blocker-level issues.",
+            f"Run audit reports blocker-level issues (blockers={blocker_count}).",
             "Open run_audit.md and fix blocker findings.",
             "run_audit.md",
         )
@@ -364,15 +380,17 @@ def _failure_diagnostics_criterion(diagnostics: dict[str, Any]) -> QualityGateCr
             "failure_diagnostics.json",
         )
     status = str(diagnostics.get("status") or "")
-    if status == "blocked" or diagnostics.get("blocker_count"):
+    blocker_count = _safe_int(diagnostics.get("blocker_count"))
+    warning_count = _safe_int(diagnostics.get("warning_count"))
+    if status == "blocked" or blocker_count:
         return QualityGateCriterion(
             "failure_diagnostics",
             "fail",
-            "Failure diagnostics report blocker-level issues.",
+            f"Failure diagnostics report blocker-level issues (blockers={blocker_count}).",
             "Open failure_diagnostics.md and fix the listed root causes.",
             "failure_diagnostics.md",
         )
-    if status == "needs_attention" or diagnostics.get("warning_count"):
+    if status == "needs_attention" or warning_count:
         return QualityGateCriterion(
             "failure_diagnostics",
             "warn",
@@ -460,11 +478,12 @@ def _capture_criterion(capture: dict[str, Any], policy: GatePolicy) -> QualityGa
             "capture_manifest_validation.json",
         )
     status_raw = str(capture.get("status") or "")
-    if status_raw == "blocked":
+    fail_count = _safe_int(capture.get("fail_count"))
+    if status_raw == "blocked" or fail_count:
         return QualityGateCriterion(
             "capture_manifest",
             "fail",
-            "Capture manifest validation is blocked.",
+            f"Capture manifest validation is blocked or has failed checks (failures={fail_count}).",
             "Fix capture-manifest failures and rerun validation.",
             "capture_manifest_validation.md",
         )

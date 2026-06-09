@@ -113,6 +113,10 @@ the evidence scorecard is otherwise strong.
 Blocked run-audit findings and blocker-level failure diagnostics are also treated as
 external-sharing blockers in both the submission packet and the result card; refresh those
 artifacts after any manual edits or copied run folders.
+The run quality gate applies the same count-based check: nonzero
+`run_audit.blocker_count`, `failure_diagnostics.blocker_count`, or
+`capture_manifest_validation.fail_count` fails the gate even if a stale status field still
+looks ready.
 `portfolio_page.html` mirrors those fields in its top-level metrics and Sharing Readiness
 panel, including query-evidence status, counter-evidence count, and risk-flag count.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,
