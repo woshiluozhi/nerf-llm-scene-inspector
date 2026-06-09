@@ -37,6 +37,8 @@ class RunComparisonEntry:
     audit_status: str = ""
     audit_score: int | None = None
     capture_manifest_status: str = ""
+    result_status: str = ""
+    submission_readiness_level: str = ""
     query_evidence_status: str = ""
     query_counter_evidence_count: int = 0
     query_risk_flag_count: int = 0
@@ -107,19 +109,21 @@ class RunComparison:
             "## Ranked Runs",
             "",
             (
-                "| Rank | Scene | Status | Mode | Score | Evidence | Audit | Capture | "
+                "| Rank | Scene | Status | Result | Submission | Mode | Score | Evidence | Audit | Capture | "
                 "Query Evidence | Risk Flags | Queries | Evaluated | Top-k | IoU | Quality | Next Action | Run Dir |"
             ),
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
-                "| {rank} | {scene} | {status} | {mode} | {score} | {evidence} | {audit} | "
-                "{capture} | {query_evidence} | {risk_flags} | {queries} | {evaluated} | {topk} | {iou} | {quality} | "
-                "{action} | `{run_dir}` |".format(
+                "| {rank} | {scene} | {status} | {result} | {submission} | {mode} | {score} | "
+                "{evidence} | {audit} | {capture} | {query_evidence} | {risk_flags} | {queries} | "
+                "{evaluated} | {topk} | {iou} | {quality} | {action} | `{run_dir}` |".format(
                     rank=entry.rank,
                     scene=_cell(entry.scene_name),
                     status=entry.selection_status,
+                    result=_cell(entry.result_status or "unknown"),
+                    submission=_cell(entry.submission_readiness_level or "unknown"),
                     mode="dry-run" if entry.dry_run else "real",
                     score=f"{entry.portfolio_score:.1f}",
                     evidence=_cell(entry.evidence_level or "unknown"),
@@ -186,6 +190,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     scorecard = _read_json(run_dir / "evidence_scorecard.json")
     capture = _read_json(run_dir / "capture_manifest_validation.json")
     query_evidence = _read_json(run_dir / "query_evidence_audit.json")
+    result_card = _read_json(run_dir / "run_result_card.json")
+    submission = _read_json(run_dir / "submission_packet" / "submission_packet.json")
     recommendations = _read_json(run_dir / "run_recommendations.json")
     scene = _read_json(run_dir / "scene_data_inspection.json")
     evaluation = _read_json(run_dir / "evaluation" / "eval_summary.json")
@@ -196,6 +202,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
     audit_status = str(audit.get("status") or "")
     capture_status = str(capture.get("status") or "")
     query_evidence_status = str(query_evidence.get("status") or "")
+    result_status = str(result_card.get("result_status") or "")
+    submission_readiness_level = str(submission.get("readiness_level") or "")
     counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
     selection_status = _selection_status(
         success=success,
@@ -203,6 +211,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         evidence_level=evidence_level,
         audit_status=audit_status,
         capture_status=capture_status,
+        result_status=result_status,
+        submission_readiness_level=submission_readiness_level,
         query_evidence_status=query_evidence_status,
         query_counter_evidence_count=counter_evidence_count,
         query_risk_flag_count=risk_flag_count,
@@ -220,6 +230,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
             evidence_max_score=_optional_int(scorecard.get("max_score")),
             audit_score=_optional_int(audit.get("score")),
             capture_status=capture_status,
+            result_status=result_status,
+            submission_readiness_level=submission_readiness_level,
             query_evidence_status=query_evidence_status,
             query_counter_evidence_count=counter_evidence_count,
             query_risk_flag_count=risk_flag_count,
@@ -241,6 +253,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunComparisonEntry:
         audit_status=audit_status,
         audit_score=_optional_int(audit.get("score")),
         capture_manifest_status=capture_status,
+        result_status=result_status,
+        submission_readiness_level=submission_readiness_level,
         query_evidence_status=query_evidence_status,
         query_counter_evidence_count=counter_evidence_count,
         query_risk_flag_count=risk_flag_count,
@@ -263,6 +277,8 @@ def _selection_status(
     evidence_level: str,
     audit_status: str,
     capture_status: str,
+    result_status: str,
+    submission_readiness_level: str,
     query_evidence_status: str,
     query_counter_evidence_count: int,
     query_risk_flag_count: int,
@@ -272,6 +288,8 @@ def _selection_status(
         or evidence_level == "blocked"
         or audit_status == "blocked"
         or capture_status == "blocked"
+        or result_status == "blocked"
+        or submission_readiness_level == "blocked"
         or query_evidence_status == "fail"
     ):
         return "blocked"
@@ -283,9 +301,13 @@ def _selection_status(
         evidence_level == "portfolio_ready_real_run"
         and audit_status == "ready"
         and capture_status == "ready"
+        and result_status == "portfolio_ready"
+        and submission_readiness_level == "portfolio_ready"
         and query_evidence_status == "pass"
     ):
         return "portfolio_candidate"
+    if result_status in {"real_run_review_ready", "needs_evidence"} or submission_readiness_level:
+        return "needs_review"
     if evidence_level in {"needs_review", "dry_run_demo_ready"} or audit_status == "needs_review":
         return "needs_review"
     return "needs_evidence"
@@ -300,6 +322,8 @@ def _portfolio_score(
     evidence_max_score: int | None,
     audit_score: int | None,
     capture_status: str,
+    result_status: str,
+    submission_readiness_level: str,
     query_evidence_status: str,
     query_counter_evidence_count: int,
     query_risk_flag_count: int,
@@ -327,6 +351,22 @@ def _portfolio_score(
         score += 5.0
     elif capture_status == "needs_review":
         score += 2.0
+    if result_status == "portfolio_ready":
+        score += 4.0
+    elif result_status == "blocked":
+        score -= 20.0
+    elif result_status:
+        score -= 3.0
+    else:
+        score -= 4.0
+    if submission_readiness_level == "portfolio_ready":
+        score += 4.0
+    elif submission_readiness_level == "blocked":
+        score -= 20.0
+    elif submission_readiness_level:
+        score -= 4.0
+    else:
+        score -= 5.0
     if query_evidence_status == "pass":
         score += 4.0
     elif query_evidence_status == "warn":
@@ -438,6 +478,8 @@ def _best_run_lines(best_run: dict[str, object] | None) -> list[str]:
         f"- Status: {status}",
         f"- Score: {best_run.get('portfolio_score')}/100",
         f"- Evidence: {best_run.get('evidence_level') or 'unknown'}",
+        f"- Result status: {best_run.get('result_status') or 'unknown'}",
+        f"- Submission readiness: {best_run.get('submission_readiness_level') or 'unknown'}",
         f"- Query evidence: {best_run.get('query_evidence_status') or 'unknown'}",
         f"- Query risk flags: {best_run.get('query_risk_flag_count') or 0}",
     ]

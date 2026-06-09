@@ -221,7 +221,8 @@ python scripts/generate_project_site.py --run-index results/pipeline_runs/run_in
 The index, project site, and comparison reports surface result status, submission
 readiness, query-evidence status, counter-evidence counts, and risk-flag counts. A real
 run with unresolved query risk flags is ranked as `needs_review`, not as a
-`portfolio_candidate`.
+`portfolio_candidate`. A real run is only ranked as a portfolio candidate when both the
+result card and submission packet are portfolio-ready.
 
 For a small ablation-style table across variants or query sets, run:
 

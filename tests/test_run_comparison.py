@@ -40,6 +40,8 @@ def test_compare_pipeline_runs_prefers_real_portfolio_candidate(tmp_path: Path) 
     assert comparison.portfolio_candidate_count == 1
     assert comparison.entries[0].scene_name == "real_scene"
     assert comparison.entries[0].selection_status == "portfolio_candidate"
+    assert comparison.entries[0].result_status == "portfolio_ready"
+    assert comparison.entries[0].submission_readiness_level == "portfolio_ready"
     assert comparison.entries[1].selection_status == "dry_run_smoke_demo"
     assert comparison.best_run is not None
     assert comparison.best_run["scene_name"] == "real_scene"
@@ -91,6 +93,55 @@ def test_compare_pipeline_runs_demotes_query_risk_flags(tmp_path: Path) -> None:
     assert comparison.best_run["query_risk_flag_count"] == 2
 
 
+def test_compare_pipeline_runs_demotes_unvalidated_submission(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "unvalidated_scene",
+        scene_name="unvalidated_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        capture_status="ready",
+        result_status="real_run_review_ready",
+        submission_readiness="needs_pack_validation",
+    )
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "needs_review"
+    assert entry.result_status == "real_run_review_ready"
+    assert entry.submission_readiness_level == "needs_pack_validation"
+    assert comparison.portfolio_candidate_count == 0
+
+
+def test_compare_pipeline_runs_blocks_result_card_failures(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "blocked_scene",
+        scene_name="blocked_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        capture_status="ready",
+        result_status="blocked",
+        submission_readiness="blocked",
+    )
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "blocked"
+    assert entry.portfolio_score <= 25.0
+    assert comparison.portfolio_candidate_count == 0
+
+
 def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     root = tmp_path / "pipeline_runs"
     _write_run(
@@ -130,6 +181,7 @@ def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     markdown_text = markdown.read_text(encoding="utf-8")
     assert "# Pipeline Run Comparison" in markdown_text
     assert "Risk Flags" in markdown_text
+    assert "Submission" in markdown_text
 
 
 def test_compare_runs_cli_strict_requires_real_candidate(tmp_path: Path) -> None:
@@ -169,7 +221,13 @@ def _write_run(
     audit_score: int,
     capture_status: str,
     query_risk_flags: int = 0,
+    result_status: str | None = None,
+    submission_readiness: str | None = None,
 ) -> None:
+    if result_status is None:
+        result_status = "shareable_smoke_demo" if dry_run else "portfolio_ready"
+    if submission_readiness is None:
+        submission_readiness = "shareable_smoke_demo" if dry_run else "portfolio_ready"
     _write_json(
         run_dir / "pipeline_summary.json",
         {
@@ -191,6 +249,11 @@ def _write_run(
     )
     _write_json(run_dir / "run_audit.json", {"status": audit_status, "score": audit_score})
     _write_json(run_dir / "capture_manifest_validation.json", {"status": capture_status})
+    _write_json(run_dir / "run_result_card.json", {"result_status": result_status})
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {"readiness_level": submission_readiness},
+    )
     _write_json(
         run_dir / "run_recommendations.json",
         {"top_next_action": "Review warnings before sharing."},

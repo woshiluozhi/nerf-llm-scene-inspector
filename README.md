@@ -243,7 +243,9 @@ config shape but remove `dry_run: true` and run on a CUDA machine with Nerfstudi
 installed.
 The run index, project site, and comparison reports include result status, submission
 readiness, query-evidence status, and risk-flag counts; real runs with unresolved query
-risk flags are demoted to `needs_review` instead of `portfolio_candidate`.
+risk flags are demoted to `needs_review` instead of `portfolio_candidate`. A real run is
+only ranked as a portfolio candidate when both the result card and submission packet are
+portfolio-ready.
 
 Refresh the latest annotated run and export a shareable portfolio package:
 
