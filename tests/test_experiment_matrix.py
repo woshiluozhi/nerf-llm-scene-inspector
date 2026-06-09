@@ -203,6 +203,80 @@ def test_experiment_matrix_prefers_fresh_query_audit_over_stale_submission(tmp_p
     assert "query evidence risk flags=1" in entry.blocking_reasons
 
 
+def test_experiment_matrix_blocks_stale_run_audit_blocker_count(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: stale_audit_matrix\n"
+        "experiments:\n"
+        "  - name: stale_audit\n"
+        "    scene_name: stale_audit_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "stale_audit_scene",
+        scene_name="stale_audit_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        audit_status="ready",
+        audit_blocker_count=1,
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.portfolio_score == 0.0
+    assert entry.audit_status == "ready"
+    assert entry.audit_blocker_count == 1
+    assert "run audit blockers=1" in entry.blocking_reasons
+
+
+def test_experiment_matrix_blocks_stale_capture_manifest_fail_count(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: stale_capture_matrix\n"
+        "experiments:\n"
+        "  - name: stale_capture\n"
+        "    scene_name: stale_capture_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "stale_capture_scene",
+        scene_name="stale_capture_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        capture_status="ready",
+        capture_fail_count=1,
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.portfolio_score == 0.0
+    assert entry.capture_manifest_status == "ready"
+    assert entry.capture_manifest_fail_count == 1
+    assert "capture manifest failures=1" in entry.blocking_reasons
+
+
 def test_run_experiment_matrix_cli_dry_run(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")
@@ -261,6 +335,10 @@ def _write_run(
     score: int,
     dry_run: bool = True,
     evidence_level: str = "dry_run_demo_ready",
+    audit_status: str = "ready",
+    audit_blocker_count: int = 0,
+    capture_status: str = "ready",
+    capture_fail_count: int = 0,
     diagnostics_status: str = "clear",
     diagnostics_blockers: int = 0,
     diagnostics_warnings: int = 0,
@@ -285,7 +363,11 @@ def _write_run(
         },
     )
     _write_json(run_dir / "evidence_scorecard.json", {"evidence_level": evidence_level, "score": score, "max_score": 100})
-    _write_json(run_dir / "run_audit.json", {"status": "ready"})
+    _write_json(run_dir / "run_audit.json", {"status": audit_status, "blocker_count": audit_blocker_count})
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": capture_status, "fail_count": capture_fail_count},
+    )
     _write_json(run_dir / "quality_gate.json", {"status": quality_status, "passed": quality_status != "fail"})
     _write_json(
         run_dir / "failure_diagnostics.json",

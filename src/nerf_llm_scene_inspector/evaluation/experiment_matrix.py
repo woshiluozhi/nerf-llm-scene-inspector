@@ -30,6 +30,9 @@ class ExperimentMatrixEntry:
     evidence_score: int | None = None
     evidence_max_score: int | None = None
     audit_status: str = ""
+    audit_blocker_count: int = 0
+    capture_manifest_status: str = ""
+    capture_manifest_fail_count: int = 0
     quality_gate_status: str = ""
     failure_diagnostics_status: str = ""
     failure_blocker_count: int | None = None
@@ -151,11 +154,11 @@ class ExperimentMatrixReport:
             "## Matrix Table",
             "",
             (
-                "| Experiment | Scene | Backend | Mode | Candidate | Score | Evidence | Diagnostics | "
-                "Readiness | Result | Submission | Query Evidence | Risk Flags | Quality | Queries | Evaluated | "
+                "| Experiment | Scene | Backend | Mode | Candidate | Score | Evidence | Audit Blockers | Capture Fails | "
+                "Diagnostics | Readiness | Result | Submission | Query Evidence | Risk Flags | Quality | Queries | Evaluated | "
                 "Top-k | IoU | Prompt Stability | Relation Edges | Run |"
             ),
-            "| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | --- | ---: | --- |",
+            "| --- | --- | --- | --- | --- | ---: | --- | ---: | ---: | --- | --- | --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | --- | ---: | --- |",
             *_entry_lines(self.entries),
             "",
             "## Warnings",
@@ -270,6 +273,7 @@ def _entry_from_run(run_dir: Path, raw: dict[str, Any], output: Path) -> Experim
     summary = _read_json(run_dir / "pipeline_summary.json")
     scorecard = _read_json(run_dir / "evidence_scorecard.json")
     audit = _read_json(run_dir / "run_audit.json")
+    capture = _read_json(run_dir / "capture_manifest_validation.json")
     quality_gate = _read_json(run_dir / "quality_gate.json")
     diagnostics = _read_json(run_dir / "failure_diagnostics.json")
     readiness = _read_json(run_dir / "run_readiness.json")
@@ -286,9 +290,13 @@ def _entry_from_run(run_dir: Path, raw: dict[str, Any], output: Path) -> Experim
     submission_readiness_level = str(submission.get("readiness_level") or "")
     query_evidence_status = str(query_evidence.get("status") or submission.get("query_evidence_status") or "")
     query_counter_evidence_count, query_risk_flag_count = _query_evidence_counts(query_evidence, submission)
+    audit_blocker_count = _safe_int(audit.get("blocker_count"))
+    capture_fail_count = _safe_int(capture.get("fail_count"))
     candidate_status = _candidate_status(
         success=success,
         dry_run=dry_run,
+        audit=audit,
+        capture=capture,
         diagnostics=diagnostics,
         readiness=readiness,
         quality_gate=quality_gate,
@@ -302,6 +310,8 @@ def _entry_from_run(run_dir: Path, raw: dict[str, Any], output: Path) -> Experim
     )
     blocking_reasons = _blocking_reasons(
         summary=summary,
+        audit=audit,
+        capture=capture,
         diagnostics=diagnostics,
         readiness=readiness,
         quality_gate=quality_gate,
@@ -326,6 +336,9 @@ def _entry_from_run(run_dir: Path, raw: dict[str, Any], output: Path) -> Experim
         evidence_score=_optional_int(scorecard.get("score")),
         evidence_max_score=_optional_int(scorecard.get("max_score")),
         audit_status=str(audit.get("status") or ""),
+        audit_blocker_count=audit_blocker_count,
+        capture_manifest_status=str(capture.get("status") or ""),
+        capture_manifest_fail_count=capture_fail_count,
         quality_gate_status=str(quality_gate.get("status") or ""),
         failure_diagnostics_status=str(diagnostics.get("status") or ""),
         failure_blocker_count=_optional_int(diagnostics.get("blocker_count")),
@@ -352,6 +365,8 @@ def _entry_from_run(run_dir: Path, raw: dict[str, Any], output: Path) -> Experim
             prompt,
             relations,
             success,
+            audit,
+            capture,
             diagnostics,
             readiness,
             quality_gate,
@@ -410,6 +425,8 @@ def _portfolio_score(
     prompt: dict[str, Any],
     relations: dict[str, Any],
     success: bool,
+    audit: dict[str, Any],
+    capture: dict[str, Any],
     diagnostics: dict[str, Any],
     readiness: dict[str, Any],
     quality_gate: dict[str, Any],
@@ -422,6 +439,10 @@ def _portfolio_score(
     query_risk_flag_count: int,
 ) -> float:
     if not success:
+        return 0.0
+    if _safe_int(audit.get("blocker_count")) or str(audit.get("status") or "") == "blocked":
+        return 0.0
+    if _safe_int(capture.get("fail_count")) or str(capture.get("status") or "") == "blocked":
         return 0.0
     if _safe_int(diagnostics.get("blocker_count")) or readiness.get("readiness_level") == "blocked":
         return 0.0
@@ -468,6 +489,8 @@ def _candidate_status(
     *,
     success: bool,
     dry_run: bool,
+    audit: dict[str, Any],
+    capture: dict[str, Any],
     diagnostics: dict[str, Any],
     readiness: dict[str, Any],
     quality_gate: dict[str, Any],
@@ -480,6 +503,10 @@ def _candidate_status(
     scorecard: dict[str, Any],
 ) -> str:
     if not success:
+        return "blocked"
+    if str(audit.get("status") or "") == "blocked" or _safe_int(audit.get("blocker_count")):
+        return "blocked"
+    if str(capture.get("status") or "") == "blocked" or _safe_int(capture.get("fail_count")):
         return "blocked"
     if _safe_int(diagnostics.get("blocker_count")):
         return "blocked"
@@ -513,6 +540,8 @@ def _candidate_status(
 def _blocking_reasons(
     *,
     summary: dict[str, Any],
+    audit: dict[str, Any],
+    capture: dict[str, Any],
     diagnostics: dict[str, Any],
     readiness: dict[str, Any],
     quality_gate: dict[str, Any],
@@ -527,6 +556,16 @@ def _blocking_reasons(
     failed = _failed_step_errors(summary)
     if failed:
         reasons.append(failed)
+    audit_blockers = _safe_int(audit.get("blocker_count"))
+    if str(audit.get("status") or "") == "blocked":
+        reasons.append("run audit is blocked")
+    if audit_blockers:
+        reasons.append(f"run audit blockers={audit_blockers}")
+    capture_failures = _safe_int(capture.get("fail_count"))
+    if str(capture.get("status") or "") == "blocked":
+        reasons.append("capture manifest is blocked")
+    if capture_failures:
+        reasons.append(f"capture manifest failures={capture_failures}")
     blocker_count = _safe_int(diagnostics.get("blocker_count"))
     if blocker_count:
         reasons.append(f"failure diagnostics blockers={blocker_count}")
@@ -679,13 +718,13 @@ def _selection_lines(entries: list[ExperimentMatrixEntry]) -> list[str]:
 
 def _entry_lines(entries: list[ExperimentMatrixEntry]) -> list[str]:
     if not entries:
-        return ["| None |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |"]
+        return ["| None |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |"]
     lines: list[str] = []
     for entry in entries:
         stability = _ratio(entry.prompt_stable_group_count, entry.prompt_group_count)
         lines.append(
             "| {name} | {scene} | {backend} | {mode} | {candidate} | {score:.1f} | {evidence} | "
-            "{diagnostics} | {readiness} | {result} | {submission} | {query_evidence} | {risk_flags} | "
+            "{audit_blockers} | {capture_fails} | {diagnostics} | {readiness} | {result} | {submission} | {query_evidence} | {risk_flags} | "
             "{quality} | {queries} | {evaluated} | {topk} | {iou} | {stability} | {edges} | `{run}` |".format(
                 name=_cell(entry.experiment_name),
                 scene=_cell(entry.scene_name),
@@ -694,6 +733,8 @@ def _entry_lines(entries: list[ExperimentMatrixEntry]) -> list[str]:
                 candidate=_cell(entry.candidate_status or "unknown"),
                 score=entry.portfolio_score,
                 evidence=_cell(entry.evidence_level or "unknown"),
+                audit_blockers=entry.audit_blocker_count,
+                capture_fails=entry.capture_manifest_fail_count,
                 diagnostics=_cell(entry.failure_diagnostics_status or "unknown"),
                 readiness=_cell(entry.readiness_level or entry.submission_readiness_level or "unknown"),
                 result=_cell(entry.result_status or "unknown"),

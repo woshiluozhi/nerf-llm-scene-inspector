@@ -142,6 +142,54 @@ def test_compare_pipeline_runs_blocks_result_card_failures(tmp_path: Path) -> No
     assert comparison.portfolio_candidate_count == 0
 
 
+def test_compare_pipeline_runs_blocks_run_audit_blocker_count(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "stale_audit_scene",
+        scene_name="stale_audit_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        audit_blockers=1,
+        capture_status="ready",
+    )
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "blocked"
+    assert entry.audit_status == "ready"
+    assert entry.audit_blocker_count == 1
+    assert comparison.portfolio_candidate_count == 0
+
+
+def test_compare_pipeline_runs_blocks_capture_manifest_fail_count(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "stale_capture_scene",
+        scene_name="stale_capture_scene",
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        evidence_score=100,
+        evidence_max_score=100,
+        audit_status="ready",
+        audit_score=100,
+        capture_status="ready",
+        capture_fail_count=1,
+    )
+
+    comparison = compare_pipeline_runs(root)
+
+    entry = comparison.entries[0]
+    assert entry.selection_status == "blocked"
+    assert entry.capture_manifest_status == "ready"
+    assert entry.capture_manifest_fail_count == 1
+    assert comparison.portfolio_candidate_count == 0
+
+
 def test_compare_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     root = tmp_path / "pipeline_runs"
     _write_run(
@@ -220,6 +268,8 @@ def _write_run(
     audit_status: str,
     audit_score: int,
     capture_status: str,
+    audit_blockers: int = 0,
+    capture_fail_count: int = 0,
     query_risk_flags: int = 0,
     result_status: str | None = None,
     submission_readiness: str | None = None,
@@ -247,8 +297,14 @@ def _write_run(
             "max_score": evidence_max_score,
         },
     )
-    _write_json(run_dir / "run_audit.json", {"status": audit_status, "score": audit_score})
-    _write_json(run_dir / "capture_manifest_validation.json", {"status": capture_status})
+    _write_json(
+        run_dir / "run_audit.json",
+        {"status": audit_status, "score": audit_score, "blocker_count": audit_blockers},
+    )
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": capture_status, "fail_count": capture_fail_count},
+    )
     _write_json(run_dir / "run_result_card.json", {"result_status": result_status})
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",

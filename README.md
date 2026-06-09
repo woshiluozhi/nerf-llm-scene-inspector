@@ -242,11 +242,13 @@ can be compared without opening every run directory by hand. In real mode, use t
 config shape but remove `dry_run: true` and run on a CUDA machine with Nerfstudio/LERF
 installed.
 The run index, project site, comparison reports, and experiment matrix include result
-status, submission readiness, query-evidence status, and risk-flag counts. Real runs with
-unresolved query risk flags are not promoted to `portfolio_candidate`; comparison reports
-label them `needs_review`, while the experiment matrix marks risk-flagged runs blocked for
-external sharing. A real run is only ranked as a portfolio candidate when the result card,
-submission packet, and query-evidence audit are portfolio-ready.
+status, submission readiness, query-evidence status, audit/capture blocker counts, and
+risk-flag counts. Real runs with unresolved query risk flags are not promoted to
+`portfolio_candidate`; comparison reports label them `needs_review`, while the experiment
+matrix marks risk-flagged runs blocked for external sharing. Nonzero run-audit blockers
+or capture-manifest failures also block candidate selection, even if a stale status field
+still says ready. A real run is only ranked as a portfolio candidate when the result card,
+submission packet, query-evidence audit, run audit, and capture manifest are clean.
 
 Refresh the latest annotated run and export a shareable portfolio package:
 

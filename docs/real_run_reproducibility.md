@@ -235,11 +235,14 @@ python scripts/generate_project_site.py --run-index results/pipeline_runs/run_in
 ```
 
 The index, project site, comparison reports, and experiment matrix surface result status,
-submission readiness, query-evidence status, counter-evidence counts, and risk-flag counts.
-A real run with unresolved query risk flags is never selected as a `portfolio_candidate`;
-comparison reports rank it as `needs_review`, and the experiment matrix treats risk flags
-as an external-sharing blocker. A real run is only ranked as a portfolio candidate when the
-result card, submission packet, and query-evidence audit are portfolio-ready.
+submission readiness, query-evidence status, counter-evidence counts, risk-flag counts,
+run-audit blocker counts, and capture-manifest failure counts. A real run with unresolved
+query risk flags is never selected as a `portfolio_candidate`; comparison reports rank it
+as `needs_review`, and the experiment matrix treats risk flags as an external-sharing
+blocker. Nonzero run-audit blockers or capture-manifest failures also block candidate
+selection, even if a stale status field still says ready. A real run is only ranked as a
+portfolio candidate when the result card, submission packet, query-evidence audit, run
+audit, and capture manifest are clean.
 
 For a small ablation-style table across variants or query sets, run:
 
@@ -252,9 +255,10 @@ python scripts/run_experiment_matrix.py \
 
 Use `--collect-only` after manual reruns or copied-in pipeline directories to refresh the
 matrix summary without launching training again. Inspect `candidate_status`,
-`failure_diagnostics_status`, `readiness_level`, `query_evidence_status`,
-`query_risk_flag_count`, and `blocking_reasons` in the CSV before choosing which real run
-to package or share externally.
+`failure_diagnostics_status`, `audit_blocker_count`, `capture_manifest_fail_count`,
+`readiness_level`, `query_evidence_status`, `query_risk_flag_count`, and
+`blocking_reasons` in the CSV before choosing which real run to package or share
+externally.
 
 Share `results/portfolio_pack.zip` together with the GitHub repository link when sending a
 portfolio or cold-email artifact. Do not claim benchmark superiority from a dry-run or a
