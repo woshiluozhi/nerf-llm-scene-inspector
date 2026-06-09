@@ -39,6 +39,10 @@ class QueryEvidenceTask:
     max_confidence: float | None = None
     mean_confidence: float | None = None
     max_region_score: float | None = None
+    counter_evidence_count: int = 0
+    counter_evidence_labels: list[str] = field(default_factory=list)
+    risk_flag_count: int = 0
+    risk_flags: list[str] = field(default_factory=list)
     query_grid_exists: bool = False
     visual_summary_exists: bool = False
     warnings: list[str] = field(default_factory=list)
@@ -104,14 +108,16 @@ class QueryEvidenceAudit:
             f"- Overlays: {self.totals.get('overlay_count', 0)}",
             f"- Bounding regions: {self.totals.get('bounding_region_count', 0)}",
             f"- Candidate 3D points: {self.totals.get('candidate_point_count', 0)}",
+            f"- Counter-evidence items: {self.totals.get('counter_evidence_count', 0)}",
+            f"- Risk flags: {self.totals.get('risk_flag_count', 0)}",
             "",
             "## Task Evidence",
             "",
             (
                 "| Task | Status | Mode | Support | Results | Overlays | Regions | "
-                "3D Points | Max Confidence | Grid | Notes |"
+                "3D Points | Max Confidence | Counter | Risk Flags | Grid | Notes |"
             ),
-            "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+            "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
             *_task_lines(self.tasks),
             "",
             "## Recommendations",
@@ -222,6 +228,9 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
     image_region_count = sum(1 for region in bounding_regions if str(region.get("coordinate_frame") or "image") == "image")
     region_3d_count = sum(1 for region in bounding_regions if _region_has_3d_evidence(region))
     support_level = _support_level(payload)
+    counter_evidence = _counter_evidence_items(payload)
+    risk_flags = _risk_flags(payload)
+    counter_evidence_labels = _counter_evidence_labels(counter_evidence)
     query_grid_exists = (task_dir / "query_grid.png").exists()
     visual_summary_exists = (task_dir / "query_visual_summary.json").exists()
     expanded_queries = [str(result.get("query") or "") for result in results if str(result.get("query") or "").strip()]
@@ -245,6 +254,12 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
         recommendations.append("Create RGB/relevancy overlay images for qualitative review.")
     if support_level and "fallback" in support_level:
         recommendations.append("Treat this answer as fallback evidence until metric 3D points or reviewed boxes are available.")
+    if counter_evidence:
+        warnings.append(f"answer_summary contains {len(counter_evidence)} counter-evidence item(s).")
+        recommendations.append("Review counter-evidence before using this answer as actionable scene guidance.")
+    if risk_flags:
+        warnings.append(f"answer_summary contains {len(risk_flags)} risk flag(s); inspect spatial conflicts before acting.")
+        recommendations.append("Resolve or document risk flags before using this answer for safety-sensitive scene guidance.")
 
     evidence_mode = _evidence_mode(
         rendered_image_count=len(rendered_images),
@@ -285,6 +300,10 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
         max_confidence=max(confidences) if confidences else None,
         mean_confidence=(sum(confidences) / len(confidences)) if confidences else None,
         max_region_score=max(region_scores) if region_scores else None,
+        counter_evidence_count=len(counter_evidence),
+        counter_evidence_labels=counter_evidence_labels,
+        risk_flag_count=len(risk_flags),
+        risk_flags=risk_flags,
         query_grid_exists=query_grid_exists,
         visual_summary_exists=visual_summary_exists,
         warnings=_dedupe(warnings),
@@ -336,6 +355,10 @@ def _totals(tasks: list[QueryEvidenceTask]) -> dict[str, Any]:
         "rgb_count": sum(task.rgb_count for task in tasks),
         "bounding_region_count": sum(task.bounding_region_count for task in tasks),
         "candidate_point_count": sum(task.candidate_point_count for task in tasks),
+        "counter_evidence_count": sum(task.counter_evidence_count for task in tasks),
+        "risk_flag_count": sum(task.risk_flag_count for task in tasks),
+        "tasks_with_counter_evidence": sum(1 for task in tasks if task.counter_evidence_count),
+        "tasks_with_risk_flags": sum(1 for task in tasks if task.risk_flag_count),
         "query_grid_count": sum(1 for task in tasks if task.query_grid_exists),
         "visual_summary_count": sum(1 for task in tasks if task.visual_summary_exists),
         "mode_counts": mode_counts,
@@ -384,6 +407,35 @@ def _support_level(payload: dict[str, Any]) -> str:
     return ""
 
 
+def _counter_evidence_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = payload.get("answer_summary")
+    if not isinstance(summary, dict):
+        return []
+    items = summary.get("counter_evidence")
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def _counter_evidence_labels(items: list[dict[str, Any]]) -> list[str]:
+    labels: list[str] = []
+    for item in items:
+        label = str(item.get("label") or item.get("query") or "").strip()
+        if label:
+            labels.append(label)
+    return _dedupe(labels)
+
+
+def _risk_flags(payload: dict[str, Any]) -> list[str]:
+    summary = payload.get("answer_summary")
+    if not isinstance(summary, dict):
+        return []
+    flags = summary.get("risk_flags")
+    if not isinstance(flags, list):
+        return []
+    return _dedupe([str(flag) for flag in flags if str(flag).strip()])
+
+
 def _kind_count(rendered_images: list[dict[str, Any]], kind: str) -> int:
     return sum(1 for image in rendered_images if str(image.get("kind") or "") == kind)
 
@@ -422,13 +474,13 @@ def _safe_float(value: object) -> float | None:
 
 def _task_lines(tasks: list[QueryEvidenceTask]) -> list[str]:
     if not tasks:
-        return ["| none | fail | missing | n/a | 0 | 0 | 0 | 0 | n/a | no | No query reports found. |"]
+        return ["| none | fail | missing | n/a | 0 | 0 | 0 | 0 | n/a | 0 | 0 | no | No query reports found. |"]
     lines: list[str] = []
     for task in tasks:
         note = "; ".join(task.warnings[:2]) if task.warnings else ""
         lines.append(
             "| {task} | {status} | {mode} | {support} | {results} | {overlays} | "
-            "{regions} | {points} | {confidence} | {grid} | {note} |".format(
+            "{regions} | {points} | {confidence} | {counter} | {risk} | {grid} | {note} |".format(
                 task=_cell(task.task),
                 status=task.status,
                 mode=task.evidence_mode,
@@ -438,6 +490,8 @@ def _task_lines(tasks: list[QueryEvidenceTask]) -> list[str]:
                 regions=task.bounding_region_count,
                 points=task.candidate_point_count,
                 confidence=_display_float(task.max_confidence),
+                counter=task.counter_evidence_count,
+                risk=task.risk_flag_count,
                 grid="yes" if task.query_grid_exists else "no",
                 note=_cell(note or "none"),
             )

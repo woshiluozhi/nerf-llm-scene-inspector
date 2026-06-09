@@ -130,6 +130,37 @@ def test_recommendations_include_query_evidence_warnings(tmp_path: Path) -> None
     assert any(item.category == "query_evidence" for item in report.recommendations)
 
 
+def test_recommendations_include_query_risk_flags(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "pass",
+            "ok": True,
+            "fail_count": 0,
+            "warn_count": 0,
+            "totals": {"counter_evidence_count": 1, "risk_flag_count": 1},
+            "tasks": [
+                {
+                    "task": "safe place to put a hot cup",
+                    "evidence_mode": "3d",
+                    "counter_evidence_count": 1,
+                    "risk_flag_count": 1,
+                }
+            ],
+        },
+    )
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "needs_review"
+    risk_actions = [
+        item for item in report.recommendations if item.action.startswith("Review query counter-evidence")
+    ]
+    assert risk_actions
+    assert risk_actions[0].severity == "high"
+
+
 def test_recommend_next_steps_cli_writes_reports(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
     output = tmp_path / "recommendations.json"

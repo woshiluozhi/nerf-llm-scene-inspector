@@ -120,10 +120,26 @@ def planned_backend_calls(
             continue
         seen_queries.add(key)
         calls.append(call)
-        if max_queries is not None and len(calls) >= max(max_queries, 1):
-            break
-    if calls:
+    if calls and max_queries is None:
         return calls
+    if calls:
+        limit = max(max_queries or 1, 1)
+        if len(calls) <= limit:
+            return calls
+        selected = calls[:limit]
+        if include_negative and not any(call.purpose == "negative" for call in selected):
+            negative_call = next((call for call in calls[limit:] if call.purpose == "negative"), None)
+            if negative_call is not None:
+                replace_index = next(
+                    (
+                        index
+                        for index in range(len(selected) - 1, -1, -1)
+                        if selected[index].purpose != "primary"
+                    ),
+                    len(selected) - 1,
+                )
+                selected[replace_index] = negative_call
+        return selected
     fallback_query = task or "scene"
     return [PlannedBackendCall(query=fallback_query, purpose="fallback")]
 

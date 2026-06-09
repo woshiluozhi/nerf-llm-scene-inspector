@@ -162,11 +162,28 @@ def _add_query_evidence_actions(
     if not audit:
         return
     status = str(audit.get("status") or "")
-    if status not in {"fail", "warn"} and audit.get("ok") is not False:
-        return
     failed = _safe_int(audit.get("fail_count"))
     warned = _safe_int(audit.get("warn_count"))
     tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter_evidence_count = _safe_int(totals.get("counter_evidence_count"))
+    risk_flag_count = _safe_int(totals.get("risk_flag_count"))
+    if not counter_evidence_count:
+        counter_evidence_count = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk_flag_count:
+        risk_flag_count = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if status not in {"fail", "warn"} and audit.get("ok") is not False and not (
+        counter_evidence_count or risk_flag_count
+    ):
+        return
     weak_modes = sorted(
         {
             str(task.get("evidence_mode") or "")
@@ -191,6 +208,20 @@ def _add_query_evidence_actions(
             artifact="query_evidence_audit.md",
         )
     )
+    if counter_evidence_count or risk_flag_count:
+        recommendations.append(
+            RecommendationItem(
+                severity="high" if risk_flag_count else "medium",
+                category="query_evidence",
+                action="Review query counter-evidence and risk flags before using scene answers for physical-action decisions.",
+                rationale=(
+                    f"query_evidence_audit.json reports counter_evidence={counter_evidence_count}, "
+                    f"risk_flags={risk_flag_count}."
+                ),
+                command="python scripts/audit_query_evidence.py --run-dir results/pipeline_runs/<scene>",
+                artifact="query_evidence_audit.md",
+            )
+        )
 
 
 def _add_failure_diagnostics_actions(

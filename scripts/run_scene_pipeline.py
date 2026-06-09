@@ -42,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-num-iterations", type=int)
     parser.add_argument("--num-views", type=int, default=1)
     parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--max-queries", type=int, default=5, help="Maximum expanded backend prompts per task.")
+    parser.add_argument(
+        "--include-negative-queries",
+        action="store_true",
+        help="Run planner negative/disambiguation prompts and preserve them as counter-evidence.",
+    )
     parser.add_argument("--min-frames", type=int, default=20)
     parser.add_argument("--min-pose-extent", type=float, default=0.05)
     parser.add_argument("--dry-run", action="store_true")
@@ -86,6 +92,8 @@ def main() -> int:
         max_num_iterations=args.max_num_iterations,
         num_views=args.num_views,
         top_k=args.top_k,
+        max_queries=args.max_queries,
+        include_negative_queries=args.include_negative_queries,
         min_frames=args.min_frames,
         min_pose_extent=args.min_pose_extent,
         dry_run=args.dry_run,

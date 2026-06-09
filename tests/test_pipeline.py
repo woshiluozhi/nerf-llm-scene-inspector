@@ -424,6 +424,46 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert comparison_step.outputs["json"] == str(tmp_path / "pipeline_runs" / "run_comparison.json")
 
 
+def test_run_scene_pipeline_can_include_negative_queries(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")
+
+    summary = run_scene_pipeline(
+        PipelineConfig(
+            input_path=tmp_path,
+            scene_name="risk_scene",
+            data_type="images",
+            queries=["safe place to put a hot cup"],
+            data_root=tmp_path / "data",
+            runs_root=tmp_path / "runs",
+            output_root=tmp_path / "pipeline_runs",
+            config_path=config_path,
+            dry_run=True,
+            skip_baseline=True,
+            skip_language=True,
+            skip_demo=True,
+            skip_eval=True,
+            include_negative_queries=True,
+        )
+    )
+
+    run_dir = tmp_path / "pipeline_runs" / "risk_scene"
+    report_path = next((run_dir / "queries").glob("*/scene_query_report.json"))
+    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    purposes = [
+        result["provenance"]["planner_backend_call"]["purpose"]
+        for result in report_payload["query_results"]
+    ]
+    query_audit_payload = json.loads((run_dir / "query_evidence_audit.json").read_text(encoding="utf-8"))
+
+    assert summary.success is True
+    assert "negative" in purposes
+    assert report_payload["answer_summary"]["counter_evidence"]
+    assert query_audit_payload["totals"]["counter_evidence_count"] > 0
+    audit_step = next(step for step in summary.steps if step.name == "audit_query_evidence")
+    assert audit_step.summary["counter_evidence_count"] > 0
+
+
 def test_run_scene_pipeline_writes_run_scoped_training_summaries(tmp_path: Path) -> None:
     run_dir = tmp_path / "pipeline_runs" / "training_scene"
 

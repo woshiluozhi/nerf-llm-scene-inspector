@@ -70,6 +70,8 @@ class PipelineConfig:
     max_num_iterations: int | None = None
     num_views: int = 1
     top_k: int = 5
+    max_queries: int = 5
+    include_negative_queries: bool = False
     min_frames: int = 20
     min_pose_extent: float = 0.05
     dry_run: bool = False
@@ -475,6 +477,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                         "warn_count": query_audit.warn_count,
                         "fail_count": query_audit.fail_count,
                         "mode_counts": query_audit.totals.get("mode_counts", {}),
+                        "counter_evidence_count": query_audit.totals.get("counter_evidence_count", 0),
+                        "risk_flag_count": query_audit.totals.get("risk_flag_count", 0),
                     },
                     outputs={
                         "json": str(run_dir / "query_evidence_audit.json"),
@@ -1051,6 +1055,8 @@ def _run_queries(
         backend=backend,
         planner=LocalRulePlanner(),
         top_k=config.top_k,
+        max_queries=config.max_queries,
+        include_negative_queries=config.include_negative_queries,
         scene_name=config.scene_name,
     )
     outputs: dict[str, str] = {}

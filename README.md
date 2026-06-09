@@ -520,7 +520,8 @@ traceable across repeated runs.
 For high-level tasks, `query_scene.py` runs the planner's primary and supporting backend
 calls by default; use `--max-queries` to cap prompt expansion, `--exact-query` to disable
 expansion, and `--include-negative-queries` when you explicitly want disambiguation prompts
-included in backend execution. Negative query results are tagged in provenance and excluded
+included in backend execution. The same flag is available on `run_scene_pipeline.py` for
+end-to-end dry-run or real-run audits. Negative query results are tagged in provenance and excluded
 from positive answer evidence, but they are preserved as `counter_evidence`; if their
 image-space boxes overlap positive evidence in the same view, the answer summary records
 explicit risk flags and lowers confidence conservatively. A successful query also writes
@@ -528,6 +529,9 @@ explicit risk flags and lowers confidence conservatively. A successful query als
 `query_visual_summary.json` with the grid path, overlay count, and expanded query list. Use
 `--no-query-grid` to skip the static overview and `--make-montage` to additionally write
 `query_montage.gif`.
+The run-level `query_evidence_audit.json` and Dashboard summarize these same
+counter-evidence/risk-flag counts per task, so a visually strong query can still be
+marked `warn` when disambiguation prompts conflict with positive evidence.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - `results/query_outputs/query_grid.png`

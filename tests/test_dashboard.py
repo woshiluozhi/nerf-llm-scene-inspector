@@ -94,6 +94,10 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 "overlay_count": 1,
                 "bounding_region_count": 1,
                 "candidate_point_count": 0,
+                "counter_evidence_count": 1,
+                "risk_flag_count": 1,
+                "tasks_with_counter_evidence": 1,
+                "tasks_with_risk_flags": 1,
                 "mode_counts": {"3d": 0, "2d_fallback": 1, "render_only": 0, "missing": 0},
             },
             "tasks": [
@@ -111,6 +115,10 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                     "image_region_count": 1,
                     "region_3d_count": 0,
                     "candidate_point_count": 0,
+                    "counter_evidence_count": 1,
+                    "counter_evidence_labels": ["screen"],
+                    "risk_flag_count": 1,
+                    "risk_flags": ["Positive mug overlaps avoid prompt screen in view_0000."],
                     "max_confidence": 0.8862745098,
                     "query_grid_exists": True,
                     "visual_summary_exists": True,
@@ -334,6 +342,9 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
             "regions_2d": 1,
             "regions_3d": 0,
             "points_3d": 0,
+            "counter_evidence": 1,
+            "counter_labels": "screen",
+            "risk_flags": 1,
             "max_confidence": 0.886,
             "grid": "yes",
             "visual_summary": "yes",
@@ -345,6 +356,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert inspector["query_evidence_status"] == "warn"
     assert inspector["query_pass_warn_fail"] == "0/1/0"
     assert inspector["query_2d_fallback_tasks"] == 1
+    assert inspector["query_counter_evidence"] == 1
+    assert inspector["query_risk_flags"] == 1
     assert inspector["portfolio_pack_ok"] is False
     assert inspector["portfolio_pack_errors"] == 1
 

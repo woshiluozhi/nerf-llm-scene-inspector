@@ -35,6 +35,29 @@ def test_query_evidence_audit_passes_3d_query_evidence(tmp_path: Path) -> None:
     assert audit.tasks[0].candidate_point_count == 1
 
 
+def test_query_evidence_audit_warns_on_counter_evidence_risk_flags(tmp_path: Path) -> None:
+    run_dir = _write_query_report(
+        tmp_path,
+        with_region=True,
+        with_point=True,
+        with_counter_evidence=True,
+        risk_flags=["Positive mug overlaps avoid prompt screen in view_0000."],
+    )
+
+    audit = audit_query_evidence(run_dir)
+
+    assert audit.ok is True
+    assert audit.status == "warn"
+    assert audit.tasks[0].evidence_mode == "3d"
+    assert audit.tasks[0].counter_evidence_count == 1
+    assert audit.tasks[0].counter_evidence_labels == ["screen"]
+    assert audit.tasks[0].risk_flag_count == 1
+    assert audit.totals["counter_evidence_count"] == 1
+    assert audit.totals["risk_flag_count"] == 1
+    assert any("risk flag" in warning for warning in audit.tasks[0].warnings)
+    assert any("counter-evidence" in item for item in audit.tasks[0].recommendations)
+
+
 def test_query_evidence_audit_fails_missing_reports(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     (run_dir / "queries").mkdir(parents=True)
@@ -69,7 +92,14 @@ def test_audit_query_evidence_cli_writes_reports(tmp_path: Path) -> None:
     assert (run_dir / "query_evidence_audit.md").exists()
 
 
-def _write_query_report(tmp_path: Path, *, with_region: bool, with_point: bool) -> Path:
+def _write_query_report(
+    tmp_path: Path,
+    *,
+    with_region: bool,
+    with_point: bool,
+    with_counter_evidence: bool = False,
+    risk_flags: list[str] | None = None,
+) -> Path:
     run_dir = tmp_path / "run"
     task_dir = run_dir / "queries" / "mug"
     expanded_dir = task_dir / "mug"
@@ -97,6 +127,19 @@ def _write_query_report(tmp_path: Path, *, with_region: bool, with_point: bool) 
     if with_point:
         candidate_points.append({"label": "mug", "x": 1.0, "y": 2.0, "z": 3.0, "score": 0.8})
         support_level = "3d_candidate_point"
+    answer_summary = {"support_level": support_level}
+    if with_counter_evidence:
+        answer_summary["counter_evidence"] = [
+            {
+                "label": "screen",
+                "score": 0.7,
+                "source_query": "screen",
+                "source_role": "negative",
+                "source_view": "view_0000",
+            }
+        ]
+    if risk_flags:
+        answer_summary["risk_flags"] = risk_flags
     report = {
         "scene_name": "unit_scene",
         "task": "mug",
@@ -128,7 +171,7 @@ def _write_query_report(tmp_path: Path, *, with_region: bool, with_point: bool) 
                 "warnings": [],
             }
         ],
-        "answer_summary": {"support_level": support_level},
+        "answer_summary": answer_summary,
         "warnings": [],
     }
     (task_dir / "scene_query_report.json").write_text(json.dumps(report), encoding="utf-8")

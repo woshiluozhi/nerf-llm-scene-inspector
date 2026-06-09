@@ -222,6 +222,9 @@ def query_evidence_rows(audit: dict[str, Any]) -> list[dict[str, Any]]:
                 "regions_2d": task.get("image_region_count", 0),
                 "regions_3d": task.get("region_3d_count", 0),
                 "points_3d": task.get("candidate_point_count", 0),
+                "counter_evidence": task.get("counter_evidence_count", 0),
+                "counter_labels": ", ".join(map(str, task.get("counter_evidence_labels") or [])),
+                "risk_flags": task.get("risk_flag_count", 0),
                 "max_confidence": _round_metric(task.get("max_confidence")),
                 "grid": "yes" if task.get("query_grid_exists") else "no",
                 "visual_summary": "yes" if task.get("visual_summary_exists") else "no",
@@ -263,6 +266,8 @@ def run_inspector_summary(bundle: dict[str, Any]) -> dict[str, Any]:
         "query_3d_tasks": mode_counts.get("3d", 0),
         "query_2d_fallback_tasks": mode_counts.get("2d_fallback", 0),
         "query_render_only_tasks": mode_counts.get("render_only", 0),
+        "query_counter_evidence": totals.get("counter_evidence_count", 0),
+        "query_risk_flags": totals.get("risk_flag_count", 0),
         "quality_gate": quality_gate.get("status", "unknown"),
         "readiness": readiness.get("readiness_level", "unknown"),
         "submission_status": submission.get("status", "unknown"),
@@ -607,6 +612,12 @@ def _render_query_evidence_summary(st: Any, bundle: dict[str, Any]) -> None:
     col_b.metric("Rendered", str(totals.get("existing_rendered_image_count", 0)))
     col_c.metric("Regions", str(totals.get("bounding_region_count", 0)))
     col_d.metric("3D Points", str(totals.get("candidate_point_count", 0)))
+
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Counter-evidence", str(totals.get("counter_evidence_count", 0)))
+    col_b.metric("Risk Flags", str(totals.get("risk_flag_count", 0)))
+    col_c.metric("Tasks With Counter", str(totals.get("tasks_with_counter_evidence", 0)))
+    col_d.metric("Tasks With Risk", str(totals.get("tasks_with_risk_flags", 0)))
 
 
 def _render_artifacts(st: Any, bundle: dict[str, Any]) -> None:

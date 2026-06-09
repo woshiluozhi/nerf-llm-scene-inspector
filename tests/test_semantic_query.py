@@ -104,6 +104,30 @@ def test_planned_backend_calls_exclude_negative_queries_by_default() -> None:
     assert [call.purpose for call in calls] == ["primary", "supporting"]
 
 
+def test_planned_backend_calls_reserve_negative_query_when_requested() -> None:
+    plan = QueryPlan(
+        task="safe place to put a hot cup",
+        primary_visual_queries=["countertop", "tray", "table", "desk"],
+        supporting_visual_queries=["surface", "coaster"],
+        negative_visual_queries=["electronics"],
+        recommended_backend_calls=[
+            {"query": "countertop", "purpose": "primary"},
+            {"query": "tray", "purpose": "primary"},
+            {"query": "table", "purpose": "primary"},
+            {"query": "desk", "purpose": "primary"},
+            {"query": "surface", "purpose": "supporting"},
+            {"query": "coaster", "purpose": "supporting"},
+            {"query": "electronics", "purpose": "negative"},
+        ],
+    )
+
+    calls = planned_backend_calls(plan, task=plan.task, include_negative=True, max_queries=5)
+
+    assert len(calls) == 5
+    assert calls[-1].query == "electronics"
+    assert calls[-1].purpose == "negative"
+
+
 def test_planned_backend_calls_tolerate_string_calls() -> None:
     plan = QueryPlan(
         task="Find writing tools",
