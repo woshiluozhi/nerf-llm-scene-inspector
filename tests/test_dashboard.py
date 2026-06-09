@@ -7,7 +7,9 @@ from nerf_llm_scene_inspector.visualization.dashboard import (
     collect_query_reports,
     collect_run_images,
     load_run_bundle,
+    query_evidence_rows,
     run_dashboard_query,
+    run_inspector_summary,
     submission_readiness_summary,
 )
 from nerf_llm_scene_inspector.backends.opennerf_backend import OpenNeRFBackend
@@ -36,6 +38,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 {"name": "diagnose_run_failures", "status": "success"},
                 {"name": "create_run_readiness", "status": "success"},
                 {"name": "audit_claims", "status": "success"},
+                {"name": "audit_query_evidence", "status": "success"},
                 {"name": "create_run_result_card", "status": "success"},
                 {"name": "create_submission_packet", "status": "success"},
             ],
@@ -53,6 +56,10 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         },
     )
     (tmp_path / "run_comparison.md").write_text("# Pipeline Run Comparison\n", encoding="utf-8")
+    _write_json(
+        tmp_path / "portfolio_pack_validation.json",
+        {"ok": False, "errors": ["missing README"], "warnings": ["dry-run pack"]},
+    )
     _write_json(run_dir / "capture_manifest.json", {"scene_name": "run"})
     (run_dir / "capture_manifest.md").write_text("# Capture Manifest\n", encoding="utf-8")
     _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "ok": True})
@@ -72,6 +79,51 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
         {"evidence_level": "dry_run_demo_ready", "score": 82, "max_score": 100, "overlay_count": 1},
     )
     (run_dir / "evidence_scorecard.md").write_text("# Evidence Scorecard\n", encoding="utf-8")
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "ok": True,
+            "status": "warn",
+            "task_count": 1,
+            "pass_count": 0,
+            "warn_count": 1,
+            "fail_count": 0,
+            "totals": {
+                "rendered_image_count": 3,
+                "existing_rendered_image_count": 3,
+                "overlay_count": 1,
+                "bounding_region_count": 1,
+                "candidate_point_count": 0,
+                "mode_counts": {"3d": 0, "2d_fallback": 1, "render_only": 0, "missing": 0},
+            },
+            "tasks": [
+                {
+                    "task_slug": "mug",
+                    "task": "mug",
+                    "status": "warn",
+                    "evidence_mode": "2d_fallback",
+                    "support_level": "2d_relevancy_fallback",
+                    "expanded_queries": ["mug"],
+                    "result_count": 1,
+                    "overlay_count": 1,
+                    "existing_rendered_image_count": 3,
+                    "missing_rendered_image_count": 0,
+                    "image_region_count": 1,
+                    "region_3d_count": 0,
+                    "candidate_point_count": 0,
+                    "max_confidence": 0.8862745098,
+                    "query_grid_exists": True,
+                    "visual_summary_exists": True,
+                    "warnings": [],
+                    "recommendations": [
+                        "Treat this answer as fallback evidence until metric 3D points are available."
+                    ],
+                }
+            ],
+            "warnings": [],
+        },
+    )
+    (run_dir / "query_evidence_audit.md").write_text("# Query Evidence Audit\n", encoding="utf-8")
     _write_json(
         run_dir / "quality_gate.json",
         {"profile": "smoke", "status": "warn", "passed": True, "fail_count": 0, "warn_count": 3},
@@ -222,6 +274,10 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert "# Failure Diagnostics" in bundle["failure_diagnostics_markdown"]
     assert bundle["evidence_scorecard"]["evidence_level"] == "dry_run_demo_ready"
     assert "# Evidence Scorecard" in bundle["evidence_scorecard_markdown"]
+    assert bundle["query_evidence_audit"]["status"] == "warn"
+    assert "# Query Evidence Audit" in bundle["query_evidence_audit_markdown"]
+    assert bundle["portfolio_pack_validation"]["ok"] is False
+    assert bundle["portfolio_pack_validation_path"].endswith("portfolio_pack_validation.json")
     assert bundle["quality_gate"]["profile"] == "smoke"
     assert "# Run Quality Gate" in bundle["quality_gate_markdown"]
     assert bundle["run_readiness"]["readiness_level"] == "dry_run_needs_real_run"
@@ -262,6 +318,35 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert bundle["query_reports"][0]["kind"] == "scene_query_report"
     assert "# Scene Query Report" in bundle["query_reports"][0]["markdown"]
     assert bundle["missing"] == []
+
+    rows = query_evidence_rows(bundle["query_evidence_audit"])
+    assert rows == [
+        {
+            "task": "mug",
+            "status": "warn",
+            "mode": "2d_fallback",
+            "support": "2d_relevancy_fallback",
+            "expanded_queries": "mug",
+            "results": 1,
+            "overlays": 1,
+            "rendered": 3,
+            "missing_renders": 0,
+            "regions_2d": 1,
+            "regions_3d": 0,
+            "points_3d": 0,
+            "max_confidence": 0.886,
+            "grid": "yes",
+            "visual_summary": "yes",
+            "warnings": "",
+            "recommendations": "Treat this answer as fallback evidence until metric 3D points are available.",
+        }
+    ]
+    inspector = run_inspector_summary(bundle)
+    assert inspector["query_evidence_status"] == "warn"
+    assert inspector["query_pass_warn_fail"] == "0/1/0"
+    assert inspector["query_2d_fallback_tasks"] == 1
+    assert inspector["portfolio_pack_ok"] is False
+    assert inspector["portfolio_pack_errors"] == 1
 
 
 def test_dashboard_collectors_tolerate_missing_run(tmp_path: Path) -> None:

@@ -350,9 +350,11 @@ export.
 
 The dashboard can review an existing `results/pipeline_runs/<scene>` directory without
 starting a new query. It shows pipeline status, provenance, scene data inspection, visual
-artifacts, query reports, annotation templates, evaluation metrics, the run quality gate,
-submission readiness, and the multi-run comparison report used to choose a portfolio
-candidate. Its Query Runner tab can also execute planner-aware dry-run or real backend
+artifacts, query reports, per-query evidence audit tables, annotation templates, evaluation
+metrics, the run quality gate, portfolio-pack validation, submission readiness, and the
+multi-run comparison report used to choose a portfolio candidate. Its Evidence Audit tab
+shows whether each language query has 3D evidence, reviewed 2D fallback regions, render-only
+evidence, or missing artifacts. Its Query Runner tab can also execute planner-aware dry-run or real backend
 queries: high-level tasks are expanded through `SemanticQueryEngine`, all expanded backend
 calls are shown with overlays, and `scene_query_report.json/.md` plus
 `dashboard_query_summary.json` are written to the selected output directory. Enable

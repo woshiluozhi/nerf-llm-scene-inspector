@@ -36,6 +36,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "failure_diagnostics_markdown": _read_text(root / "failure_diagnostics.md"),
         "evidence_scorecard": _read_json(root / "evidence_scorecard.json"),
         "evidence_scorecard_markdown": _read_text(root / "evidence_scorecard.md"),
+        "query_evidence_audit": _read_json(root / "query_evidence_audit.json"),
+        "query_evidence_audit_markdown": _read_text(root / "query_evidence_audit.md"),
         "quality_gate": _read_json(root / "quality_gate.json"),
         "quality_gate_markdown": _read_text(root / "quality_gate.md"),
         "run_readiness": _read_json(root / "run_readiness.json"),
@@ -87,6 +89,8 @@ def load_run_bundle(run_dir: str | Path) -> dict[str, Any]:
         "annotation_template": _read_json(root / "annotation_template.json"),
         "portfolio_card": _read_text(root / "portfolio_result_card.md"),
         "portfolio_page": str(root / "portfolio_page.html") if (root / "portfolio_page.html").exists() else "",
+        "portfolio_pack_validation": _read_first_json(_portfolio_validation_candidates(root)),
+        "portfolio_pack_validation_path": _first_existing_path(_portfolio_validation_candidates(root)),
         "project_report": _read_text(root / "project_report.md"),
         "command_logs": collect_command_logs(root),
         "images": collect_run_images(root),
@@ -197,6 +201,77 @@ def submission_readiness_summary(packet: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def query_evidence_rows(audit: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten query evidence audit tasks into a dashboard table."""
+
+    rows: list[dict[str, Any]] = []
+    for task in audit.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        rows.append(
+            {
+                "task": task.get("task") or task.get("task_slug") or "unknown",
+                "status": task.get("status") or "unknown",
+                "mode": task.get("evidence_mode") or "unknown",
+                "support": task.get("support_level") or "unknown",
+                "expanded_queries": ", ".join(map(str, task.get("expanded_queries") or [])),
+                "results": task.get("result_count", 0),
+                "overlays": task.get("overlay_count", 0),
+                "rendered": task.get("existing_rendered_image_count", 0),
+                "missing_renders": task.get("missing_rendered_image_count", 0),
+                "regions_2d": task.get("image_region_count", 0),
+                "regions_3d": task.get("region_3d_count", 0),
+                "points_3d": task.get("candidate_point_count", 0),
+                "max_confidence": _round_metric(task.get("max_confidence")),
+                "grid": "yes" if task.get("query_grid_exists") else "no",
+                "visual_summary": "yes" if task.get("visual_summary_exists") else "no",
+                "warnings": "; ".join(map(str, task.get("warnings") or [])),
+                "recommendations": "; ".join(map(str, task.get("recommendations") or [])),
+            }
+        )
+    return rows
+
+
+def run_inspector_summary(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Return the compact run-inspector status used by tests and Streamlit."""
+
+    summary = bundle.get("pipeline_summary") or {}
+    scorecard = bundle.get("evidence_scorecard") or {}
+    query_audit = bundle.get("query_evidence_audit") or {}
+    quality_gate = bundle.get("quality_gate") or {}
+    readiness = bundle.get("run_readiness") or {}
+    submission = bundle.get("submission_readiness") or {}
+    pack_validation = bundle.get("portfolio_pack_validation") or {}
+    totals = query_audit.get("totals") if isinstance(query_audit.get("totals"), dict) else {}
+    mode_counts = totals.get("mode_counts") if isinstance(totals.get("mode_counts"), dict) else {}
+    return {
+        "scene_name": summary.get("scene_name") or Path(str(bundle.get("run_dir", ""))).name or "unknown",
+        "success": summary.get("success"),
+        "backend": summary.get("backend", "unknown"),
+        "dry_run": summary.get("dry_run"),
+        "query_count": len(summary.get("queries") or []),
+        "evidence_level": scorecard.get("evidence_level", "unknown"),
+        "evidence_score": scorecard.get("score"),
+        "query_evidence_status": query_audit.get("status", "missing"),
+        "query_evidence_ok": query_audit.get("ok"),
+        "query_task_count": query_audit.get("task_count", 0),
+        "query_pass_warn_fail": (
+            f"{query_audit.get('pass_count', 0)}/"
+            f"{query_audit.get('warn_count', 0)}/"
+            f"{query_audit.get('fail_count', 0)}"
+        ),
+        "query_3d_tasks": mode_counts.get("3d", 0),
+        "query_2d_fallback_tasks": mode_counts.get("2d_fallback", 0),
+        "query_render_only_tasks": mode_counts.get("render_only", 0),
+        "quality_gate": quality_gate.get("status", "unknown"),
+        "readiness": readiness.get("readiness_level", "unknown"),
+        "submission_status": submission.get("status", "unknown"),
+        "portfolio_pack_ok": pack_validation.get("ok") if pack_validation else None,
+        "portfolio_pack_errors": len(pack_validation.get("errors") or []) if pack_validation else 0,
+        "portfolio_pack_warnings": len(pack_validation.get("warnings") or []) if pack_validation else 0,
+    }
+
+
 def main() -> None:
     try:
         import streamlit as st  # type: ignore
@@ -214,14 +289,16 @@ def main() -> None:
     strict_backend = st.sidebar.checkbox("Strict backend rendering", value=False)
 
     bundle = load_run_bundle(run_dir)
-    tabs = st.tabs(["Run Review", "Artifacts", "Evaluation", "Query Runner"])
+    tabs = st.tabs(["Run Review", "Evidence Audit", "Artifacts", "Evaluation", "Query Runner"])
     with tabs[0]:
         _render_run_review(st, bundle)
     with tabs[1]:
-        _render_artifacts(st, bundle)
+        _render_evidence_audit(st, bundle)
     with tabs[2]:
-        _render_evaluation(st, bundle)
+        _render_artifacts(st, bundle)
     with tabs[3]:
+        _render_evaluation(st, bundle)
+    with tabs[4]:
         _render_query_runner(
             st,
             config_path,
@@ -246,6 +323,13 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
     col_b.metric("Backend", str(summary.get("backend", "unknown")))
     col_c.metric("Dry Run", str(summary.get("dry_run")))
     col_d.metric("Queries", str(len(summary.get("queries") or [])))
+
+    inspector = run_inspector_summary(bundle)
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Query Evidence", str(inspector["query_evidence_status"]))
+    col_b.metric("Query P/W/F", str(inspector["query_pass_warn_fail"]))
+    col_c.metric("2D Fallback Tasks", str(inspector["query_2d_fallback_tasks"]))
+    col_d.metric("3D Evidence Tasks", str(inspector["query_3d_tasks"]))
 
     if bundle["run_audit"]:
         audit = bundle["run_audit"]
@@ -333,6 +417,8 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.markdown(bundle["evidence_scorecard_markdown"])
             else:
                 st.json(scorecard)
+    if bundle["query_evidence_audit"]:
+        _render_query_evidence_summary(st, bundle)
     if bundle["quality_gate"]:
         gate = bundle["quality_gate"]
         col_a, col_b, col_c = st.columns(3)
@@ -391,6 +477,17 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
             st.json(readiness)
     if bundle["portfolio_page"]:
         st.markdown(f"[Open static portfolio page]({bundle['portfolio_page']})")
+    if bundle["portfolio_pack_validation"]:
+        validation = bundle["portfolio_pack_validation"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Portfolio Pack", "ok" if validation.get("ok") else "needs review")
+        col_b.metric("Pack Errors", str(len(validation.get("errors") or [])))
+        col_c.metric("Pack Warnings", str(len(validation.get("warnings") or [])))
+        with st.expander("Portfolio Pack Validation", expanded=validation.get("ok") is False):
+            path = bundle.get("portfolio_pack_validation_path")
+            if path:
+                st.caption(str(path))
+            st.json(validation)
 
     st.subheader("Provenance")
     st.json(summary.get("provenance") or {})
@@ -457,6 +554,59 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
             status = "ok" if payload.get("returncode") == 0 else "failed"
             with st.expander(f"{command_log['label']} ({status})"):
                 st.json(payload)
+
+
+def _render_evidence_audit(st: Any, bundle: dict[str, Any]) -> None:
+    st.subheader("Query Evidence Audit")
+    if not bundle["query_evidence_audit"]:
+        st.info("No query_evidence_audit.json found. Run scripts/audit_query_evidence.py for this run.")
+        return
+
+    _render_query_evidence_summary(st, bundle)
+    rows = query_evidence_rows(bundle["query_evidence_audit"])
+    if rows:
+        st.table(rows)
+    else:
+        st.info("No query-level audit rows found.")
+
+    audit = bundle["query_evidence_audit"]
+    warnings = audit.get("warnings") or []
+    if warnings:
+        with st.expander("Run-Level Query Evidence Warnings", expanded=True):
+            for warning in warnings:
+                st.warning(str(warning))
+
+    for task in audit.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        title = f"{task.get('task') or task.get('task_slug')}: {task.get('status', 'unknown')}"
+        expanded = task.get("status") in {"warn", "fail"}
+        with st.expander(title, expanded=expanded):
+            st.json(task)
+
+    if bundle["query_evidence_audit_markdown"]:
+        with st.expander("Query Evidence Audit Markdown", expanded=False):
+            st.markdown(bundle["query_evidence_audit_markdown"])
+
+
+def _render_query_evidence_summary(st: Any, bundle: dict[str, Any]) -> None:
+    audit = bundle["query_evidence_audit"]
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    mode_counts = totals.get("mode_counts") if isinstance(totals.get("mode_counts"), dict) else {}
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Query Audit", str(audit.get("status", "unknown")))
+    col_b.metric("Tasks", str(audit.get("task_count", 0)))
+    col_c.metric(
+        "Pass/Warn/Fail",
+        f"{audit.get('pass_count', 0)}/{audit.get('warn_count', 0)}/{audit.get('fail_count', 0)}",
+    )
+    col_d.metric("Evidence Modes", _mode_counts_label(mode_counts))
+
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Overlays", str(totals.get("overlay_count", 0)))
+    col_b.metric("Rendered", str(totals.get("existing_rendered_image_count", 0)))
+    col_c.metric("Regions", str(totals.get("bounding_region_count", 0)))
+    col_d.metric("3D Points", str(totals.get("candidate_point_count", 0)))
 
 
 def _render_artifacts(st: Any, bundle: dict[str, Any]) -> None:
@@ -683,6 +833,14 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
+def _read_first_json(paths: list[Path]) -> dict[str, Any]:
+    for path in paths:
+        payload = _read_json(path)
+        if payload:
+            return payload
+    return {}
+
+
 def _read_csv(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
@@ -694,6 +852,22 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
+def _first_existing_path(paths: list[Path]) -> str:
+    for path in paths:
+        if path.exists():
+            return str(path)
+    return ""
+
+
+def _portfolio_validation_candidates(run_dir: Path) -> list[Path]:
+    return [
+        run_dir / "portfolio_pack_validation.json",
+        run_dir.parent / "portfolio_pack_validation.json",
+        run_dir.parent.parent / "portfolio_pack" / "portfolio_pack_validation.json",
+        Path("results") / "portfolio_pack" / "portfolio_pack_validation.json",
+    ]
+
+
 def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = None) -> list[str]:
     expected = [
         "pipeline_summary.json",
@@ -702,6 +876,7 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         "preflight_report.json",
         "failure_diagnostics.json",
         "evidence_scorecard.json",
+        "query_evidence_audit.json",
         "quality_gate.json",
         "run_readiness.json",
         "claim_audit.json",
@@ -758,6 +933,8 @@ def _missing_run_files(run_dir: Path, pipeline_summary: dict[str, Any] | None = 
         expected.append("failure_diagnostics.md")
     if _step_succeeded(pipeline_summary, "audit_claims"):
         expected.append("claim_audit.md")
+    if _step_succeeded(pipeline_summary, "audit_query_evidence"):
+        expected.append("query_evidence_audit.md")
     if _step_succeeded(pipeline_summary, "create_run_result_card"):
         expected.append("run_result_card.md")
     if _step_succeeded(pipeline_summary, "create_submission_packet"):
@@ -813,6 +990,21 @@ def _image_kind(path: Path) -> str:
     if path.suffix.lower() == ".gif":
         return "montage"
     return "image"
+
+
+def _round_metric(value: object) -> float | str:
+    try:
+        return round(float(value), 3)
+    except (TypeError, ValueError):
+        return ""
+
+
+def _mode_counts_label(mode_counts: dict[str, Any]) -> str:
+    return (
+        f"3D {mode_counts.get('3d', 0)} / "
+        f"2D {mode_counts.get('2d_fallback', 0)} / "
+        f"render {mode_counts.get('render_only', 0)}"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover - UI entry point
