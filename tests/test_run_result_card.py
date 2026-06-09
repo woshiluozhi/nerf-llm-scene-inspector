@@ -24,10 +24,13 @@ def test_build_run_result_card_calibrates_dry_run_claims(tmp_path: Path) -> None
     assert any("dry-run" in claim.lower() for claim in card.do_not_claim)
     assert card.evidence_snapshot["failure_diagnostics"] == "clear"
     assert card.evidence_snapshot["claim_audit"] == "pass"
+    assert card.evidence_snapshot["query_evidence"] == "pass"
+    assert card.evidence_snapshot["query_risk_flag_count"] == 0
     assert card.metrics["mean_iou_2d"] == 0.42
     assert card.artifacts["failure_diagnostics"] == "failure_diagnostics.md"
     assert any(check.name == "failure_diagnostics" and check.status == "pass" for check in card.checks)
     assert any(check.name == "claim_audit" and check.status == "pass" for check in card.checks)
+    assert any(check.name == "query_evidence" and check.status == "pass" for check in card.checks)
 
 
 def test_write_run_result_card_outputs_json_and_markdown(tmp_path: Path) -> None:
@@ -69,14 +72,100 @@ def test_create_run_result_card_cli(tmp_path: Path) -> None:
     assert "# Run Result Card" in output.read_text(encoding="utf-8")
 
 
-def _write_run(tmp_path: Path) -> Path:
+def test_run_result_card_blocks_query_risk_flags(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "warn",
+            "ok": True,
+            "totals": {"counter_evidence_count": 1, "risk_flag_count": 2},
+            "tasks": [{"task": "safe place", "counter_evidence_count": 1, "risk_flag_count": 2}],
+        },
+    )
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": "blocked",
+            "query_evidence_status": "warn",
+            "query_counter_evidence_count": 1,
+            "query_risk_flag_count": 2,
+            "avoid_claims": ["Do not present unresolved query-risk flags as clean scene-understanding evidence."],
+            "next_actions": ["Resolve query risk flags."],
+        },
+    )
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert "not ready for external sharing" in card.primary_takeaway
+    assert card.evidence_snapshot["query_evidence"] == "warn"
+    assert card.evidence_snapshot["query_counter_evidence_count"] == 1
+    assert card.evidence_snapshot["query_risk_flag_count"] == 2
+    assert any(check.name == "query_evidence" and check.status == "fail" for check in card.checks)
+    assert any(check.name == "submission_packet" and check.status == "fail" for check in card.checks)
+    assert any("query-risk" in claim for claim in card.do_not_claim)
+
+
+def test_run_result_card_does_not_mark_portfolio_ready_without_submission_ready(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": "needs_pack_validation",
+            "query_evidence_status": "pass",
+            "query_counter_evidence_count": 0,
+            "query_risk_flag_count": 0,
+            "avoid_claims": [],
+            "next_actions": ["Validate and attach the portfolio pack."],
+        },
+    )
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "real_run_review_ready"
+    assert card.evidence_snapshot["submission_readiness"] == "needs_pack_validation"
+    assert any(check.name == "submission_packet" and check.status == "warn" for check in card.checks)
+
+
+def test_run_result_card_blocks_failed_query_evidence_audit(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "fail",
+            "ok": False,
+            "totals": {"counter_evidence_count": 0, "risk_flag_count": 0},
+            "tasks": [{"task": "mug", "status": "fail"}],
+        },
+    )
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": "real_run_review_ready",
+            "query_evidence_status": "",
+            "query_counter_evidence_count": 0,
+            "query_risk_flag_count": 0,
+            "avoid_claims": [],
+            "next_actions": [],
+        },
+    )
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert card.evidence_snapshot["query_evidence"] == "fail"
+    assert any(check.name == "query_evidence" and check.status == "fail" for check in card.checks)
+
+
+def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     run_dir = tmp_path / "run"
     _write_json(
         run_dir / "pipeline_summary.json",
         {
             "scene_name": "desk_scene",
             "success": True,
-            "dry_run": True,
+            "dry_run": dry_run,
             "backend": "lerf",
             "queries": ["mug", "laptop"],
         },
@@ -84,30 +173,45 @@ def _write_run(tmp_path: Path) -> Path:
     _write_json(
         run_dir / "evidence_scorecard.json",
         {
-            "evidence_level": "dry_run_demo_ready",
+            "evidence_level": "dry_run_demo_ready" if dry_run else "portfolio_ready_real_run",
             "score": 85,
             "max_score": 113,
-            "dry_run": True,
+            "dry_run": dry_run,
             "overlay_count": 2,
             "metrics": {
-                "preflight_status": "needs_attention",
-                "capture_manifest_status": "needs_review",
+                "preflight_status": "needs_attention" if dry_run else "ready",
+                "capture_manifest_status": "needs_review" if dry_run else "ready",
             },
         },
     )
-    _write_json(run_dir / "quality_gate.json", {"profile": "smoke", "status": "warn", "passed": True})
-    _write_json(run_dir / "run_audit.json", {"status": "needs_review", "score": 52})
+    _write_json(
+        run_dir / "quality_gate.json",
+        {"profile": "smoke" if dry_run else "portfolio", "status": "warn" if dry_run else "pass", "passed": True},
+    )
+    _write_json(run_dir / "run_audit.json", {"status": "needs_review" if dry_run else "ready", "score": 52})
     _write_json(run_dir / "failure_diagnostics.json", {"status": "clear", "blocker_count": 0, "warning_count": 0})
     _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
         {
-            "readiness_level": "shareable_smoke_demo",
+            "readiness_level": "shareable_smoke_demo" if dry_run else "portfolio_ready",
+            "query_evidence_status": "pass",
+            "query_counter_evidence_count": 0,
+            "query_risk_flag_count": 0,
             "avoid_claims": [
                 "Do not claim state-of-the-art performance.",
                 "Do not describe dry-run overlays as trained LERF outputs from a real scene.",
             ],
             "next_actions": ["Run the same pipeline on a CUDA machine."],
+        },
+    )
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "pass",
+            "ok": True,
+            "totals": {"counter_evidence_count": 0, "risk_flag_count": 0},
+            "tasks": [{"task": "mug", "counter_evidence_count": 0, "risk_flag_count": 0}],
         },
     )
     _write_json(

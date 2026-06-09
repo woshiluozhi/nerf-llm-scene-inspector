@@ -107,6 +107,9 @@ counter-evidence is retained as a warning for calibrated review. The same inform
 `query_*` fields for automation. Pack
 references in this packet use share-safe artifact names such as `portfolio_pack.zip` instead
 of machine-specific absolute paths.
+`run_result_card.md` consumes the same submission and query-evidence fields, so it will
+mark a run as blocked when query evidence fails or unresolved risk flags remain, even if
+the evidence scorecard is otherwise strong.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,
 dry-run/real-run mode, capture metadata, preflight status, GPU/upstream environment checks,
 language training, query evidence risk flags, failure diagnostics, quality gates, claim audit, submission packet, and portfolio pack

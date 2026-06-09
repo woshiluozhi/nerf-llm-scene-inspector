@@ -127,6 +127,7 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
     diagnostics = _read_json(root / "failure_diagnostics.json")
     claim_audit = _read_json(root / "claim_audit.json")
     submission = _read_json(root / "submission_packet" / "submission_packet.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
     scene = _read_json(root / "scene_data_inspection.json")
@@ -136,6 +137,8 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
     scene_name = str(summary.get("scene_name") or scorecard.get("scene_name") or root.name)
     backend = str(summary.get("backend") or scorecard.get("backend") or "unknown")
     dry_run = bool(summary.get("dry_run", scorecard.get("dry_run", False)))
+    query_counter_evidence_count, query_risk_flag_count = _query_evidence_counts(query_evidence, submission)
+    query_evidence_status = str(submission.get("query_evidence_status") or query_evidence.get("status") or "")
     status = _result_status(
         dry_run=dry_run,
         success=summary.get("success") is True,
@@ -143,6 +146,9 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
         quality_status=str(quality.get("status") or ""),
         claim_status=str(claim_audit.get("status") or ""),
         readiness=str(submission.get("readiness_level") or ""),
+        query_evidence_status=query_evidence_status,
+        query_evidence_ok=query_evidence.get("ok"),
+        query_risk_flag_count=query_risk_flag_count,
     )
     metrics = _metrics(evaluation, scorecard, scene, relations)
     evidence_snapshot = _evidence_snapshot(
@@ -153,12 +159,22 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
         diagnostics,
         claim_audit,
         submission,
+        query_evidence,
         annotations,
+        query_counter_evidence_count=query_counter_evidence_count,
+        query_risk_flag_count=query_risk_flag_count,
     )
-    limitations = _limitations(dry_run, evaluation, annotations, relations)
+    limitations = _limitations(
+        dry_run,
+        evaluation,
+        annotations,
+        relations,
+        query_counter_evidence_count=query_counter_evidence_count,
+        query_risk_flag_count=query_risk_flag_count,
+    )
     next_actions = _next_actions(submission, recommendations, dry_run)
-    do_not_claim = _do_not_claim(submission, dry_run)
-    checks = _checks(summary, scorecard, quality, audit, diagnostics, claim_audit, submission, annotations)
+    do_not_claim = _do_not_claim(submission, dry_run, query_risk_flag_count=query_risk_flag_count)
+    checks = _checks(summary, scorecard, quality, audit, diagnostics, claim_audit, submission, query_evidence, annotations)
     return RunResultCard(
         scene_name=scene_name,
         backend=backend,
@@ -202,12 +218,25 @@ def _result_status(
     quality_status: str,
     claim_status: str,
     readiness: str,
+    query_evidence_status: str,
+    query_evidence_ok: object,
+    query_risk_flag_count: int,
 ) -> str:
-    if not success or quality_status == "fail" or claim_status == "fail":
+    if (
+        not success
+        or quality_status == "fail"
+        or claim_status == "fail"
+        or readiness == "blocked"
+        or query_evidence_status == "fail"
+        or query_evidence_ok is False
+        or query_risk_flag_count
+    ):
         return "blocked"
-    if readiness == "portfolio_ready" or (not dry_run and evidence_level == "portfolio_ready_real_run"):
+    if readiness == "portfolio_ready":
         return "portfolio_ready"
     if not dry_run and readiness in {"real_run_review_ready", "shareable_smoke_demo"}:
+        return "real_run_review_ready"
+    if not dry_run and evidence_level == "portfolio_ready_real_run":
         return "real_run_review_ready"
     if dry_run and readiness in {"shareable_smoke_demo", "needs_pack_validation"}:
         return "shareable_smoke_demo"
@@ -230,6 +259,8 @@ def _primary_takeaway(
     score = _score_text(scorecard.get("score"), scorecard.get("max_score"))
     if status == "portfolio_ready":
         return f"The run has enough recorded evidence for portfolio sharing, with evidence score {score}."
+    if status == "blocked":
+        return "The run is not ready for external sharing because one or more evidence or claim-safety gates failed."
     if status == "real_run_review_ready":
         return "The run has real-mode artifacts but still needs qualitative review before strong external claims."
     if dry_run:
@@ -249,6 +280,11 @@ def _shareable_blurb(scene_name: str, backend: str, dry_run: bool, status: str) 
             "reproducible orchestration, query reports, visualizations, evaluation scaffolding, "
             "and sharing gates; real trained-scene claims require a CUDA-backed run."
         )
+    if status == "blocked":
+        return (
+            f"For `{scene_name}`, I generated real-mode `{backend}` artifacts, but the result card is blocked "
+            "until failed evidence, query-risk, or claim-calibration checks are resolved."
+        )
     qualifier = "portfolio-ready" if status == "portfolio_ready" else "review-ready"
     return (
         f"For `{scene_name}`, I ran a {qualifier} open-vocabulary 3D scene inspection workflow "
@@ -265,7 +301,11 @@ def _evidence_snapshot(
     diagnostics: dict[str, Any],
     claim_audit: dict[str, Any],
     submission: dict[str, Any],
+    query_evidence: dict[str, Any],
     annotations: dict[str, Any],
+    *,
+    query_counter_evidence_count: int,
+    query_risk_flag_count: int,
 ) -> dict[str, Any]:
     return {
         "pipeline_success": summary.get("success"),
@@ -276,6 +316,9 @@ def _evidence_snapshot(
         "failure_diagnostics": diagnostics.get("status"),
         "claim_audit": claim_audit.get("status"),
         "submission_readiness": submission.get("readiness_level"),
+        "query_evidence": submission.get("query_evidence_status") or query_evidence.get("status"),
+        "query_counter_evidence_count": query_counter_evidence_count,
+        "query_risk_flag_count": query_risk_flag_count,
         "annotation_validation_ok": annotations.get("ok"),
         "query_count": len(summary.get("queries") or []),
     }
@@ -330,6 +373,9 @@ def _limitations(
     evaluation: dict[str, Any],
     annotations: dict[str, Any],
     relations: dict[str, Any],
+    *,
+    query_counter_evidence_count: int,
+    query_risk_flag_count: int,
 ) -> list[str]:
     limitations = [
         "This is a research engineering system built on upstream Nerfstudio and LERF components.",
@@ -343,6 +389,10 @@ def _limitations(
         limitations.append("Annotation warnings should be resolved before reporting numeric localization performance.")
     if relations:
         limitations.append("Scene-relation outputs are heuristic and should be treated as qualitative evidence.")
+    if query_counter_evidence_count:
+        limitations.append("Query counter-evidence should be reviewed before making scene-answer claims.")
+    if query_risk_flag_count:
+        limitations.append("Unresolved query risk flags block external sharing until evidence conflicts are resolved.")
     return limitations
 
 
@@ -369,7 +419,7 @@ def _next_actions(
     return deduped or ["Review run artifacts and rerun quality gates."]
 
 
-def _do_not_claim(submission: dict[str, Any], dry_run: bool) -> list[str]:
+def _do_not_claim(submission: dict[str, Any], dry_run: bool, *, query_risk_flag_count: int = 0) -> list[str]:
     claims = [str(item) for item in submission.get("avoid_claims") or [] if str(item).strip()]
     if not claims:
         claims = [
@@ -379,6 +429,8 @@ def _do_not_claim(submission: dict[str, Any], dry_run: bool) -> list[str]:
         ]
     if dry_run and not any("dry-run" in item.lower() for item in claims):
         claims.append("Do not describe dry-run overlays as trained LERF outputs from a real scene.")
+    if query_risk_flag_count and not any("query-risk" in item.lower() for item in claims):
+        claims.append("Do not present unresolved query-risk flags as clean scene-understanding evidence.")
     return claims
 
 
@@ -390,6 +442,7 @@ def _checks(
     diagnostics: dict[str, Any],
     claim_audit: dict[str, Any],
     submission: dict[str, Any],
+    query_evidence: dict[str, Any],
     annotations: dict[str, Any],
 ) -> list[ResultCardCheck]:
     return [
@@ -441,11 +494,12 @@ def _checks(
         ),
         ResultCardCheck(
             "submission_packet",
-            "pass" if submission.get("readiness_level") in {"shareable_smoke_demo", "portfolio_ready"} else "warn",
+            _submission_check_status(str(submission.get("readiness_level") or "")),
             f"readiness={submission.get('readiness_level')}",
-            "Regenerate submission packet with a validated pack." if not submission.get("readiness_level") else "",
+            _submission_check_action(str(submission.get("readiness_level") or "")),
             "submission_packet/submission_checklist.md",
         ),
+        _query_evidence_check(query_evidence, submission),
         ResultCardCheck(
             "annotations",
             "pass" if annotations.get("ok") is True and not annotations.get("warnings") else "warn",
@@ -454,6 +508,70 @@ def _checks(
             "evaluation/annotation_validation.json",
         ),
     ]
+
+
+def _query_evidence_check(query_evidence: dict[str, Any], submission: dict[str, Any]) -> ResultCardCheck:
+    status = str(submission.get("query_evidence_status") or query_evidence.get("status") or "")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence, submission)
+    if not query_evidence and not status:
+        return ResultCardCheck(
+            "query_evidence",
+            "warn",
+            "query evidence audit missing",
+            "Run scripts/audit_query_evidence.py before external sharing.",
+            "query_evidence_audit.md",
+        )
+    if risk_flag_count:
+        return ResultCardCheck(
+            "query_evidence",
+            "fail",
+            f"status={status or 'unknown'}, risk_flags={risk_flag_count}, counter_evidence={counter_evidence_count}",
+            "Resolve or explicitly document conflicting query evidence before external sharing.",
+            "query_evidence_audit.md",
+        )
+    if status == "fail" or query_evidence.get("ok") is False:
+        return ResultCardCheck(
+            "query_evidence",
+            "fail",
+            f"status={status or 'unknown'}, risk_flags=0, counter_evidence={counter_evidence_count}",
+            "Regenerate missing query reports, overlays, or visual summaries.",
+            "query_evidence_audit.md",
+        )
+    if counter_evidence_count or status == "warn":
+        return ResultCardCheck(
+            "query_evidence",
+            "warn",
+            f"status={status or 'unknown'}, risk_flags=0, counter_evidence={counter_evidence_count}",
+            "Review disambiguation/counter-evidence prompts before making scene-answer claims.",
+            "query_evidence_audit.md",
+        )
+    return ResultCardCheck(
+        "query_evidence",
+        "pass",
+        f"status={status or 'unknown'}, risk_flags=0, counter_evidence=0",
+        "",
+        "query_evidence_audit.md",
+    )
+
+
+def _submission_check_status(readiness: str) -> str:
+    if readiness in {"shareable_smoke_demo", "portfolio_ready"}:
+        return "pass"
+    if readiness == "blocked":
+        return "fail"
+    return "warn"
+
+
+def _submission_check_action(readiness: str) -> str:
+    if readiness == "blocked":
+        return "Resolve failed submission checklist items before sharing."
+    if not readiness:
+        return "Regenerate submission packet with a validated pack."
+    if readiness == "needs_pack_validation":
+        return "Validate and attach the portfolio pack before outreach."
+    if readiness == "real_run_review_ready":
+        return "Review warning-level submission items before outreach."
+    return ""
 
 
 def _artifacts(root: Path) -> dict[str, str]:
@@ -486,6 +604,37 @@ def _read_json(path: str | Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _query_evidence_counts(query_evidence: dict[str, Any], submission: dict[str, Any]) -> tuple[int, int]:
+    counter = _safe_int(submission.get("query_counter_evidence_count"))
+    risk = _safe_int(submission.get("query_risk_flag_count"))
+    totals = query_evidence.get("totals") if isinstance(query_evidence.get("totals"), dict) else {}
+    if not counter:
+        counter = _safe_int(totals.get("counter_evidence_count"))
+    if not risk:
+        risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = query_evidence.get("tasks") if isinstance(query_evidence.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _score_text(value: Any, maximum: Any) -> str:

@@ -267,6 +267,8 @@ sharing: its `Readiness Summary` section lists failed checks, warning checks, pa
 query-evidence counter/risk counts, and the next action to take before CV/professor outreach.
 Unresolved query risk flags block the packet; counter-evidence without overlap is kept as a
 warning so the run can still be reviewed with calibrated language.
+The run result card consumes the same packet/audit fields, so a high evidence score alone
+cannot promote a run to `portfolio_ready` while submission or query-evidence gates are blocked.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
 time or send the run externally. It consolidates pipeline success, evidence mode, capture,
 preflight, environment, language training, quality gate, claim audit, submission packet,
