@@ -161,6 +161,25 @@ def test_recommendations_include_query_risk_flags(tmp_path: Path) -> None:
     assert risk_actions[0].severity == "high"
 
 
+def test_recommendations_block_stale_pipeline_success_false(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+    payload = json.loads((run_dir / "pipeline_summary.json").read_text(encoding="utf-8"))
+    payload["success"] = False
+    _write_json(run_dir / "pipeline_summary.json", payload)
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "blocked"
+    assert report.critical_count == 1
+    assert report.top_next_action == (
+        "Inspect pipeline_summary.json and rerun the failed or stale pipeline stages."
+    )
+    assert any(
+        item.category == "pipeline" and "success=false" in item.rationale
+        for item in report.recommendations
+    )
+
+
 def test_recommend_next_steps_cli_writes_reports(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
     output = tmp_path / "recommendations.json"

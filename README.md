@@ -208,6 +208,8 @@ If baseline or language training returns `success=false` in its train summary, t
 Run `diagnose_run_failures.py` when a real run fails or falls back to manual viewer
 workflow: it summarizes common CUDA, LERF registration, COLMAP/FFmpeg, missing-config,
 and query-rendering failure modes in `failure_diagnostics.md`.
+`recommend_next_steps.py` also treats `pipeline_summary.success=false` as a blocker even
+when older artifacts do not expose an explicit failed step.
 The real-run action plan reads those diagnostics together with run audit, capture
 validation, preflight, query-evidence, and readiness gates; nonzero blocker/failure/risk
 counts are surfaced as plan issues even when a stale status string still looks ready.

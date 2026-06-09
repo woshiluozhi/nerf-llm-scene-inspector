@@ -431,9 +431,19 @@ def _add_annotation_actions(
 
 
 def _add_pipeline_step_actions(summary: dict[str, Any], recommendations: list[RecommendationItem]) -> None:
-    for step in summary.get("steps") or []:
-        if not isinstance(step, dict):
-            continue
+    steps = [step for step in summary.get("steps") or [] if isinstance(step, dict)]
+    failed_steps = [step for step in steps if str(step.get("status") or "") == "failed"]
+    if summary.get("success") is False and not failed_steps:
+        recommendations.append(
+            RecommendationItem(
+                severity="critical",
+                category="pipeline",
+                action="Inspect pipeline_summary.json and rerun the failed or stale pipeline stages.",
+                rationale="pipeline_summary.json reports success=false but does not list an explicit failed step.",
+                artifact="pipeline_summary.json",
+            )
+        )
+    for step in steps:
         name = str(step.get("name") or "")
         status = str(step.get("status") or "")
         if status == "failed":
