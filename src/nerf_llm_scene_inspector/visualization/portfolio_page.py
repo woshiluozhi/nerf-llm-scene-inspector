@@ -23,6 +23,10 @@ class PortfolioPage:
     evidence_score: str
     audit_status: str
     summary: str
+    result_status: str = "unknown"
+    query_evidence_status: str = "unknown"
+    query_counter_evidence_count: int = 0
+    query_risk_flag_count: int = 0
     metrics: dict[str, Any] = field(default_factory=dict)
     sharing_readiness: dict[str, Any] = field(default_factory=dict)
     recommendations: list[str] = field(default_factory=list)
@@ -38,6 +42,16 @@ class PortfolioPage:
             if self.dry_run
             else "This page summarizes a real-mode run; inspect upstream versions and artifacts."
         )
+        if self.result_status == "blocked":
+            dry_run_note = (
+                "This run is blocked for external sharing until failed evidence, "
+                "query-risk, or claim-calibration checks are resolved."
+            )
+        elif self.query_risk_flag_count:
+            dry_run_note = (
+                "This run has unresolved query-risk flags; review query evidence "
+                "before using scene-answer claims externally."
+            )
         return "\n".join(
             [
                 "<!doctype html>",
@@ -112,10 +126,14 @@ def build_portfolio_page(run_dir: str | Path) -> PortfolioPage:
     summary = _read_json(root / "pipeline_summary.json")
     scorecard = _read_json(root / "evidence_scorecard.json")
     audit = _read_json(root / "run_audit.json")
+    result_card = _read_json(root / "run_result_card.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
     scene_name = str(summary.get("scene_name") or scorecard.get("scene_name") or root.name)
     score = scorecard.get("score", "?")
     max_score = scorecard.get("max_score", "?")
+    sharing_readiness = _sharing_readiness(root)
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence, sharing_readiness)
     return PortfolioPage(
         run_dir=".",
         scene_name=scene_name,
@@ -124,9 +142,13 @@ def build_portfolio_page(run_dir: str | Path) -> PortfolioPage:
         evidence_level=str(scorecard.get("evidence_level") or "unknown"),
         evidence_score=f"{score}/{max_score}",
         audit_status=str(audit.get("status") or "unknown"),
+        result_status=str(result_card.get("result_status") or "unknown"),
+        query_evidence_status=str(sharing_readiness.get("query_evidence_status") or query_evidence.get("status") or "unknown"),
+        query_counter_evidence_count=counter_evidence_count,
+        query_risk_flag_count=risk_flag_count,
         summary=str(scorecard.get("summary") or _fallback_summary(summary)),
         metrics=_metrics(scorecard, evaluation),
-        sharing_readiness=_sharing_readiness(root),
+        sharing_readiness=sharing_readiness,
         recommendations=_recommendations(scorecard),
         images=_images(root),
         artifacts=_artifacts(root),
@@ -158,11 +180,13 @@ def _recommendations(scorecard: dict[str, Any]) -> list[str]:
 
 def _sharing_readiness(root: Path) -> dict[str, Any]:
     packet = _read_json(root / "submission_packet" / "submission_packet.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
     summary = packet.get("readiness_summary")
     if isinstance(summary, dict) and summary:
-        return dict(summary)
+        return _with_query_evidence(dict(summary), packet, query_evidence)
     if packet:
-        return {
+        return _with_query_evidence(
+            {
             "status": "unknown",
             "readiness_level": packet.get("readiness_level", "unknown"),
             "failed_check_count": _count_items(packet.get("checklist"), "fail"),
@@ -170,7 +194,10 @@ def _sharing_readiness(root: Path) -> dict[str, Any]:
             "packet_warning_count": len(packet.get("warnings") or []),
             "pack_ok": packet.get("pack_ok"),
             "recommended_next_action": packet.get("share_decision") or "Review the submission checklist.",
-        }
+            },
+            packet,
+            query_evidence,
+        )
     return {}
 
 
@@ -235,6 +262,9 @@ def _artifacts(root: Path) -> list[dict[str, str]]:
 def _stat_cards(page: PortfolioPage) -> list[str]:
     stats = [
         ("Evidence", page.evidence_level),
+        ("Result", page.result_status),
+        ("Query evidence", page.query_evidence_status),
+        ("Risk flags", str(page.query_risk_flag_count)),
         ("Backend", page.backend),
         ("Audit", page.audit_status),
         ("Run mode", "dry-run" if page.dry_run else "real"),
@@ -288,6 +318,9 @@ def _sharing_readiness_panel(summary: dict[str, Any]) -> str:
         ("Warning checks", summary.get("warning_check_count", 0)),
         ("Packet warnings", summary.get("packet_warning_count", 0)),
         ("Pack OK", summary.get("pack_ok")),
+        ("Query evidence", summary.get("query_evidence_status", "unknown")),
+        ("Query counter-evidence", summary.get("query_counter_evidence_count", 0)),
+        ("Query risk flags", summary.get("query_risk_flag_count", 0)),
     ]
     for label, value in rows:
         lines.append(f"          <tr><th>{_escape(label)}</th><td>{_escape(_format_value(value))}</td></tr>")
@@ -436,6 +469,52 @@ def _count_items(raw_items: Any, status: str) -> int:
     if not isinstance(raw_items, list):
         return 0
     return sum(1 for item in raw_items if isinstance(item, dict) and item.get("status") == status)
+
+
+def _with_query_evidence(
+    summary: dict[str, Any],
+    packet: dict[str, Any],
+    query_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence, packet)
+    if "query_evidence_status" not in summary:
+        summary["query_evidence_status"] = packet.get("query_evidence_status") or query_evidence.get("status") or "unknown"
+    if "query_counter_evidence_count" not in summary:
+        summary["query_counter_evidence_count"] = counter_evidence_count
+    if "query_risk_flag_count" not in summary:
+        summary["query_risk_flag_count"] = risk_flag_count
+    return summary
+
+
+def _query_evidence_counts(query_evidence: dict[str, Any], source: dict[str, Any]) -> tuple[int, int]:
+    counter = _safe_int(source.get("query_counter_evidence_count"))
+    risk = _safe_int(source.get("query_risk_flag_count"))
+    totals = query_evidence.get("totals") if isinstance(query_evidence.get("totals"), dict) else {}
+    if not counter:
+        counter = _safe_int(totals.get("counter_evidence_count"))
+    if not risk:
+        risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = query_evidence.get("tasks") if isinstance(query_evidence.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _read_json(path: Path) -> dict[str, Any]:

@@ -17,6 +17,10 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
 
     assert "desk_scene" in html
     assert "dry_run_demo_ready" in html
+    assert "shareable_smoke_demo" in html
+    assert "Query evidence" in html
+    assert "Query risk flags" in html
+    assert "counter-evidence" in html
     assert "demo_assets/query_grid.png" in html
     assert "quality_gate.md" in html
     assert "failure_diagnostics.md" in html
@@ -30,6 +34,55 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "Finalize annotations with --export-pack --zip-pack." in html
     assert "portfolio_pack" in html
     assert str(tmp_path) not in html
+    assert "C:\\Users" not in html
+
+
+def test_portfolio_page_surfaces_blocked_query_risk_flags(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    _write_json(run_dir / "run_result_card.json", {"result_status": "blocked"})
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "warn",
+            "ok": True,
+            "totals": {"counter_evidence_count": 1, "risk_flag_count": 2},
+            "tasks": [{"task": "safe place", "counter_evidence_count": 1, "risk_flag_count": 2}],
+        },
+    )
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": "blocked",
+            "pack_ok": True,
+            "readiness_summary": {
+                "status": "fail",
+                "readiness_level": "blocked",
+                "failed_check_count": 1,
+                "warning_check_count": 0,
+                "packet_warning_count": 1,
+                "failed_checks": ["query_evidence"],
+                "warning_checks": [],
+                "top_blockers": ["query_evidence: risk_flags=2, counter_evidence=1"],
+                "top_warnings": [],
+                "pack_ok": True,
+                "query_evidence_status": "warn",
+                "query_counter_evidence_count": 1,
+                "query_risk_flag_count": 2,
+                "recommended_next_action": "Resolve query risk flags before external sharing.",
+            },
+        },
+    )
+
+    page = build_portfolio_page(run_dir)
+    html = page.to_html()
+
+    assert page.result_status == "blocked"
+    assert page.query_evidence_status == "warn"
+    assert page.query_counter_evidence_count == 1
+    assert page.query_risk_flag_count == 2
+    assert "This run is blocked for external sharing" in html
+    assert "risk_flags=2" in html
+    assert "Resolve query risk flags before external sharing." in html
     assert "C:\\Users" not in html
 
 
@@ -88,6 +141,16 @@ def _write_run(tmp_path: Path) -> Path:
         },
     )
     _write_json(run_dir / "run_audit.json", {"status": "needs_review"})
+    _write_json(run_dir / "run_result_card.json", {"result_status": "shareable_smoke_demo"})
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "pass",
+            "ok": True,
+            "totals": {"counter_evidence_count": 0, "risk_flag_count": 0},
+            "tasks": [{"task": "mug", "counter_evidence_count": 0, "risk_flag_count": 0}],
+        },
+    )
     _write_json(run_dir / "evaluation" / "eval_summary.json", {"mean_iou_2d": 0.2})
     _write_text(run_dir / "demo_assets" / "query_grid.png", "image")
     _write_text(run_dir / "demo_assets" / "mug" / "view_0000_overlay.png", "image")
@@ -118,6 +181,9 @@ def _write_run(tmp_path: Path) -> Path:
                 "top_blockers": [],
                 "top_warnings": ["portfolio_pack: portfolio pack was not validated"],
                 "pack_ok": None,
+                "query_evidence_status": "pass",
+                "query_counter_evidence_count": 0,
+                "query_risk_flag_count": 0,
                 "recommended_next_action": "Finalize annotations with --export-pack --zip-pack.",
             },
         },

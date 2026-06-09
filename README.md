@@ -269,6 +269,8 @@ Unresolved query risk flags block the packet; counter-evidence without overlap i
 warning so the run can still be reviewed with calibrated language.
 The run result card consumes the same packet/audit fields, so a high evidence score alone
 cannot promote a run to `portfolio_ready` while submission or query-evidence gates are blocked.
+The generated `portfolio_page.html` surfaces the same result status and query-risk counts
+near the top of the page, so a reviewer sees blocked evidence without opening raw JSON.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
 time or send the run externally. It consolidates pipeline success, evidence mode, capture,
 preflight, environment, language training, quality gate, claim audit, submission packet,
