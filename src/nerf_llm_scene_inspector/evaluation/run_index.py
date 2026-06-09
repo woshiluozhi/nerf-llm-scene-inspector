@@ -25,6 +25,8 @@ class RunIndexEntry:
     audit_score: int | None = None
     blocker_count: int = 0
     warning_count: int = 0
+    result_status: str = ""
+    submission_readiness_level: str = ""
     query_evidence_status: str = ""
     query_counter_evidence_count: int = 0
     query_risk_flag_count: int = 0
@@ -81,15 +83,18 @@ class RunIndex:
             f"- Successful runs: {self.successful_runs}",
             f"- Ready runs: {self.ready_runs}",
             "",
-            "| Scene | Status | Audit | Score | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
-            "| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| Scene | Status | Result | Submission | Audit | Score | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
+            "| --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
-                "| {scene} | {success} | {audit} | {score} | {query_evidence} | {risk_flags} | "
-                "{backend} | {dry_run} | {queries} | {evaluated} | {topk} | {iou} | {quality} | `{run_dir}` |".format(
+                "| {scene} | {success} | {result} | {submission} | {audit} | {score} | "
+                "{query_evidence} | {risk_flags} | {backend} | {dry_run} | {queries} | "
+                "{evaluated} | {topk} | {iou} | {quality} | `{run_dir}` |".format(
                     scene=entry.scene_name,
                     success="success" if entry.success else "failed",
+                    result=entry.result_status or "unknown",
+                    submission=entry.submission_readiness_level or "unknown",
                     audit=entry.audit_status or "unknown",
                     score=_display(entry.audit_score),
                     query_evidence=entry.query_evidence_status or "unknown",
@@ -141,6 +146,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
     summary = _read_json(run_dir / "pipeline_summary.json")
     audit = _read_json(run_dir / "run_audit.json")
     query_evidence = _read_json(run_dir / "query_evidence_audit.json")
+    result_card = _read_json(run_dir / "run_result_card.json")
+    submission = _read_json(run_dir / "submission_packet" / "submission_packet.json")
     scene = _read_json(run_dir / "scene_data_inspection.json")
     evaluation = _read_json(run_dir / "evaluation" / "eval_summary.json")
     scene_name = str(summary.get("scene_name") or run_dir.name)
@@ -157,6 +164,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
         audit_score=_optional_int(audit.get("score")),
         blocker_count=_safe_int(audit.get("blocker_count")),
         warning_count=_safe_int(audit.get("warning_count")),
+        result_status=str(result_card.get("result_status") or ""),
+        submission_readiness_level=str(submission.get("readiness_level") or ""),
         query_evidence_status=str(query_evidence.get("status") or ""),
         query_counter_evidence_count=counter_evidence_count,
         query_risk_flag_count=risk_flag_count,

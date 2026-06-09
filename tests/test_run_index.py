@@ -24,6 +24,8 @@ def test_index_pipeline_runs_summarizes_runs(tmp_path: Path) -> None:
     assert index.entries[0].artifacts["capture_manifest"] == "capture_manifest.md"
     assert index.entries[0].artifacts["portfolio_page"] == "portfolio_page.html"
     assert index.entries[0].artifacts["annotation_review"] == "evaluation/annotation_review.md"
+    assert index.entries[0].result_status == "shareable_smoke_demo"
+    assert index.entries[0].submission_readiness_level == "shareable_smoke_demo"
     assert index.entries[0].query_evidence_status == "pass"
     assert index.entries[0].query_risk_flag_count == 0
 
@@ -53,7 +55,10 @@ def test_index_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert json.loads(output.read_text(encoding="utf-8"))["total_runs"] == 1
-    assert "# Pipeline Run Index" in markdown.read_text(encoding="utf-8")
+    markdown_text = markdown.read_text(encoding="utf-8")
+    assert "# Pipeline Run Index" in markdown_text
+    assert "Result" in markdown_text
+    assert "Submission" in markdown_text
 
 
 def _write_run(run_dir: Path, *, scene_name: str, audit_status: str, score: int) -> None:
@@ -85,6 +90,11 @@ def _write_run(run_dir: Path, *, scene_name: str, audit_status: str, score: int)
     _write_json(
         run_dir / "query_evidence_audit.json",
         {"status": "pass", "ok": True, "task_count": 1, "fail_count": 0, "totals": {}},
+    )
+    _write_json(run_dir / "run_result_card.json", {"result_status": "shareable_smoke_demo"})
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {"readiness_level": "shareable_smoke_demo"},
     )
     (run_dir / "run_audit.md").parent.mkdir(parents=True, exist_ok=True)
     (run_dir / "run_audit.md").write_text("# Audit\n", encoding="utf-8")

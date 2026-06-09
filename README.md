@@ -241,9 +241,9 @@ status, blocking reasons, and a selection summary so repeated captures or backen
 can be compared without opening every run directory by hand. In real mode, use the same
 config shape but remove `dry_run: true` and run on a CUDA machine with Nerfstudio/LERF
 installed.
-The run index and comparison reports include query-evidence status and risk-flag counts;
-real runs with unresolved query risk flags are demoted to `needs_review` instead of
-`portfolio_candidate`.
+The run index, project site, and comparison reports include result status, submission
+readiness, query-evidence status, and risk-flag counts; real runs with unresolved query
+risk flags are demoted to `needs_review` instead of `portfolio_candidate`.
 
 Refresh the latest annotated run and export a shareable portfolio package:
 
