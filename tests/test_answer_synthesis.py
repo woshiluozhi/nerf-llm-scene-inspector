@@ -101,7 +101,14 @@ def test_synthesize_scene_answer_excludes_negative_query_evidence() -> None:
         query="cup",
         backend_name="lerf",
         config_path="config.yml",
-        bounding_regions=[BoundingRegion(label="cup", score=0.7)],
+        bounding_regions=[
+            BoundingRegion(
+                label="cup",
+                score=0.7,
+                bbox_2d=(10.0, 10.0, 80.0, 90.0),
+                source_view="view_0001",
+            )
+        ],
         confidence=0.7,
         provenance={"planner_backend_call": {"query": "cup", "purpose": "primary"}},
     )
@@ -109,7 +116,14 @@ def test_synthesize_scene_answer_excludes_negative_query_evidence() -> None:
         query="screen",
         backend_name="lerf",
         config_path="config.yml",
-        bounding_regions=[BoundingRegion(label="screen", score=0.99)],
+        bounding_regions=[
+            BoundingRegion(
+                label="screen",
+                score=0.99,
+                bbox_2d=(20.0, 20.0, 90.0, 100.0),
+                source_view="view_0001",
+            )
+        ],
         confidence=0.99,
         provenance={"planner_backend_call": {"query": "screen", "purpose": "negative"}},
     )
@@ -121,6 +135,57 @@ def test_synthesize_scene_answer_excludes_negative_query_evidence() -> None:
     )
 
     assert [item.label for item in answer.evidence] == ["cup"]
-    assert "screen" not in answer.answer
-    assert answer.confidence == 0.7
+    assert [item.label for item in answer.counter_evidence] == ["screen"]
+    assert answer.risk_flags
+    assert "Counter-evidence/avoid prompts detected: screen." in answer.answer
+    assert answer.confidence == 0.5
     assert any("Negative/disambiguation query results" in item for item in answer.limitations)
+    assert any("counter_evidence" in item for item in answer.limitations)
+    assert any("spatial conflicts" in item for item in answer.limitations)
+
+
+def test_synthesize_scene_answer_keeps_non_overlapping_counter_evidence_separate() -> None:
+    plan = {
+        "final_answer_template": "Likely safe regions are {items}.",
+        "negative_visual_queries": ["electronics"],
+    }
+    positive = QueryResult(
+        query="flat surface",
+        backend_name="lerf",
+        config_path="config.yml",
+        bounding_regions=[
+            BoundingRegion(
+                label="desk",
+                score=0.8,
+                bbox_2d=(10.0, 10.0, 60.0, 60.0),
+                source_view="view_0001",
+            )
+        ],
+        provenance={"planner_backend_call": {"query": "flat surface", "purpose": "primary"}},
+    )
+    negative = QueryResult(
+        query="electronics",
+        backend_name="lerf",
+        config_path="config.yml",
+        bounding_regions=[
+            BoundingRegion(
+                label="laptop",
+                score=0.9,
+                bbox_2d=(100.0, 100.0, 160.0, 160.0),
+                source_view="view_0001",
+            )
+        ],
+        provenance={"planner_backend_call": {"query": "electronics", "purpose": "negative"}},
+    )
+
+    answer = synthesize_scene_answer(
+        task="Where is the safest place to put a hot cup?",
+        plan=plan,
+        results=[positive, negative],
+    )
+
+    assert [item.label for item in answer.evidence] == ["desk"]
+    assert [item.label for item in answer.counter_evidence] == ["laptop"]
+    assert answer.risk_flags == []
+    assert answer.confidence == 0.65
+    assert any("counter-evidence overlays" in item for item in answer.recommended_followups)

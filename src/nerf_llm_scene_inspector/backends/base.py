@@ -284,17 +284,21 @@ def _answer_evidence_lines(summary: dict[str, Any]) -> list[str]:
         for item in evidence:
             if not isinstance(item, dict):
                 continue
-            label = item.get("label", "unknown")
-            query = item.get("query", "unknown")
-            score = item.get("score")
-            source = item.get("source_view") or "unknown view"
-            evidence_type = item.get("evidence_type", "unknown")
-            point_3d = item.get("point_3d")
-            point_text = f", point_3d={point_3d}" if point_3d else ""
-            lines.append(
-                f"  - `{label}` from query `{query}` ({evidence_type}, score={score}, source={source})"
-                f"{point_text}"
-            )
+            lines.append(f"  - {_answer_evidence_item_line(item)}")
+    counter_evidence = (
+        summary.get("counter_evidence")
+        if isinstance(summary.get("counter_evidence"), list)
+        else []
+    )
+    if counter_evidence:
+        lines.append("- Counter-evidence / avoid prompts:")
+        for item in counter_evidence:
+            if isinstance(item, dict):
+                lines.append(f"  - {_answer_evidence_item_line(item)}")
+    risk_flags = summary.get("risk_flags") if isinstance(summary.get("risk_flags"), list) else []
+    if risk_flags:
+        lines.append("- Risk flags:")
+        lines.extend(f"  - {item}" for item in risk_flags)
     limitations = summary.get("limitations") if isinstance(summary.get("limitations"), list) else []
     if limitations:
         lines.append("- Limitations:")
@@ -308,6 +312,20 @@ def _answer_evidence_lines(summary: dict[str, Any]) -> list[str]:
         lines.append("- Recommended follow-ups:")
         lines.extend(f"  - {item}" for item in followups)
     return lines
+
+
+def _answer_evidence_item_line(item: dict[str, Any]) -> str:
+    label = item.get("label", "unknown")
+    query = item.get("query", "unknown")
+    score = item.get("score")
+    source = item.get("source_view") or "unknown view"
+    evidence_type = item.get("evidence_type", "unknown")
+    point_3d = item.get("point_3d")
+    point_text = f", point_3d={point_3d}" if point_3d else ""
+    return (
+        f"`{label}` from query `{query}` ({evidence_type}, score={score}, source={source})"
+        f"{point_text}"
+    )
 
 
 def _plan_lines(plan: dict[str, Any]) -> list[str]:

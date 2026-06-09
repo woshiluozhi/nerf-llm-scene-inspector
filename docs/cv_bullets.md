@@ -9,7 +9,7 @@
 ## Stronger Research-Style Version
 
 - Engineered a research-oriented NeRF/VLM scene understanding system that turns monocular captures into language-queryable scene artifacts using Nerfstudio and LERF-style backends.
-- Integrated open-vocabulary visual query expansion, relation-anchor planning, relevancy rendering, typed QueryResult schemas, evidence-grounded answer synthesis, prompt-sensitivity diagnostics, 2D/3D fallback spatial reasoning, object-relation edge reports, annotation QA contact sheets, and annotation-based evaluation tables.
+- Integrated open-vocabulary visual query expansion, relation-anchor planning, relevancy rendering, typed QueryResult schemas, evidence-grounded answer synthesis with counter-evidence/risk flags, prompt-sensitivity diagnostics, 2D/3D fallback spatial reasoning, object-relation edge reports, annotation QA contact sheets, and annotation-based evaluation tables.
 - Built CPU-safe reproducibility infrastructure including dry-run training/query simulation, CI checks, capture manifests, real-run preflight reports, processed-scene quality reports, viewer-fallback import/repair workflows, offline annotation workbenches with post-annotation finalization, experiment-matrix summaries, paper-style research reports, reviewer-facing run result cards, real-run action plans, claim audits, submission checklists, evidence scorecards, project/run-level static portfolio pages, run-scoped portfolio packs, and professor-facing documentation.
 
 ## Conservative No-Overclaim Version

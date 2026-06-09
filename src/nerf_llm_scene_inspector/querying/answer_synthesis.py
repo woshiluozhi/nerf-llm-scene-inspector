@@ -11,6 +11,7 @@ from nerf_llm_scene_inspector.backends.base import (
     QueryResult,
     RenderedView,
 )
+from nerf_llm_scene_inspector.evaluation.metrics import bbox_iou
 
 
 @dataclass
@@ -40,6 +41,8 @@ class SceneAnswer:
     support_level: str
     confidence: float | None
     evidence: list[SceneAnswerEvidence] = field(default_factory=list)
+    counter_evidence: list[SceneAnswerEvidence] = field(default_factory=list)
+    risk_flags: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     recommended_followups: list[str] = field(default_factory=list)
 
@@ -49,6 +52,8 @@ class SceneAnswer:
             "support_level": self.support_level,
             "confidence": self.confidence,
             "evidence": [item.to_dict() for item in self.evidence],
+            "counter_evidence": [item.to_dict() for item in self.counter_evidence],
+            "risk_flags": list(self.risk_flags),
             "limitations": list(self.limitations),
             "recommended_followups": list(self.recommended_followups),
         }
@@ -64,13 +69,34 @@ def synthesize_scene_answer(
     """Create an evidence-grounded natural-language answer from query results."""
 
     positive_results = _positive_results(results)
+    negative_results = _negative_results(results)
     evidence = _collect_evidence(positive_results, top_k=top_k)
+    counter_evidence = _collect_evidence(negative_results, top_k=min(top_k, 3))
+    risk_flags = _risk_flags(evidence, counter_evidence)
     labels = _unique_labels(evidence)
     answer = _format_answer(plan, labels)
     support_level = _support_level(positive_results)
-    confidence = _confidence(evidence, positive_results, plan)
-    limitations = _limitations(results, support_level)
-    followups = _followups(task, plan, positive_results, evidence)
+    confidence = _confidence(
+        evidence,
+        positive_results,
+        plan,
+        counter_evidence=counter_evidence,
+        risk_flags=risk_flags,
+    )
+    limitations = _limitations(
+        results,
+        support_level,
+        counter_evidence=counter_evidence,
+        risk_flags=risk_flags,
+    )
+    followups = _followups(
+        task,
+        plan,
+        positive_results,
+        evidence,
+        counter_evidence=counter_evidence,
+        risk_flags=risk_flags,
+    )
     if evidence:
         answer = (
             f"{answer} Strongest evidence is based on {len(evidence)} ranked "
@@ -78,11 +104,20 @@ def synthesize_scene_answer(
         )
     else:
         answer = f"{answer} No backend evidence was available yet."
+    if counter_evidence:
+        answer = (
+            f"{answer} Counter-evidence/avoid prompts detected: "
+            f"{', '.join(_unique_labels(counter_evidence)[:3])}."
+        )
+    if risk_flags:
+        answer = f"{answer} Review {len(risk_flags)} spatial conflict flag(s) before acting."
     return SceneAnswer(
         answer=answer,
         support_level=support_level,
         confidence=confidence,
         evidence=evidence,
+        counter_evidence=counter_evidence,
+        risk_flags=risk_flags,
         limitations=limitations,
         recommended_followups=followups,
     )
@@ -90,6 +125,10 @@ def synthesize_scene_answer(
 
 def _positive_results(results: list[QueryResult]) -> list[QueryResult]:
     return [result for result in results if _query_purpose(result) != "negative"]
+
+
+def _negative_results(results: list[QueryResult]) -> list[QueryResult]:
+    return [result for result in results if _query_purpose(result) == "negative"]
 
 
 def _collect_evidence(results: list[QueryResult], *, top_k: int) -> list[SceneAnswerEvidence]:
@@ -241,24 +280,59 @@ def _confidence(
     evidence: list[SceneAnswerEvidence],
     results: list[QueryResult],
     plan: dict[str, Any],
+    *,
+    counter_evidence: list[SceneAnswerEvidence] | None = None,
+    risk_flags: list[str] | None = None,
 ) -> float | None:
     values = [item.score for item in evidence if item.score is not None]
     if not values:
         values = [result.confidence for result in results if result.confidence is not None]
+    confidence: float | None = None
     if values:
-        return round(sum(values) / len(values), 4)
-    raw_plan_confidence = plan.get("confidence")
-    try:
-        return round(float(raw_plan_confidence), 4) if raw_plan_confidence is not None else None
-    except (TypeError, ValueError):
+        confidence = sum(values) / len(values)
+    else:
+        raw_plan_confidence = plan.get("confidence")
+        try:
+            confidence = float(raw_plan_confidence) if raw_plan_confidence is not None else None
+        except (TypeError, ValueError):
+            confidence = None
+    if confidence is None:
         return None
 
+    counter_scores = [
+        item.score for item in (counter_evidence or []) if item.score is not None
+    ]
+    if counter_scores:
+        max_positive = max(values) if values else confidence
+        max_counter = max(counter_scores)
+        penalty = 0.05
+        if max_counter >= max_positive - 0.05:
+            penalty += 0.10
+        if risk_flags:
+            penalty += min(0.20, 0.05 * len(risk_flags))
+        confidence = max(0.0, confidence - min(0.35, penalty))
+    return round(confidence, 4)
 
-def _limitations(results: list[QueryResult], support_level: str) -> list[str]:
+
+def _limitations(
+    results: list[QueryResult],
+    support_level: str,
+    *,
+    counter_evidence: list[SceneAnswerEvidence] | None = None,
+    risk_flags: list[str] | None = None,
+) -> list[str]:
     limitations: list[str] = []
     if any(_query_purpose(result) == "negative" for result in results):
         limitations.append(
-            "Negative/disambiguation query results were run for review but excluded from positive answer evidence."
+            "Negative/disambiguation query results were run for review and excluded from positive answer evidence."
+        )
+    if counter_evidence:
+        limitations.append(
+            "Negative/disambiguation prompts returned visual evidence; review counter_evidence before acting on the answer."
+        )
+    if risk_flags:
+        limitations.append(
+            "Potential positive-vs-negative spatial conflicts were detected from image-space boxes; verify manually before physical action."
         )
     if support_level in {"2d_relevancy_fallback", "rendered_relevancy_only", "query_only"}:
         limitations.append(
@@ -289,17 +363,63 @@ def _followups(
     plan: dict[str, Any],
     results: list[QueryResult],
     evidence: list[SceneAnswerEvidence],
+    *,
+    counter_evidence: list[SceneAnswerEvidence] | None = None,
+    risk_flags: list[str] | None = None,
 ) -> list[str]:
     followups: list[str] = []
     if len(evidence) < min(3, max(1, len(results))):
         followups.append("Run additional views or prompts to improve evidence coverage.")
     if plan.get("negative_visual_queries"):
         followups.append("Run negative/disambiguation prompts before making a final decision.")
+    if counter_evidence:
+        followups.append("Compare positive overlays against counter-evidence overlays before treating the result as actionable.")
+    if risk_flags:
+        followups.append("Resolve spatial conflict flags by inspecting the source views or adding manual annotations.")
     if plan.get("relation_hypotheses"):
         followups.append("Use spatial_reasoning utilities on 3D points or image-space boxes to verify relation hypotheses.")
     if "?" in task or any(word in task.lower() for word in ("where", "which", "safe", "support")):
         followups.append("Inspect the overlay images manually before acting on the answer.")
     return _dedupe(followups)
+
+
+def _risk_flags(
+    evidence: list[SceneAnswerEvidence],
+    counter_evidence: list[SceneAnswerEvidence],
+    *,
+    iou_threshold: float = 0.10,
+) -> list[str]:
+    flags: list[str] = []
+    for positive in evidence:
+        if positive.bbox_2d is None:
+            continue
+        for counter in counter_evidence:
+            if counter.bbox_2d is None or not _compatible_source_view(positive, counter):
+                continue
+            overlap = bbox_iou(positive.bbox_2d, counter.bbox_2d)
+            if overlap < iou_threshold:
+                continue
+            flags.append(
+                "Positive candidate '{positive}' from query '{positive_query}' overlaps "
+                "negative evidence '{negative}' from query '{negative_query}' in {view} "
+                "(IoU={iou:.3f}).".format(
+                    positive=positive.label,
+                    positive_query=positive.query,
+                    negative=counter.label,
+                    negative_query=counter.query,
+                    view=positive.source_view or counter.source_view or "unknown view",
+                    iou=overlap,
+                )
+            )
+    return _dedupe(flags)
+
+
+def _compatible_source_view(left: SceneAnswerEvidence, right: SceneAnswerEvidence) -> bool:
+    return (
+        not left.source_view
+        or not right.source_view
+        or left.source_view == right.source_view
+    )
 
 
 def _support_phrase(support_level: str) -> str:

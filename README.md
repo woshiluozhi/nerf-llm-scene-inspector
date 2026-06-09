@@ -512,18 +512,22 @@ translation extent, approximate path length, duplicate adjacent poses, and a pos
 score. Low pose coverage usually means the camera rotated in place or COLMAP could not recover
 enough parallax for reliable training.
 Each `scene_query_report.json` stores the originating scene name, planner output, backend
-query results, synthesized `answer_summary`, support level, limitations, and follow-up
-recommendations. The paired `scene_query_report.md` is the human-readable version for
-reviewing natural-language answers alongside evidence and warnings. Stable slugged query
-directories keep artifacts traceable across repeated runs.
+query results, synthesized `answer_summary`, support level, ranked evidence,
+counter-evidence, risk flags, limitations, and follow-up recommendations. The paired
+`scene_query_report.md` is the human-readable version for reviewing natural-language
+answers alongside evidence and warnings. Stable slugged query directories keep artifacts
+traceable across repeated runs.
 For high-level tasks, `query_scene.py` runs the planner's primary and supporting backend
 calls by default; use `--max-queries` to cap prompt expansion, `--exact-query` to disable
 expansion, and `--include-negative-queries` when you explicitly want disambiguation prompts
 included in backend execution. Negative query results are tagged in provenance and excluded
-from positive answer evidence. A successful query also writes `query_grid.png` by default
-as a compact visual overview across expanded prompts, plus `query_visual_summary.json`
-with the grid path, overlay count, and expanded query list. Use `--no-query-grid` to skip
-the static overview and `--make-montage` to additionally write `query_montage.gif`.
+from positive answer evidence, but they are preserved as `counter_evidence`; if their
+image-space boxes overlap positive evidence in the same view, the answer summary records
+explicit risk flags and lowers confidence conservatively. A successful query also writes
+`query_grid.png` by default as a compact visual overview across expanded prompts, plus
+`query_visual_summary.json` with the grid path, overlay count, and expanded query list. Use
+`--no-query-grid` to skip the static overview and `--make-montage` to additionally write
+`query_montage.gif`.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - `results/query_outputs/query_grid.png`

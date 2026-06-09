@@ -45,6 +45,8 @@ def test_build_project_site_links_run_pages_without_absolute_paths(tmp_path: Pat
     html = site.to_html()
 
     assert "NeRF-LLM Scene Inspector" in html
+    assert "Counter-evidence answers" in html
+    assert "Query evidence audit" in html
     assert "desk_scene" in html
     assert "../results/pipeline_runs/desk_scene/portfolio_page.html" in html
     assert "../results/pipeline_runs/run_comparison.md" in html

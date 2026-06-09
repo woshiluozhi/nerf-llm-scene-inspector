@@ -119,6 +119,9 @@ def test_query_scene_cli_records_negative_query_purpose_without_positive_evidenc
     assert persisted["provenance"]["planner_backend_call"]["purpose"] == "negative"
     evidence_labels = [item["label"] for item in report["answer_summary"]["evidence"]]
     assert "flat screen" not in evidence_labels
+    counter_labels = [item["label"] for item in report["answer_summary"]["counter_evidence"]]
+    assert "flat screen" in counter_labels
+    assert "risk_flags" in report["answer_summary"]
     assert any(
         "Negative/disambiguation query results" in item
         for item in report["answer_summary"]["limitations"]

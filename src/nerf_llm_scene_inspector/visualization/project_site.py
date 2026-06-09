@@ -84,6 +84,14 @@ class ProjectPortfolioSite:
                 _capability("3D reconstruction", "Nerfstudio wrappers for data processing and baseline NeRF training."),
                 _capability("Language fields", "LERF-first semantic query path with OpenNeRF as a secondary adapter."),
                 _capability("Query planning", "Deterministic local planner for object, affordance, material, and relation prompts."),
+                _capability(
+                    "Counter-evidence answers",
+                    "Negative prompts are preserved as avoid evidence, with image-space conflict flags for actionable queries.",
+                ),
+                _capability(
+                    "Query evidence audit",
+                    "Per-query checks for overlays, localization evidence, fallback mode, confidence, and missing artifacts.",
+                ),
                 _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
                 _capability(
                     "Annotation workbench",

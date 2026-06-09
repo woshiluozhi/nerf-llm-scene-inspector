@@ -167,6 +167,9 @@ def test_semantic_query_engine_can_include_negative_queries(tmp_path: Path) -> N
     assert persisted["provenance"]["planner_backend_call"]["purpose"] == "negative"
     evidence_labels = [item["label"] for item in report.answer_summary["evidence"]]
     assert "screen" not in evidence_labels
+    counter_labels = [item["label"] for item in report.answer_summary["counter_evidence"]]
+    assert counter_labels == ["screen"]
+    assert report.answer_summary["risk_flags"]
     assert any(
         "Negative/disambiguation query results" in item
         for item in report.answer_summary["limitations"]
@@ -218,6 +221,8 @@ def test_scene_query_report_marks_query_purpose_in_markdown(tmp_path: Path) -> N
 
     markdown = output.read_text(encoding="utf-8")
     assert "- Negative/disambiguation visual queries: screen" in markdown
+    assert "Counter-evidence / avoid prompts" in markdown
+    assert "Risk flags" in markdown
     assert "`screen` via `fake` purpose=`negative`, top_k=5" in markdown
     assert "`screen` via `fake` (purpose=`negative`, planned_backend=`fake`)" in markdown
     assert "excluded from positive answer evidence" in markdown

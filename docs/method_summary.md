@@ -32,8 +32,12 @@ is run from `query_scene.py` or imported as `SemanticQueryEngine`. By default, p
 supporting, and relation-anchor prompts are executed, negative prompts are kept for
 disambiguation, and all answers explicitly report the evidence level, limitations, and
 recommended follow-up checks. When negative prompts are explicitly executed, their results
-are tagged in provenance and excluded from positive answer evidence so disambiguation
-artifacts do not become claimed detections.
+are tagged in provenance, excluded from positive answer evidence, and preserved as
+counter-evidence. The answer synthesizer compares positive and negative image-space boxes
+from compatible views, records risk flags when they overlap, and conservatively lowers
+confidence for safety or disambiguation tasks. This keeps queries such as "where is a safe
+place to put a hot cup?" honest about nearby electronics or clutter instead of silently
+dropping those detections.
 
 ## Experiment Matrices
 
