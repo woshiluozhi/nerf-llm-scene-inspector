@@ -194,6 +194,8 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 "top_blockers": [],
                 "top_warnings": ["quality_gate: smoke profile has warnings"],
                 "pack_ok": True,
+                "capture_manifest_status": "ready",
+                "capture_manifest_fail_count": 0,
                 "recommended_next_action": "Share only as a smoke demo.",
             },
         },
@@ -358,8 +360,81 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert inspector["query_2d_fallback_tasks"] == 1
     assert inspector["query_counter_evidence"] == 1
     assert inspector["query_risk_flags"] == 1
+    assert inspector["audit_status"] == "ready"
+    assert inspector["audit_blocker_count"] == 0
+    assert inspector["failure_diagnostics_status"] == "clear"
+    assert inspector["failure_diagnostics_blocker_count"] == 0
+    assert inspector["capture_manifest_status"] == "ready"
+    assert inspector["capture_manifest_fail_count"] == 0
     assert inspector["portfolio_pack_ok"] is False
     assert inspector["portfolio_pack_errors"] == 1
+
+
+def test_run_inspector_summary_surfaces_review_blocker_counts() -> None:
+    inspector = run_inspector_summary(
+        {
+            "run_dir": "runs/desk_scene",
+            "pipeline_summary": {
+                "scene_name": "desk_scene",
+                "success": True,
+                "dry_run": False,
+                "backend": "lerf",
+                "queries": ["mug"],
+            },
+            "run_audit": {"status": "ready", "blocker_count": "2"},
+            "failure_diagnostics": {
+                "status": "clear",
+                "blocker_count": "1",
+                "warning_count": "3",
+            },
+            "capture_manifest_validation": {
+                "status": "ready",
+                "fail_count": "1",
+                "warn_count": "4",
+            },
+            "evidence_scorecard": {"evidence_level": "portfolio_ready_real_run", "score": 94},
+            "query_evidence_audit": {
+                "status": "pass",
+                "ok": True,
+                "pass_count": 1,
+                "warn_count": 0,
+                "fail_count": 0,
+                "task_count": 1,
+                "totals": {"mode_counts": {"3d": 1}, "risk_flag_count": 0},
+            },
+            "quality_gate": {"status": "pass"},
+            "run_readiness": {"readiness_level": "blocked"},
+            "submission_readiness": {"status": "fail", "readiness_level": "blocked"},
+            "portfolio_pack_validation": {},
+        }
+    )
+
+    assert inspector["audit_blocker_count"] == 2
+    assert inspector["failure_diagnostics_status"] == "clear"
+    assert inspector["failure_diagnostics_blocker_count"] == 1
+    assert inspector["failure_diagnostics_warning_count"] == 3
+    assert inspector["capture_manifest_status"] == "ready"
+    assert inspector["capture_manifest_fail_count"] == 1
+    assert inspector["capture_manifest_warning_count"] == 4
+
+
+def test_run_inspector_summary_uses_submission_capture_fallback() -> None:
+    inspector = run_inspector_summary(
+        {
+            "run_dir": "runs/desk_scene",
+            "pipeline_summary": {"success": False, "dry_run": False, "queries": []},
+            "submission_readiness": {
+                "status": "fail",
+                "readiness_level": "blocked",
+                "capture_manifest_status": "needs_review",
+                "capture_manifest_fail_count": "2",
+            },
+        }
+    )
+
+    assert inspector["capture_manifest_status"] == "needs_review"
+    assert inspector["capture_manifest_fail_count"] == 2
+    assert inspector["failure_diagnostics_status"] == "missing"
 
 
 def test_dashboard_collectors_tolerate_missing_run(tmp_path: Path) -> None:

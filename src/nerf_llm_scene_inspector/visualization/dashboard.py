@@ -239,6 +239,9 @@ def run_inspector_summary(bundle: dict[str, Any]) -> dict[str, Any]:
     """Return the compact run-inspector status used by tests and Streamlit."""
 
     summary = bundle.get("pipeline_summary") or {}
+    audit = bundle.get("run_audit") or {}
+    diagnostics = bundle.get("failure_diagnostics") or {}
+    capture = bundle.get("capture_manifest_validation") or {}
     scorecard = bundle.get("evidence_scorecard") or {}
     query_audit = bundle.get("query_evidence_audit") or {}
     quality_gate = bundle.get("quality_gate") or {}
@@ -270,6 +273,14 @@ def run_inspector_summary(bundle: dict[str, Any]) -> dict[str, Any]:
         "query_risk_flags": totals.get("risk_flag_count", 0),
         "quality_gate": quality_gate.get("status", "unknown"),
         "readiness": readiness.get("readiness_level", "unknown"),
+        "audit_status": audit.get("status", "missing"),
+        "audit_blocker_count": _safe_int(audit.get("blocker_count")),
+        "failure_diagnostics_status": diagnostics.get("status", "missing"),
+        "failure_diagnostics_blocker_count": _safe_int(diagnostics.get("blocker_count")),
+        "failure_diagnostics_warning_count": _safe_int(diagnostics.get("warning_count")),
+        "capture_manifest_status": _capture_manifest_status(capture, submission),
+        "capture_manifest_fail_count": _capture_manifest_fail_count(capture, submission),
+        "capture_manifest_warning_count": _safe_int(capture.get("warn_count")),
         "submission_status": submission.get("status", "unknown"),
         "portfolio_pack_ok": pack_validation.get("ok") if pack_validation else None,
         "portfolio_pack_errors": len(pack_validation.get("errors") or []) if pack_validation else 0,
@@ -335,6 +346,15 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
     col_b.metric("Query P/W/F", str(inspector["query_pass_warn_fail"]))
     col_c.metric("2D Fallback Tasks", str(inspector["query_2d_fallback_tasks"]))
     col_d.metric("3D Evidence Tasks", str(inspector["query_3d_tasks"]))
+
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Audit Blockers", str(inspector["audit_blocker_count"]))
+    col_b.metric("Diagnostics", str(inspector["failure_diagnostics_status"]))
+    col_c.metric("Diagnostic Blockers", str(inspector["failure_diagnostics_blocker_count"]))
+    col_d.metric(
+        "Capture",
+        f"{inspector['capture_manifest_status']} / {inspector['capture_manifest_fail_count']} fail",
+    )
 
     if bundle["run_audit"]:
         audit = bundle["run_audit"]
@@ -403,6 +423,10 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
                 st.json(diagnostics)
     if bundle["capture_manifest_validation"]:
         validation = bundle["capture_manifest_validation"]
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Capture Manifest", str(validation.get("status", "unknown")))
+        col_b.metric("Capture Failures", str(_safe_int(validation.get("fail_count"))))
+        col_c.metric("Capture Warnings", str(_safe_int(validation.get("warn_count"))))
         with st.expander("Capture Manifest", expanded=validation.get("status") != "ready"):
             if bundle["capture_manifest_markdown"]:
                 st.markdown(bundle["capture_manifest_markdown"])
@@ -1008,6 +1032,23 @@ def _round_metric(value: object) -> float | str:
         return round(float(value), 3)
     except (TypeError, ValueError):
         return ""
+
+
+def _capture_manifest_status(capture: dict[str, Any], submission: dict[str, Any]) -> str:
+    if capture:
+        return str(capture.get("status") or "unknown")
+    return str(submission.get("capture_manifest_status") or "missing")
+
+
+def _capture_manifest_fail_count(capture: dict[str, Any], submission: dict[str, Any]) -> int:
+    return max(_safe_int(capture.get("fail_count")), _safe_int(submission.get("capture_manifest_fail_count")))
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _mode_counts_label(mode_counts: dict[str, Any]) -> str:

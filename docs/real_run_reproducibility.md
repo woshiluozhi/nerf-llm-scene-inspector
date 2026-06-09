@@ -144,8 +144,9 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 Set the dashboard's pipeline run directory to `results/pipeline_runs/desk_scene`.
 The run review tab includes the multi-run comparison summary so repeated captures or
 training attempts can be ranked before choosing a portfolio candidate. It also shows the
-run quality gate and submission readiness summary so failed, warning-level, and send/no-send
-criteria are visible without opening raw JSON. The evidence audit tab exposes query
+run quality gate, submission readiness summary, run-audit blocker count,
+failure-diagnostics blocker count, capture-validation status, and capture failure count so
+failed, warning-level, and send/no-send criteria are visible without opening raw JSON. The evidence audit tab exposes query
 counter-evidence and risk-flag counts alongside overlays, regions, and 3D points.
 
 If automated LERF query rendering falls back to the interactive viewer, save the viewer

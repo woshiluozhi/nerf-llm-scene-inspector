@@ -389,7 +389,9 @@ artifacts, query reports, per-query evidence audit tables, annotation templates,
 metrics, the run quality gate, portfolio-pack validation, submission readiness, and the
 multi-run comparison report used to choose a portfolio candidate. Its Evidence Audit tab
 shows whether each language query has 3D evidence, reviewed 2D fallback regions, render-only
-evidence, or missing artifacts. Its Query Runner tab can also execute planner-aware dry-run or real backend
+evidence, or missing artifacts. The run review header surfaces audit blocker counts,
+failure-diagnostics blocker counts, capture-validation status, and capture failure counts
+so stale ready-looking artifacts are visible before sharing. Its Query Runner tab can also execute planner-aware dry-run or real backend
 queries: high-level tasks are expanded through `SemanticQueryEngine`, all expanded backend
 calls are shown with overlays, and `scene_query_report.json/.md` plus
 `dashboard_query_summary.json` are written to the selected output directory. Enable
