@@ -51,6 +51,8 @@ class SubmissionPacket:
     ci_url: str = ""
     pack_dir: str = ""
     pack_ok: bool | None = None
+    capture_manifest_status: str = ""
+    capture_manifest_fail_count: int = 0
     query_evidence_status: str = ""
     query_counter_evidence_count: int = 0
     query_risk_flag_count: int = 0
@@ -83,6 +85,8 @@ class SubmissionPacket:
             f"- Dry run: {self.dry_run}",
             f"- Readiness: `{self.readiness_level}`",
             f"- Share decision: {self.share_decision}",
+            f"- Capture manifest: {self.capture_manifest_status or 'unknown'}",
+            f"- Capture manifest failed checks: {self.capture_manifest_fail_count}",
             f"- Query evidence: {self.query_evidence_status or 'unknown'}",
             f"- Query counter-evidence items: {self.query_counter_evidence_count}",
             f"- Query risk flags: {self.query_risk_flag_count}",
@@ -180,6 +184,7 @@ def build_submission_packet(
     diagnostics = _read_json(root / "failure_diagnostics.json")
     recommendations = _read_json(root / "run_recommendations.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
+    capture = _read_json(root / "capture_manifest_validation.json")
     query_evidence = _read_json(root / "query_evidence_audit.json")
     research = _read_json(root / "research_report.json")
     claim_audit = _read_json(root / "claim_audit.json")
@@ -196,6 +201,7 @@ def build_submission_packet(
         quality,
         audit,
         diagnostics,
+        capture,
         annotations,
         query_evidence,
         claim_audit,
@@ -219,6 +225,8 @@ def build_submission_packet(
             warnings=warnings,
             next_actions=next_actions,
             pack_validation=pack_validation,
+            capture_manifest_status=str(capture.get("status") or ""),
+            capture_manifest_fail_count=_safe_int(capture.get("fail_count")),
             query_evidence_status=str(query_evidence.get("status") or ""),
             query_counter_evidence_count=query_counter_evidence_count,
             query_risk_flag_count=query_risk_flag_count,
@@ -227,6 +235,8 @@ def build_submission_packet(
         ci_url=ci_url,
         pack_dir=_display_pack_path(Path(pack_dir)) if pack_dir else "",
         pack_ok=_pack_ok(pack_validation),
+        capture_manifest_status=str(capture.get("status") or ""),
+        capture_manifest_fail_count=_safe_int(capture.get("fail_count")),
         query_evidence_status=str(query_evidence.get("status") or ""),
         query_counter_evidence_count=query_counter_evidence_count,
         query_risk_flag_count=query_risk_flag_count,
@@ -273,6 +283,7 @@ def _checklist(
     quality: dict[str, Any],
     audit: dict[str, Any],
     diagnostics: dict[str, Any],
+    capture: dict[str, Any],
     annotations: dict[str, Any],
     query_evidence: dict[str, Any],
     claim_audit: dict[str, Any],
@@ -312,6 +323,7 @@ def _checklist(
         _quality_item(quality),
         _audit_item(audit),
         _failure_diagnostics_item(diagnostics),
+        _capture_manifest_item(capture, dry_run=bool(summary.get("dry_run", scorecard.get("dry_run", False)))),
         _annotation_item(annotations),
         _query_evidence_item(query_evidence),
         _claim_audit_item(claim_audit),
@@ -402,20 +414,61 @@ def _failure_diagnostics_item(diagnostics: dict[str, Any]) -> SubmissionChecklis
             "Run diagnose_run_failures.py before sharing.",
             "failure_diagnostics.md",
         )
-    if status == "blocked" or diagnostics.get("blocker_count"):
+    blocker_count = _safe_int(diagnostics.get("blocker_count"))
+    warning_count = _safe_int(diagnostics.get("warning_count"))
+    if status == "blocked" or blocker_count:
         return SubmissionChecklistItem(
             "failure_diagnostics",
             "fail",
-            f"status={status}, blockers={diagnostics.get('blocker_count', 0)}",
+            f"status={status}, blockers={blocker_count}",
             "Fix blocker-level diagnostics before sharing.",
             "failure_diagnostics.md",
         )
     return SubmissionChecklistItem(
         "failure_diagnostics",
-        "warn" if status == "needs_attention" or diagnostics.get("warning_count") else "pass",
-        f"status={status}, warnings={diagnostics.get('warning_count', 0)}",
+        "warn" if status == "needs_attention" or warning_count else "pass",
+        f"status={status}, warnings={warning_count}",
         "Review failure_diagnostics.md warnings before sharing." if status == "needs_attention" else "",
         "failure_diagnostics.md",
+    )
+
+
+def _capture_manifest_item(capture: dict[str, Any], *, dry_run: bool) -> SubmissionChecklistItem:
+    if not capture:
+        status: ChecklistStatus = "warn" if dry_run else "fail"
+        return SubmissionChecklistItem(
+            "capture_manifest",
+            status,
+            "capture_manifest_validation.json missing",
+            "Create and validate capture metadata before sharing real-scene evidence.",
+            "capture_manifest_validation.md",
+        )
+    status = str(capture.get("status") or "")
+    fail_count = _safe_int(capture.get("fail_count"))
+    warn_count = _safe_int(capture.get("warn_count"))
+    if status == "blocked" or fail_count:
+        return SubmissionChecklistItem(
+            "capture_manifest",
+            "fail",
+            f"status={status}, failures={fail_count}, warnings={warn_count}",
+            "Fix capture-manifest failures, including privacy/static-scene/overlap issues, before sharing.",
+            "capture_manifest_validation.md",
+        )
+    if status == "ready":
+        return SubmissionChecklistItem(
+            "capture_manifest",
+            "pass",
+            f"status={status}, failures=0, warnings={warn_count}",
+            "",
+            "capture_manifest_validation.md",
+        )
+    checklist_status: ChecklistStatus = "warn" if dry_run else "fail"
+    return SubmissionChecklistItem(
+        "capture_manifest",
+        checklist_status,
+        f"status={status or 'missing'}, failures=0, warnings={warn_count}",
+        "Refresh capture_manifest_validation.md and resolve capture metadata warnings before external sharing.",
+        "capture_manifest_validation.md",
     )
 
 
@@ -606,6 +659,8 @@ def _readiness_summary(
     warnings: list[str],
     next_actions: list[str],
     pack_validation: dict[str, Any],
+    capture_manifest_status: str,
+    capture_manifest_fail_count: int,
     query_evidence_status: str,
     query_counter_evidence_count: int,
     query_risk_flag_count: int,
@@ -626,6 +681,8 @@ def _readiness_summary(
         "top_blockers": [_item_summary(item) for item in failed_items[:5]],
         "top_warnings": _dedupe(top_warnings)[:5],
         "pack_ok": _pack_ok(pack_validation),
+        "capture_manifest_status": capture_manifest_status,
+        "capture_manifest_fail_count": capture_manifest_fail_count,
         "query_evidence_status": query_evidence_status,
         "query_counter_evidence_count": query_counter_evidence_count,
         "query_risk_flag_count": query_risk_flag_count,

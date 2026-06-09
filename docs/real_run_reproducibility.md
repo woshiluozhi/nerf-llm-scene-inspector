@@ -100,11 +100,12 @@ python scripts/run_scene_pipeline.py \
 
 For external sharing, start with `submission_packet/submission_checklist.md`. Its
 `Readiness Summary` section is the compact send/no-send view: failed checks, warning checks,
-pack validation state, query-evidence counter/risk counts, and the recommended next action.
+pack validation state, capture-manifest status/failure count, query-evidence counter/risk
+counts, and the recommended next action.
 Unresolved query risk flags are treated as a blocker in this packet; non-overlapping
 counter-evidence is retained as a warning for calibrated review. The same information is available in
 `submission_packet/submission_packet.json` under `readiness_summary` and the top-level
-`query_*` fields for automation. Pack
+`capture_manifest_*` and `query_*` fields for automation. Pack
 references in this packet use share-safe artifact names such as `portfolio_pack.zip` instead
 of machine-specific absolute paths.
 `run_result_card.md` consumes the same submission and query-evidence fields, so it will
@@ -113,6 +114,9 @@ the evidence scorecard is otherwise strong.
 Blocked run-audit findings and blocker-level failure diagnostics are also treated as
 external-sharing blockers in both the submission packet and the result card; refresh those
 artifacts after any manual edits or copied run folders.
+The submission packet directly checks capture validation as well: a real run with missing
+capture validation, `status=blocked`, or nonzero `capture_manifest_validation.fail_count`
+is blocked before outreach.
 The run quality gate applies the same count-based check: nonzero
 `run_audit.blocker_count`, `failure_diagnostics.blocker_count`, or
 `capture_manifest_validation.fail_count` fails the gate even if a stale status field still

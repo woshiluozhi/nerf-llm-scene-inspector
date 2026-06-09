@@ -269,9 +269,12 @@ reporting, quality checks, submission materials, pack validation, the final zip,
 post-archive zip validation report.
 Open `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` first before
 sharing: its `Readiness Summary` section lists failed checks, warning checks, pack status,
-query-evidence counter/risk counts, and the next action to take before CV/professor outreach.
+capture-manifest status/failures, query-evidence counter/risk counts, and the next action
+to take before CV/professor outreach.
 Unresolved query risk flags block the packet; counter-evidence without overlap is kept as a
 warning so the run can still be reviewed with calibrated language.
+For real runs, missing or failed capture validation is also a packet blocker, including
+nonzero `capture_manifest_validation.fail_count` from stale-looking ready artifacts.
 The run result card consumes the same packet/audit fields, so a high evidence score alone
 cannot promote a run to `portfolio_ready` while submission or query-evidence gates are blocked.
 The generated `portfolio_page.html` surfaces the same result status and query-risk counts
@@ -509,7 +512,7 @@ when a `--require-all` repair left required queries unresolved.
 - `results/pipeline_runs/<scene>/research_report.md`
 - `results/pipeline_runs/<scene>/real_run_plan/real_run_plan.json`
 - `results/pipeline_runs/<scene>/real_run_plan/real_run_plan.md`
-- `results/pipeline_runs/<scene>/submission_packet/submission_packet.json` with a machine-readable `readiness_summary`
+- `results/pipeline_runs/<scene>/submission_packet/submission_packet.json` with a machine-readable `readiness_summary` and capture/query evidence counters
 - `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` with the reviewer-facing readiness summary
 - `results/pipeline_runs/<scene>/submission_packet/cv_project_entry.md`
 - `results/pipeline_runs/<scene>/submission_packet/professor_email_brief.md`
