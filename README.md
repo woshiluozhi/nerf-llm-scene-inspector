@@ -576,7 +576,9 @@ explicit risk flags and lowers confidence conservatively. A successful query als
 `query_visual_summary.json` with the grid path, overlay count, and expanded query list. Use
 `--no-query-grid` to skip the static overview and `--make-montage` to additionally write
 `query_montage.gif`.
-The run-level `query_evidence_audit.json` and Dashboard summarize these same
+The run-level `query_evidence_audit.json` validates that the visual summary still matches
+the scene query report, existing overlay files, query grid, and optional montage before
+surfacing it in the Dashboard. It also summarizes these same
 counter-evidence/risk-flag counts per task, so a visually strong query can still be
 marked `warn` when disambiguation prompts conflict with positive evidence. The submission
 packet also reads this audit: risk flags become an external-sharing blocker, while

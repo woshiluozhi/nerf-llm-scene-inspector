@@ -59,6 +59,7 @@ class QueryEvidenceTask:
     risk_flags: list[str] = field(default_factory=list)
     query_grid_exists: bool = False
     visual_summary_exists: bool = False
+    visual_summary_issue_count: int = 0
     warnings: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
 
@@ -251,8 +252,10 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
     risk_flags = _risk_flags(payload)
     counter_evidence_labels = _counter_evidence_labels(counter_evidence)
     query_grid_exists = (task_dir / "query_grid.png").exists()
-    visual_summary_exists = (task_dir / "query_visual_summary.json").exists()
+    visual_summary_path = task_dir / "query_visual_summary.json"
+    visual_summary_exists = visual_summary_path.exists()
     expanded_queries = [str(result.get("query") or "") for result in results if str(result.get("query") or "").strip()]
+    existing_overlay_count = _existing_kind_count(visual_rendered_images, "overlay", run_dir, task_dir)
 
     for warning in payload.get("warnings") or []:
         warnings.append(str(warning))
@@ -273,6 +276,16 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
     if not visual_summary_exists:
         warnings.append("query_visual_summary.json is missing for this task.")
         recommendations.append("Regenerate the visual summary to keep expanded prompts machine-readable.")
+    visual_summary_issues = _visual_summary_issues(
+        visual_summary_path,
+        task_dir=task_dir,
+        run_dir=run_dir,
+        expanded_queries=expanded_queries,
+        existing_overlay_count=existing_overlay_count,
+    )
+    if visual_summary_issues:
+        warnings.extend(visual_summary_issues)
+        recommendations.append("Regenerate query_visual_summary.json so visual summaries match the query report and files.")
     if overlay_count == 0 and rendered_images:
         warnings.append("Rendered artifacts exist, but no overlay images were recorded.")
         recommendations.append("Create RGB/relevancy overlay images for qualitative review.")
@@ -332,6 +345,7 @@ def _audit_task(report_path: Path, *, run_dir: Path) -> QueryEvidenceTask:
         risk_flags=risk_flags,
         query_grid_exists=query_grid_exists,
         visual_summary_exists=visual_summary_exists,
+        visual_summary_issue_count=len(visual_summary_issues),
         warnings=_dedupe(warnings),
         recommendations=_dedupe(recommendations),
     )
@@ -389,6 +403,7 @@ def _totals(tasks: list[QueryEvidenceTask]) -> dict[str, Any]:
         "tasks_with_risk_flags": sum(1 for task in tasks if task.risk_flag_count),
         "query_grid_count": sum(1 for task in tasks if task.query_grid_exists),
         "visual_summary_count": sum(1 for task in tasks if task.visual_summary_exists),
+        "visual_summary_issue_count": sum(task.visual_summary_issue_count for task in tasks),
         "mode_counts": mode_counts,
         "mean_task_max_confidence": (sum(max_confidences) / len(max_confidences)) if max_confidences else None,
     }
@@ -466,6 +481,75 @@ def _risk_flags(payload: dict[str, Any]) -> list[str]:
 
 def _kind_count(rendered_images: list[dict[str, Any]], kind: str) -> int:
     return sum(1 for image in rendered_images if str(image.get("kind") or "") == kind)
+
+
+def _existing_kind_count(
+    rendered_images: list[dict[str, Any]],
+    kind: str,
+    run_dir: Path,
+    task_dir: Path,
+) -> int:
+    return sum(
+        1
+        for image in rendered_images
+        if str(image.get("kind") or "") == kind
+        and image.get("path")
+        and _resolve_artifact_path(str(image["path"]), run_dir, task_dir).exists()
+    )
+
+
+def _visual_summary_issues(
+    summary_path: Path,
+    *,
+    task_dir: Path,
+    run_dir: Path,
+    expanded_queries: list[str],
+    existing_overlay_count: int,
+) -> list[str]:
+    if not summary_path.exists():
+        return []
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f"query_visual_summary.json is not valid JSON: {exc}"]
+    if not isinstance(summary, dict):
+        return ["query_visual_summary.json must contain a JSON object."]
+
+    issues: list[str] = []
+    raw_queries = summary.get("expanded_queries")
+    if raw_queries is not None:
+        if not isinstance(raw_queries, list):
+            issues.append("query_visual_summary.json expanded_queries must be a list.")
+        else:
+            summary_queries = [str(query) for query in raw_queries if str(query).strip()]
+            if summary_queries != expanded_queries:
+                issues.append(
+                    "query_visual_summary.json expanded_queries do not match scene_query_report.json "
+                    f"({summary_queries} != {expanded_queries})."
+                )
+
+    raw_overlay_count = summary.get("num_overlay_images")
+    if raw_overlay_count is not None:
+        if isinstance(raw_overlay_count, bool) or not isinstance(raw_overlay_count, int):
+            issues.append("query_visual_summary.json num_overlay_images must be an integer when provided.")
+        elif raw_overlay_count != existing_overlay_count:
+            issues.append(
+                "query_visual_summary.json num_overlay_images does not match existing overlay files "
+                f"({raw_overlay_count} != {existing_overlay_count})."
+            )
+
+    for field_name in ("scene_query_report", "query_grid", "query_montage"):
+        raw_path = summary.get(field_name)
+        if raw_path is None or raw_path == "":
+            continue
+        if not isinstance(raw_path, str):
+            issues.append(f"query_visual_summary.json {field_name} must be a string path or null.")
+            continue
+        if Path(raw_path).is_absolute():
+            issues.append(f"query_visual_summary.json {field_name} should be a relative path: {raw_path}")
+        if not _resolve_artifact_path(raw_path, run_dir, task_dir).exists():
+            issues.append(f"query_visual_summary.json {field_name} path does not exist: {raw_path}")
+    return issues
 
 
 def _is_visual_render(view: dict[str, Any]) -> bool:

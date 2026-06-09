@@ -230,6 +230,7 @@ def query_evidence_rows(audit: dict[str, Any]) -> list[dict[str, Any]]:
                 "max_confidence": _round_metric(task.get("max_confidence")),
                 "grid": "yes" if task.get("query_grid_exists") else "no",
                 "visual_summary": "yes" if task.get("visual_summary_exists") else "no",
+                "visual_summary_issues": task.get("visual_summary_issue_count", 0),
                 "warnings": "; ".join(map(str, task.get("warnings") or [])),
                 "recommendations": "; ".join(map(str, task.get("recommendations") or [])),
             }
@@ -655,9 +656,10 @@ def _render_query_evidence_summary(st: Any, bundle: dict[str, Any]) -> None:
     col_c.metric("Counter-evidence", str(totals.get("counter_evidence_count", 0)))
     col_d.metric("Risk Flags", str(totals.get("risk_flag_count", 0)))
 
-    col_a, col_b = st.columns(2)
+    col_a, col_b, col_c = st.columns(3)
     col_a.metric("Tasks With Counter", str(totals.get("tasks_with_counter_evidence", 0)))
     col_b.metric("Tasks With Risk", str(totals.get("tasks_with_risk_flags", 0)))
+    col_c.metric("Visual Summary Issues", str(totals.get("visual_summary_issue_count", 0)))
 
 
 def _render_artifacts(st: Any, bundle: dict[str, Any]) -> None:

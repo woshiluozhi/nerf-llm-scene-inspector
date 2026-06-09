@@ -35,6 +35,33 @@ def test_query_evidence_audit_passes_3d_query_evidence(tmp_path: Path) -> None:
     assert audit.tasks[0].candidate_point_count == 1
 
 
+def test_query_evidence_audit_warns_on_visual_summary_mismatch(tmp_path: Path) -> None:
+    run_dir = _write_query_report(tmp_path, with_region=True, with_point=True)
+    summary_path = run_dir / "queries" / "mug" / "query_visual_summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "expanded_queries": ["wrong query"],
+                "num_overlay_images": 99,
+                "query_grid": "missing_grid.png",
+                "query_montage": "missing_montage.gif",
+                "scene_query_report": "scene_query_report.json",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    audit = audit_query_evidence(run_dir)
+
+    assert audit.ok is True
+    assert audit.status == "warn"
+    assert audit.tasks[0].evidence_mode == "3d"
+    assert audit.tasks[0].visual_summary_issue_count == 4
+    assert audit.totals["visual_summary_issue_count"] == 4
+    assert any("expanded_queries do not match" in warning for warning in audit.tasks[0].warnings)
+    assert any("num_overlay_images does not match" in warning for warning in audit.tasks[0].warnings)
+
+
 def test_query_evidence_audit_warns_on_counter_evidence_risk_flags(tmp_path: Path) -> None:
     run_dir = _write_query_report(
         tmp_path,

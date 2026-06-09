@@ -100,6 +100,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                 "risk_flag_count": 1,
                 "tasks_with_counter_evidence": 1,
                 "tasks_with_risk_flags": 1,
+                "visual_summary_issue_count": 0,
                 "mode_counts": {"3d": 0, "2d_fallback": 1, "render_only": 0, "missing": 0},
             },
             "tasks": [
@@ -126,6 +127,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
                     "max_confidence": 0.8862745098,
                     "query_grid_exists": True,
                     "visual_summary_exists": True,
+                    "visual_summary_issue_count": 0,
                     "warnings": [],
                     "recommendations": [
                         "Treat this answer as fallback evidence until metric 3D points are available."
@@ -361,6 +363,7 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
             "max_confidence": 0.886,
             "grid": "yes",
             "visual_summary": "yes",
+            "visual_summary_issues": 0,
             "warnings": "",
             "recommendations": "Treat this answer as fallback evidence until metric 3D points are available.",
         }
