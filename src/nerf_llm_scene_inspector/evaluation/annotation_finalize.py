@@ -454,12 +454,6 @@ def _command_specs(
                 critical=False,
             ),
             _CommandSpec(
-                "refresh_reproduction_bundle",
-                [py, "scripts/create_reproduction_bundle.py", "--run-dir", str(run_root)],
-                {"reproduction_manifest": str(run_root / "reproduction_manifest.json")},
-                critical=False,
-            ),
-            _CommandSpec(
                 "index_runs",
                 [py, "scripts/index_runs.py", "--root", str(run_root.parent)],
                 {"run_index": str(run_root.parent / "run_index.json"), "run_index_markdown": str(run_root.parent / "run_index.md")},
@@ -469,6 +463,22 @@ def _command_specs(
                 "compare_runs",
                 [py, "scripts/compare_runs.py", "--root", str(run_root.parent)],
                 {"run_comparison": str(run_root.parent / "run_comparison.json"), "run_comparison_markdown": str(run_root.parent / "run_comparison.md")},
+                critical=False,
+            ),
+            _CommandSpec(
+                "refresh_reproduction_bundle",
+                [py, "scripts/create_reproduction_bundle.py", "--run-dir", str(run_root)],
+                {"reproduction_manifest": str(run_root / "reproduction_manifest.json")},
+                critical=False,
+            ),
+            _CommandSpec(
+                "verify_reproduction_manifest",
+                [py, "scripts/verify_reproduction_manifest.py", "--run-dir", str(run_root)],
+                {
+                    "reproduction_manifest_validation": str(
+                        run_root / "reproduction_manifest_validation.json"
+                    )
+                },
                 critical=False,
             ),
         ]

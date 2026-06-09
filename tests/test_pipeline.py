@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from nerf_llm_scene_inspector.pipeline import PipelineConfig, run_scene_pipeline
+from nerf_llm_scene_inspector.reproducibility import verify_reproduction_manifest
 
 
 def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None:
@@ -353,6 +354,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     reproduction_payload = json.loads((run_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
     assert reproduction_payload["replay_command"].startswith("python scripts/run_scene_pipeline.py")
     assert reproduction_payload["artifact_summary"]["files"] > 0
+    manifest_validation = verify_reproduction_manifest(run_dir)
+    assert manifest_validation.ok is True, manifest_validation.to_dict()
     assert any(artifact["name"] == "real_run_plan" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "failure_diagnostics" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "run_readiness" and artifact["exists"] for artifact in reproduction_payload["artifacts"])

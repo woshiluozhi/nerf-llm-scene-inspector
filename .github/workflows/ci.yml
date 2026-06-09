@@ -63,6 +63,7 @@ jobs:
           python scripts/create_evidence_scorecard.py --help
           python scripts/check_run_quality.py --help
           python scripts/create_reproduction_bundle.py --help
+          python scripts/verify_reproduction_manifest.py --help
           python scripts/generate_research_report.py --help
           python scripts/create_run_result_card.py --help
           python scripts/create_submission_packet.py --help
@@ -83,6 +84,9 @@ jobs:
       - name: Run practical pipeline dry-run
         run: python scripts/run_scene_pipeline.py --dry-run --query mug
 
+      - name: Verify reproduction manifest
+        run: python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/desk_scene
+
       - name: Check run quality gate
         run: python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile smoke
 
@@ -91,6 +95,9 @@ jobs:
 
       - name: Finalize run and export portfolio pack
         run: python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled results/pipeline_runs/desk_scene/evaluation/annotation_workbench/annotation_seed.json --profile smoke --export-pack --zip-pack --repo-url https://github.com/woshiluozhi/nerf-llm-scene-inspector
+
+      - name: Verify finalized reproduction manifest
+        run: python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/desk_scene
 
       - name: Generate project site
         run: python scripts/generate_project_site.py --output results/project_site/index.html --run-index results/pipeline_runs/run_index.json

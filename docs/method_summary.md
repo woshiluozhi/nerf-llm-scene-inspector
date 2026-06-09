@@ -67,7 +67,7 @@ Before sharing a run externally, `claim_audit.md` scans README/docs, run reports
 
 ## Reproduction Evidence
 
-The reproduction manifest is evidence-oriented rather than just a command log. It records replay and verification commands, summarizes existing and missing artifacts, and stores file sizes plus SHA256 digests for run-local reports, visual grids, query summaries, evaluation files, and command logs. This makes a real run easier to audit before exporting a portfolio pack or sending evidence to a collaborator.
+The reproduction manifest is evidence-oriented rather than just a command log. It records replay and verification commands, summarizes existing and missing artifacts, and stores file sizes plus SHA256 digests for run-local reports, visual grids, query summaries, evaluation files, and command logs. The companion verifier checks those saved digests against the current run directory and can run in a stricter mode that fails on any recorded-missing artifact. This makes a real run easier to audit before exporting a portfolio pack or sending evidence to a collaborator.
 
 ## How This Project Differs From A Pure Reproduction
 

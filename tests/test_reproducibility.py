@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from nerf_llm_scene_inspector.reproducibility import build_reproduction_bundle
+from nerf_llm_scene_inspector.reproducibility import build_reproduction_bundle, verify_reproduction_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +17,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert bundle.scene_name == "desk_scene"
     assert bundle.dry_run is True
     assert bundle.replay_command == "python scripts/run_scene_pipeline.py --dry-run --query mug"
+    assert "python scripts/verify_reproduction_manifest.py --run-dir run" in bundle.verification_commands
     assert "python scripts/diagnose_run_failures.py --run-dir run" in bundle.verification_commands
     assert "python scripts/audit_run.py --run-dir run" in bundle.verification_commands
     assert "python scripts/create_evidence_scorecard.py --run-dir run" in bundle.verification_commands
@@ -98,6 +99,7 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     script_text = script.read_text(encoding="utf-8")
     assert "set -euo pipefail" in script_text
     assert "python scripts/run_scene_pipeline.py --dry-run --query mug" in script_text
+    assert "python scripts/verify_reproduction_manifest.py --run-dir run" in script_text
     assert "python scripts/diagnose_run_failures.py --run-dir run" in script_text
     assert "python scripts/create_real_run_plan.py --run-dir run" in script_text
     assert "python scripts/create_run_readiness.py --run-dir run" in script_text
@@ -142,6 +144,75 @@ def test_create_reproduction_bundle_cli_writes_outputs(tmp_path: Path) -> None:
     assert json.loads(manifest.read_text(encoding="utf-8"))["replay_command"].startswith("python ")
     assert report.exists()
     assert script.exists()
+
+
+def test_verify_reproduction_manifest_passes_for_unchanged_artifacts(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    build_reproduction_bundle(run_dir).to_json(run_dir / "reproduction_manifest.json")
+
+    report = verify_reproduction_manifest(run_dir)
+
+    assert report.ok is True, report.to_dict()
+    assert report.checked_artifacts > 0
+    assert report.matched_files > 0
+    assert not report.errors
+
+
+def test_verify_reproduction_manifest_detects_file_drift(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    build_reproduction_bundle(run_dir).to_json(run_dir / "reproduction_manifest.json")
+    (run_dir / "queries" / "mug" / "query_grid.png").write_text("changed", encoding="utf-8")
+
+    report = verify_reproduction_manifest(run_dir)
+
+    assert report.ok is False
+    categories = {issue.category for issue in report.errors}
+    assert {"size_mismatch", "sha256_mismatch"} <= categories
+
+
+def test_verify_reproduction_manifest_require_complete_fails_recorded_missing(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    bundle = build_reproduction_bundle(run_dir)
+    manifest_path = bundle.to_json(run_dir / "reproduction_manifest.json")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["artifacts"][0]["exists"] = False
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    permissive = verify_reproduction_manifest(run_dir)
+    strict = verify_reproduction_manifest(run_dir, require_complete=True)
+
+    assert permissive.ok is True
+    assert permissive.recorded_missing == 1
+    assert strict.ok is False
+    assert any(issue.category == "recorded_missing_artifact" for issue in strict.errors)
+
+
+def test_verify_reproduction_manifest_cli_writes_outputs(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path)
+    build_reproduction_bundle(run_dir).to_json(run_dir / "reproduction_manifest.json")
+    output = tmp_path / "validation.json"
+    markdown = tmp_path / "validation.md"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "verify_reproduction_manifest.py"),
+            "--run-dir",
+            str(run_dir),
+            "--output",
+            str(output),
+            "--markdown-output",
+            str(markdown),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(output.read_text(encoding="utf-8"))["ok"] is True
+    assert "# Reproduction Manifest Validation" in markdown.read_text(encoding="utf-8")
 
 
 def _write_run(tmp_path: Path) -> Path:

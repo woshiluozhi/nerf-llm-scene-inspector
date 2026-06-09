@@ -95,6 +95,7 @@ def test_finalize_continues_after_noncritical_failure(tmp_path: Path, monkeypatc
     assert any("check_run_quality failed" in warning for warning in report.warnings)
     assert "generate_research_report.py" in calls
     assert "compare_runs.py" in calls
+    assert "verify_reproduction_manifest.py" in calls
 
 
 def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: Path, monkeypatch) -> None:
@@ -117,7 +118,9 @@ def test_finalize_export_pack_refreshes_quality_after_pack_validation(tmp_path: 
     assert step_names.index("diagnose_run_failures") < step_names.index("audit_run")
     assert report.steps[step_names.index("check_run_quality")].command.endswith("--no-require-pack")
     assert "--pack" in report.steps[step_names.index("refresh_quality_gate_with_pack")].command
+    assert step_names.index("verify_reproduction_manifest") > step_names.index("refresh_reproduction_bundle")
     assert step_names.index("final_export_portfolio_pack") > step_names.index("refresh_reproduction_bundle")
+    assert step_names.index("final_export_portfolio_pack") > step_names.index("verify_reproduction_manifest")
     assert step_names.index("create_run_readiness") < step_names.index("final_export_portfolio_pack")
     assert step_names.index("final_validate_portfolio_pack") > step_names.index("final_export_portfolio_pack")
     assert step_names.index("final_archive_portfolio_pack") > step_names.index("final_validate_portfolio_pack")

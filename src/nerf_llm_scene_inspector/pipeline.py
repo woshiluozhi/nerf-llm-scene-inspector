@@ -896,10 +896,6 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         )
     )
     summary.to_json(summary_path)
-    reproduction = build_reproduction_bundle(run_dir)
-    reproduction.to_json(run_dir / "reproduction_manifest.json")
-    reproduction.to_markdown(run_dir / "reproduction_report.md")
-    reproduction.to_shell_script(run_dir / "reproduce_run.sh")
     refreshed_index = index_pipeline_runs(runs_root)
     refreshed_index.to_json(runs_root / "run_index.json")
     refreshed_index.to_markdown(runs_root / "run_index.md")
@@ -1006,7 +1002,13 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     write_research_report(run_dir)
     write_run_result_card(run_dir)
     build_portfolio_page(run_dir).write_html(run_dir / "portfolio_page.html")
+    reproduction = build_reproduction_bundle(run_dir)
+    _update_reproduction_step(steps, reproduction, run_dir)
     summary.to_json(summary_path)
+    reproduction = build_reproduction_bundle(run_dir)
+    reproduction.to_json(run_dir / "reproduction_manifest.json")
+    reproduction.to_markdown(run_dir / "reproduction_report.md")
+    reproduction.to_shell_script(run_dir / "reproduce_run.sh")
     return summary
 
 
@@ -1052,6 +1054,27 @@ def _run_queries(
         if grid_path:
             outputs[f"{query_slug}_grid"] = str(grid_path)
     return outputs
+
+
+def _update_reproduction_step(
+    steps: list[PipelineStep],
+    reproduction: Any,
+    run_dir: Path,
+) -> None:
+    for step in steps:
+        if step.name != "create_reproduction_bundle":
+            continue
+        step.summary = {
+            "replay_command": reproduction.replay_command,
+            "verification_commands": reproduction.verification_commands,
+            "artifact_count": len(reproduction.artifacts),
+        }
+        step.outputs = {
+            "manifest": str(run_dir / "reproduction_manifest.json"),
+            "markdown": str(run_dir / "reproduction_report.md"),
+            "script": str(run_dir / "reproduce_run.sh"),
+        }
+        return
 
 
 def _report_overlay_paths(report: Any) -> list[Path]:

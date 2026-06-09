@@ -13,6 +13,9 @@ from typing import Any
 from nerf_llm_scene_inspector.utils.paths import project_root, utc_timestamp
 
 
+MUTABLE_ARTIFACT_NAMES = {"annotation_finalize"}
+
+
 @dataclass
 class ReproductionArtifact:
     """One artifact expected inside a reproducible run directory."""
@@ -125,6 +128,90 @@ class ReproductionBundle:
         return output_path
 
 
+@dataclass
+class ReproductionManifestIssue:
+    """One integrity issue found while checking a reproduction manifest."""
+
+    artifact_name: str
+    path: str
+    category: str
+    severity: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+
+@dataclass
+class ReproductionManifestValidation:
+    """Integrity report for a run-local reproduction manifest."""
+
+    ok: bool
+    run_dir: str
+    manifest_path: str
+    timestamp: str
+    require_complete: bool
+    checked_artifacts: int = 0
+    matched_files: int = 0
+    matched_directories: int = 0
+    recorded_missing: int = 0
+    issues: list[ReproductionManifestIssue] = field(default_factory=list)
+
+    @property
+    def errors(self) -> list[ReproductionManifestIssue]:
+        return [issue for issue in self.issues if issue.severity == "error"]
+
+    @property
+    def warnings(self) -> list[ReproductionManifestIssue]:
+        return [issue for issue in self.issues if issue.severity == "warning"]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "ok": self.ok,
+            "run_dir": self.run_dir,
+            "manifest_path": self.manifest_path,
+            "timestamp": self.timestamp,
+            "require_complete": self.require_complete,
+            "checked_artifacts": self.checked_artifacts,
+            "matched_files": self.matched_files,
+            "matched_directories": self.matched_directories,
+            "recorded_missing": self.recorded_missing,
+            "error_count": len(self.errors),
+            "warning_count": len(self.warnings),
+            "issues": [issue.to_dict() for issue in self.issues],
+        }
+
+    def to_json(self, path: str | Path) -> Path:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        return output_path
+
+    def to_markdown(self, path: str | Path) -> Path:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "# Reproduction Manifest Validation",
+            "",
+            f"- Status: {'pass' if self.ok else 'fail'}",
+            f"- Run directory: `{self.run_dir}`",
+            f"- Manifest: `{self.manifest_path}`",
+            f"- Require complete: {self.require_complete}",
+            f"- Checked artifacts: {self.checked_artifacts}",
+            f"- Matched files: {self.matched_files}",
+            f"- Matched directories: {self.matched_directories}",
+            f"- Recorded missing artifacts: {self.recorded_missing}",
+            f"- Errors: {len(self.errors)}",
+            f"- Warnings: {len(self.warnings)}",
+            "",
+            "## Issues",
+            "",
+            *_manifest_issue_lines(self.issues),
+        ]
+        output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return output_path
+
+
 def build_reproduction_bundle(run_dir: str | Path) -> ReproductionBundle:
     """Build replay and verification instructions from a pipeline run directory."""
 
@@ -149,6 +236,354 @@ def build_reproduction_bundle(run_dir: str | Path) -> ReproductionBundle:
         artifacts=artifacts,
         artifact_summary=_artifact_summary(artifacts),
         notes=_notes(dry_run=dry_run),
+    )
+
+
+def verify_reproduction_manifest(
+    run_dir: str | Path,
+    *,
+    manifest_path: str | Path | None = None,
+    require_complete: bool = False,
+) -> ReproductionManifestValidation:
+    """Verify file sizes and SHA256 digests recorded in a reproduction manifest."""
+
+    root = Path(run_dir)
+    manifest = Path(manifest_path) if manifest_path is not None else root / "reproduction_manifest.json"
+    issues: list[ReproductionManifestIssue] = []
+    if not manifest.exists():
+        issues.append(
+            _manifest_issue(
+                "",
+                str(manifest),
+                "missing_manifest",
+                "error",
+                "Reproduction manifest does not exist.",
+            )
+        )
+        return _validation_report(root, manifest, require_complete, 0, 0, 0, 0, issues)
+
+    payload = _read_manifest_payload(manifest, issues)
+    artifacts = payload.get("artifacts") if isinstance(payload, dict) else None
+    if not isinstance(artifacts, list):
+        issues.append(
+            _manifest_issue(
+                "",
+                _display_validation_path(manifest),
+                "invalid_manifest",
+                "error",
+                "Manifest field 'artifacts' must be a list.",
+            )
+        )
+        return _validation_report(root, manifest, require_complete, 0, 0, 0, 0, issues)
+
+    matched_files = 0
+    matched_directories = 0
+    recorded_missing = 0
+    for raw_artifact in artifacts:
+        if not isinstance(raw_artifact, dict):
+            issues.append(
+                _manifest_issue(
+                    "",
+                    "",
+                    "invalid_artifact",
+                    "error",
+                    "Manifest artifact entries must be objects.",
+                )
+            )
+            continue
+        name = str(raw_artifact.get("name") or "")
+        relative_path = str(raw_artifact.get("path") or "")
+        if not relative_path:
+            issues.append(
+                _manifest_issue(name, "", "invalid_artifact_path", "error", "Artifact path is missing.")
+            )
+            continue
+        if Path(relative_path).is_absolute():
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "absolute_artifact_path",
+                    "error",
+                    "Artifact path must be relative to the run directory.",
+                )
+            )
+            continue
+        artifact_path = root / relative_path
+        expected_exists = bool(raw_artifact.get("exists"))
+        expected_kind = str(raw_artifact.get("kind") or "")
+        if not expected_exists:
+            recorded_missing += 1
+            severity = "error" if require_complete else "warning"
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "recorded_missing_artifact",
+                    severity,
+                    "Artifact was recorded as missing in the manifest.",
+                )
+            )
+            continue
+        if not artifact_path.exists():
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "missing_artifact",
+                    "error",
+                    "Artifact existed when the manifest was written but is missing now.",
+                )
+            )
+            continue
+        if expected_kind == "file":
+            matched_files += _verify_file_artifact(raw_artifact, artifact_path, name, relative_path, issues)
+        elif expected_kind == "directory":
+            matched_directories += _verify_directory_artifact(
+                raw_artifact, artifact_path, name, relative_path, issues
+            )
+        else:
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "unknown_artifact_kind",
+                    "warning",
+                    f"Artifact kind is {expected_kind or 'unset'}; only existence was checked.",
+                )
+            )
+    _check_artifact_summary(payload, artifacts, issues)
+    return _validation_report(
+        root,
+        manifest,
+        require_complete,
+        len(artifacts),
+        matched_files,
+        matched_directories,
+        recorded_missing,
+        issues,
+    )
+
+
+def _read_manifest_payload(path: Path, issues: list[ReproductionManifestIssue]) -> dict[str, Any]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        issues.append(
+            _manifest_issue(
+                "",
+                _display_validation_path(path),
+                "invalid_json",
+                "error",
+                f"Could not parse reproduction manifest JSON: {exc}",
+            )
+        )
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _verify_file_artifact(
+    raw_artifact: dict[str, Any],
+    artifact_path: Path,
+    name: str,
+    relative_path: str,
+    issues: list[ReproductionManifestIssue],
+) -> int:
+    start_error_count = sum(1 for issue in issues if issue.severity == "error")
+    if not artifact_path.is_file():
+        issues.append(
+            _manifest_issue(
+                name,
+                relative_path,
+                "artifact_kind_mismatch",
+                "error",
+                "Manifest recorded a file, but the path is not a file.",
+            )
+        )
+        return 0
+    expected_size = raw_artifact.get("size_bytes")
+    if isinstance(expected_size, int):
+        current_size = artifact_path.stat().st_size
+        if current_size != expected_size:
+            severity = _integrity_mismatch_severity(name)
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "size_mismatch",
+                    severity,
+                    f"Expected {expected_size} bytes, found {current_size} bytes.",
+                )
+            )
+    else:
+        issues.append(
+            _manifest_issue(
+                name,
+                relative_path,
+                "missing_size_digest",
+                "warning",
+                "File artifact does not record size_bytes.",
+            )
+        )
+    expected_sha = raw_artifact.get("sha256")
+    if isinstance(expected_sha, str) and expected_sha:
+        current_sha = _sha256(artifact_path)
+        if current_sha != expected_sha:
+            severity = _integrity_mismatch_severity(name)
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "sha256_mismatch",
+                    severity,
+                    "SHA256 digest does not match the current file contents.",
+                )
+            )
+    else:
+        issues.append(
+            _manifest_issue(
+                name,
+                relative_path,
+                "missing_sha256_digest",
+                "warning",
+                "File artifact does not record a SHA256 digest.",
+            )
+        )
+    end_error_count = sum(1 for issue in issues if issue.severity == "error")
+    return 1 if end_error_count == start_error_count else 0
+
+
+def _integrity_mismatch_severity(artifact_name: str) -> str:
+    return "warning" if artifact_name in MUTABLE_ARTIFACT_NAMES else "error"
+
+
+def _verify_directory_artifact(
+    raw_artifact: dict[str, Any],
+    artifact_path: Path,
+    name: str,
+    relative_path: str,
+    issues: list[ReproductionManifestIssue],
+) -> int:
+    if not artifact_path.is_dir():
+        issues.append(
+            _manifest_issue(
+                name,
+                relative_path,
+                "artifact_kind_mismatch",
+                "error",
+                "Manifest recorded a directory, but the path is not a directory.",
+            )
+        )
+        return 0
+    expected_count = raw_artifact.get("file_count")
+    if isinstance(expected_count, int):
+        current_count = sum(1 for item in artifact_path.rglob("*") if item.is_file())
+        if current_count != expected_count:
+            issues.append(
+                _manifest_issue(
+                    name,
+                    relative_path,
+                    "directory_file_count_mismatch",
+                    "warning",
+                    f"Expected {expected_count} files, found {current_count} files.",
+                )
+            )
+            return 0
+    else:
+        issues.append(
+            _manifest_issue(
+                name,
+                relative_path,
+                "missing_directory_file_count",
+                "warning",
+                "Directory artifact does not record file_count.",
+            )
+        )
+    return 1
+
+
+def _check_artifact_summary(
+    payload: dict[str, Any],
+    artifacts: list[Any],
+    issues: list[ReproductionManifestIssue],
+) -> None:
+    summary = payload.get("artifact_summary")
+    if not isinstance(summary, dict):
+        issues.append(
+            _manifest_issue(
+                "",
+                "artifact_summary",
+                "missing_artifact_summary",
+                "warning",
+                "Manifest does not contain an artifact_summary object.",
+            )
+        )
+        return
+    expected = {
+        "total": len(artifacts),
+        "existing": sum(1 for artifact in artifacts if isinstance(artifact, dict) and artifact.get("exists")),
+        "missing": sum(1 for artifact in artifacts if isinstance(artifact, dict) and not artifact.get("exists")),
+        "files": sum(1 for artifact in artifacts if isinstance(artifact, dict) and artifact.get("kind") == "file"),
+        "directories": sum(
+            1 for artifact in artifacts if isinstance(artifact, dict) and artifact.get("kind") == "directory"
+        ),
+        "total_size_bytes": sum(
+            int(artifact.get("size_bytes"))
+            for artifact in artifacts
+            if isinstance(artifact, dict) and isinstance(artifact.get("size_bytes"), int)
+        ),
+    }
+    for key, expected_value in expected.items():
+        observed_value = summary.get(key)
+        if observed_value != expected_value:
+            issues.append(
+                _manifest_issue(
+                    "",
+                    f"artifact_summary.{key}",
+                    "artifact_summary_mismatch",
+                    "warning",
+                    f"Expected {expected_value}, found {observed_value}.",
+                )
+            )
+
+
+def _validation_report(
+    run_dir: Path,
+    manifest_path: Path,
+    require_complete: bool,
+    checked_artifacts: int,
+    matched_files: int,
+    matched_directories: int,
+    recorded_missing: int,
+    issues: list[ReproductionManifestIssue],
+) -> ReproductionManifestValidation:
+    return ReproductionManifestValidation(
+        ok=not any(issue.severity == "error" for issue in issues),
+        run_dir=_display_run_dir(run_dir),
+        manifest_path=_display_validation_path(manifest_path),
+        timestamp=utc_timestamp(),
+        require_complete=require_complete,
+        checked_artifacts=checked_artifacts,
+        matched_files=matched_files,
+        matched_directories=matched_directories,
+        recorded_missing=recorded_missing,
+        issues=issues,
+    )
+
+
+def _manifest_issue(
+    artifact_name: str,
+    path: str,
+    category: str,
+    severity: str,
+    message: str,
+) -> ReproductionManifestIssue:
+    return ReproductionManifestIssue(
+        artifact_name=artifact_name,
+        path=path.replace("\\", "/"),
+        category=category,
+        severity=severity,
+        message=message,
     )
 
 
@@ -187,6 +622,7 @@ def _verification_commands(root: Path) -> list[str]:
     run_dir = _display_run_dir(root)
     runs_root = _display_path(root.parent)
     return [
+        _format_command(["python", "scripts/verify_reproduction_manifest.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/diagnose_run_failures.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/audit_run.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/recommend_next_steps.py", "--run-dir", run_dir]),
@@ -521,6 +957,13 @@ def _display_path(path: Path) -> str:
         return "."
 
 
+def _display_validation_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(project_root().resolve())).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
 def _command_lines(commands: list[str]) -> list[str]:
     if not commands:
         return ["- None."]
@@ -555,6 +998,18 @@ def _artifact_status(artifact: ReproductionArtifact) -> str:
     if artifact.file_count is not None:
         details.append(f"{artifact.file_count} files")
     return ", ".join(details)
+
+
+def _manifest_issue_lines(issues: list[ReproductionManifestIssue]) -> list[str]:
+    if not issues:
+        return ["- None."]
+    return [
+        (
+            f"- {issue.severity.upper()} `{issue.category}`"
+            f" {issue.artifact_name or '(manifest)'} `{issue.path}`: {issue.message}"
+        )
+        for issue in issues
+    ]
 
 
 def _note_lines(notes: list[str]) -> list[str]:

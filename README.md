@@ -181,6 +181,7 @@ python scripts/generate_portfolio_page.py --run-dir results/pipeline_runs/desk_s
 python scripts/index_runs.py --root results/pipeline_runs
 python scripts/compare_runs.py --root results/pipeline_runs
 python scripts/create_reproduction_bundle.py --run-dir results/pipeline_runs/desk_scene
+python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene
@@ -485,6 +486,7 @@ when a `--require-all` repair left required queries unresolved.
 - `results/pipeline_runs/<scene>/reproduction_manifest.json` with replay commands, artifact existence checks, file sizes, SHA256 digests, and query-level evidence paths
 - `results/pipeline_runs/<scene>/reproduction_report.md`
 - `results/pipeline_runs/<scene>/reproduce_run.sh`
+- `results/pipeline_runs/<scene>/reproduction_manifest_validation.json` and `.md` when the manifest verifier is run
 - `results/pipeline_runs/run_index.json`
 - `results/pipeline_runs/run_index.md`
 - `results/pipeline_runs/run_comparison.json`
@@ -552,6 +554,10 @@ Each run also writes `reproduction_manifest.json`, `reproduction_report.md`, and
 summary with file/dir counts, sizes, SHA256 digests for files, and run-scoped query artifacts
 such as `queries/<query>/scene_query_report.json`, `query_visual_summary.json`, and
 `query_grid.png`.
+Run `python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/<scene>`
+to check that recorded-present artifacts still match their saved sizes and SHA256 digests.
+Use `--require-complete` for a stricter portfolio-candidate check that fails if the
+manifest recorded any expected artifact as missing.
 
 ## LERF Query Rendering
 
@@ -592,6 +598,7 @@ python scripts/audit_run.py --help
 python scripts/recommend_next_steps.py --help
 python scripts/create_evidence_scorecard.py --help
 python scripts/create_reproduction_bundle.py --help
+python scripts/verify_reproduction_manifest.py --help
 python scripts/generate_research_report.py --help
 python scripts/create_run_result_card.py --help
 python scripts/create_submission_packet.py --help

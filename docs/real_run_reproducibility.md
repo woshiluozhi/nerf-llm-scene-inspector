@@ -88,6 +88,7 @@ python scripts/run_scene_pipeline.py \
 - `submission_packet/submission_checklist.md`: claim-calibrated checklist for CV, portfolio, and professor outreach.
 - `submission_packet/submission_packet.json`: machine-readable sharing decision and checklist status.
 - `reproduction_manifest.json`: machine-readable replay command, verification commands, artifact summary, key artifact map, file sizes, SHA256 digests, and query-level evidence paths.
+- `reproduction_manifest_validation.json` and `.md`: integrity check for files and directories recorded in the reproduction manifest.
 - `reproduction_report.md`: human-readable reproduction recipe for sharing with collaborators.
 - `reproduce_run.sh`: shell recipe that installs local dependencies, runs checks, replays the pipeline, and verifies the pack.
 - `real_run_plan/real_run_plan.md`: concrete action plan for upgrading a dry-run or partially reviewed run into real CUDA/Nerfstudio/LERF evidence.
@@ -165,6 +166,16 @@ The run-local `reproduction_manifest.json` now provides a similar pre-pack audit
 before exporting, inspect `artifact_summary` and the per-artifact `kind`, `size_bytes`,
 `sha256`, and `file_count` fields to confirm that query reports, visual summaries, grids,
 evaluation files, and command logs are present.
+Then verify the manifest against the current run directory:
+
+```bash
+python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/desk_scene
+python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/desk_scene --require-complete
+```
+
+The first command checks that artifacts recorded as present still match their saved sizes
+and SHA256 digests. The stricter `--require-complete` form is intended for real portfolio
+candidates where any recorded-missing expected artifact should block sharing.
 When `--zip` is used, the archive is self-contained and includes the same
 `portfolio_pack_index.json` with digest metadata.
 The normal finalization path runs validation and re-archives the pack afterward, so the
@@ -178,6 +189,7 @@ inside one top-level `portfolio_pack/` directory.
 ```bash
 python scripts/create_annotation_workbench.py --annotations results/pipeline_runs/desk_scene/annotation_template.json --results results/pipeline_runs/desk_scene/queries --output results/pipeline_runs/desk_scene/evaluation/annotation_workbench
 python scripts/finalize_annotations.py --run-dir results/pipeline_runs/desk_scene --filled path/to/annotations_filled.json --profile portfolio --export-pack --zip-pack
+python scripts/verify_reproduction_manifest.py --run-dir results/pipeline_runs/desk_scene --require-complete
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack
 python scripts/validate_portfolio_pack.py --pack results/portfolio_pack.zip
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack
