@@ -51,6 +51,9 @@ class SubmissionPacket:
     ci_url: str = ""
     pack_dir: str = ""
     pack_ok: bool | None = None
+    query_evidence_status: str = ""
+    query_counter_evidence_count: int = 0
+    query_risk_flag_count: int = 0
     recommended_links: dict[str, str] = field(default_factory=dict)
     allowed_claims: list[str] = field(default_factory=list)
     avoid_claims: list[str] = field(default_factory=list)
@@ -80,6 +83,9 @@ class SubmissionPacket:
             f"- Dry run: {self.dry_run}",
             f"- Readiness: `{self.readiness_level}`",
             f"- Share decision: {self.share_decision}",
+            f"- Query evidence: {self.query_evidence_status or 'unknown'}",
+            f"- Query counter-evidence items: {self.query_counter_evidence_count}",
+            f"- Query risk flags: {self.query_risk_flag_count}",
             f"- Generated: `{self.generated_at}`",
             "",
             "## Readiness Summary",
@@ -174,6 +180,7 @@ def build_submission_packet(
     diagnostics = _read_json(root / "failure_diagnostics.json")
     recommendations = _read_json(root / "run_recommendations.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
     research = _read_json(root / "research_report.json")
     claim_audit = _read_json(root / "claim_audit.json")
     pack_validation = _pack_validation(pack_dir, pack_validation_path)
@@ -181,6 +188,7 @@ def build_submission_packet(
     scene_name = str(summary.get("scene_name") or scorecard.get("scene_name") or root.name)
     backend = str(summary.get("backend") or scorecard.get("backend") or research.get("backend") or "unknown")
     dry_run = bool(summary.get("dry_run", scorecard.get("dry_run", False)))
+    query_counter_evidence_count, query_risk_flag_count = _query_evidence_counts(query_evidence)
     checklist = _checklist(
         root,
         summary,
@@ -189,12 +197,13 @@ def build_submission_packet(
         audit,
         diagnostics,
         annotations,
+        query_evidence,
         claim_audit,
         pack_validation,
         ci_url,
     )
     readiness = _readiness(dry_run, summary, scorecard, quality, pack_validation, checklist)
-    warnings = _warnings(quality, audit, annotations, claim_audit, pack_validation)
+    warnings = _warnings(quality, audit, annotations, query_evidence, claim_audit, pack_validation)
     next_actions = _next_actions(recommendations, readiness, pack_validation)
     return SubmissionPacket(
         run_dir=_display_run_dir(root),
@@ -210,14 +219,20 @@ def build_submission_packet(
             warnings=warnings,
             next_actions=next_actions,
             pack_validation=pack_validation,
+            query_evidence_status=str(query_evidence.get("status") or ""),
+            query_counter_evidence_count=query_counter_evidence_count,
+            query_risk_flag_count=query_risk_flag_count,
         ),
         repo_url=repo_url,
         ci_url=ci_url,
         pack_dir=_display_pack_path(Path(pack_dir)) if pack_dir else "",
         pack_ok=_pack_ok(pack_validation),
+        query_evidence_status=str(query_evidence.get("status") or ""),
+        query_counter_evidence_count=query_counter_evidence_count,
+        query_risk_flag_count=query_risk_flag_count,
         recommended_links=_recommended_links(repo_url, ci_url, pack_dir),
         allowed_claims=_allowed_claims(dry_run, readiness),
-        avoid_claims=_avoid_claims(dry_run),
+        avoid_claims=_avoid_claims(dry_run, query_risk_flag_count=query_risk_flag_count),
         checklist=checklist,
         warnings=warnings,
         next_actions=next_actions,
@@ -259,6 +274,7 @@ def _checklist(
     audit: dict[str, Any],
     diagnostics: dict[str, Any],
     annotations: dict[str, Any],
+    query_evidence: dict[str, Any],
     claim_audit: dict[str, Any],
     pack_validation: dict[str, Any],
     ci_url: str,
@@ -297,6 +313,7 @@ def _checklist(
         _audit_item(audit),
         _failure_diagnostics_item(diagnostics),
         _annotation_item(annotations),
+        _query_evidence_item(query_evidence),
         _claim_audit_item(claim_audit),
         _pack_item(pack_validation),
         _path_leak_item(pack_validation),
@@ -410,6 +427,58 @@ def _annotation_item(annotations: dict[str, Any]) -> SubmissionChecklistItem:
         f"ok={annotations.get('ok')}, warnings={len(warnings)}",
         "Resolve annotation warnings before reporting quantitative localization numbers." if warnings else "",
         "evaluation/annotation_validation.json",
+    )
+
+
+def _query_evidence_item(query_evidence: dict[str, Any]) -> SubmissionChecklistItem:
+    if not query_evidence:
+        return SubmissionChecklistItem(
+            "query_evidence",
+            "warn",
+            "query_evidence_audit.json missing",
+            "Run audit_query_evidence.py before professor outreach.",
+            "query_evidence_audit.md",
+        )
+    status = str(query_evidence.get("status") or "")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
+    if query_evidence.get("ok") is False or status == "fail":
+        return SubmissionChecklistItem(
+            "query_evidence",
+            "fail",
+            "query evidence audit failed",
+            "Regenerate missing query reports, overlays, or visual summaries before sharing.",
+            "query_evidence_audit.md",
+        )
+    if risk_flag_count:
+        return SubmissionChecklistItem(
+            "query_evidence",
+            "fail",
+            f"risk_flags={risk_flag_count}, counter_evidence={counter_evidence_count}",
+            "Resolve or explicitly document conflicting query evidence before external sharing.",
+            "query_evidence_audit.md",
+        )
+    if counter_evidence_count:
+        return SubmissionChecklistItem(
+            "query_evidence",
+            "warn",
+            f"risk_flags=0, counter_evidence={counter_evidence_count}",
+            "Review disambiguation/counter-evidence prompts before making scene-answer claims.",
+            "query_evidence_audit.md",
+        )
+    if status == "warn":
+        return SubmissionChecklistItem(
+            "query_evidence",
+            "warn",
+            "query evidence audit has warning-level findings",
+            "Inspect fallback modes, missing artifacts, and query warnings before sharing.",
+            "query_evidence_audit.md",
+        )
+    return SubmissionChecklistItem(
+        "query_evidence",
+        "pass",
+        f"status={status or 'unknown'}, risk_flags=0, counter_evidence=0",
+        "",
+        "query_evidence_audit.md",
     )
 
 
@@ -529,6 +598,9 @@ def _readiness_summary(
     warnings: list[str],
     next_actions: list[str],
     pack_validation: dict[str, Any],
+    query_evidence_status: str,
+    query_counter_evidence_count: int,
+    query_risk_flag_count: int,
 ) -> dict[str, Any]:
     failed_items = [item for item in checklist if item.status == "fail"]
     warning_items = [item for item in checklist if item.status == "warn"]
@@ -546,6 +618,9 @@ def _readiness_summary(
         "top_blockers": [_item_summary(item) for item in failed_items[:5]],
         "top_warnings": _dedupe(top_warnings)[:5],
         "pack_ok": _pack_ok(pack_validation),
+        "query_evidence_status": query_evidence_status,
+        "query_counter_evidence_count": query_counter_evidence_count,
+        "query_risk_flag_count": query_risk_flag_count,
         "recommended_next_action": next_actions[0] if next_actions else _default_next_action(readiness),
     }
 
@@ -585,7 +660,7 @@ def _allowed_claims(dry_run: bool, readiness: ReadinessLevel) -> list[str]:
     return claims
 
 
-def _avoid_claims(dry_run: bool) -> list[str]:
+def _avoid_claims(dry_run: bool, *, query_risk_flag_count: int = 0) -> list[str]:
     claims = [
         "Do not claim a new NeRF architecture.",
         "Do not claim state-of-the-art detection, segmentation, or 3D grounding performance.",
@@ -593,6 +668,8 @@ def _avoid_claims(dry_run: bool) -> list[str]:
     ]
     if dry_run:
         claims.append("Do not describe dry-run overlays as trained LERF outputs from a real scene.")
+    if query_risk_flag_count:
+        claims.append("Do not present unresolved query-risk flags as clean scene-understanding evidence.")
     return claims
 
 
@@ -600,6 +677,7 @@ def _warnings(
     quality: dict[str, Any],
     audit: dict[str, Any],
     annotations: dict[str, Any],
+    query_evidence: dict[str, Any],
     claim_audit: dict[str, Any],
     pack_validation: dict[str, Any],
 ) -> list[str]:
@@ -610,6 +688,14 @@ def _warnings(
         warnings.append(f"Run audit status is {audit.get('status')}.")
     for item in annotations.get("warnings") or []:
         warnings.append(f"Annotation warning: {item}")
+    query_status = str(query_evidence.get("status") or "")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
+    if query_status == "warn":
+        warnings.append("Query evidence audit has warning-level findings.")
+    if counter_evidence_count:
+        warnings.append(f"Query evidence audit reports {counter_evidence_count} counter-evidence item(s).")
+    if risk_flag_count:
+        warnings.append(f"Query evidence audit reports {risk_flag_count} risk flag(s).")
     if claim_audit.get("status") == "warn":
         warnings.append("Claim audit has warning-level findings.")
     if claim_audit.get("status") == "fail":
@@ -694,6 +780,33 @@ def _read_json(path: str | Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _query_evidence_counts(audit: dict[str, Any]) -> tuple[int, int]:
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter = _safe_int(totals.get("counter_evidence_count"))
+    risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _display_path(path: Path) -> str:
     return str(path).replace("\\", "/")
 
@@ -722,6 +835,9 @@ def _readiness_summary_lines(summary: dict[str, Any]) -> list[str]:
         f"- Warning checks: {summary.get('warning_check_count', 0)}",
         f"- Packet warnings: {summary.get('packet_warning_count', 0)}",
         f"- Pack OK: `{summary.get('pack_ok')}`",
+        f"- Query evidence: `{summary.get('query_evidence_status') or 'unknown'}`",
+        f"- Query counter-evidence items: {summary.get('query_counter_evidence_count', 0)}",
+        f"- Query risk flags: {summary.get('query_risk_flag_count', 0)}",
         f"- Recommended next action: {summary.get('recommended_next_action') or 'Review the checklist.'}",
     ]
     blockers = summary.get("top_blockers") if isinstance(summary.get("top_blockers"), list) else []

@@ -100,8 +100,11 @@ python scripts/run_scene_pipeline.py \
 
 For external sharing, start with `submission_packet/submission_checklist.md`. Its
 `Readiness Summary` section is the compact send/no-send view: failed checks, warning checks,
-pack validation state, and the recommended next action. The same information is available in
-`submission_packet/submission_packet.json` under `readiness_summary` for automation. Pack
+pack validation state, query-evidence counter/risk counts, and the recommended next action.
+Unresolved query risk flags are treated as a blocker in this packet; non-overlapping
+counter-evidence is retained as a warning for calibrated review. The same information is available in
+`submission_packet/submission_packet.json` under `readiness_summary` and the top-level
+`query_*` fields for automation. Pack
 references in this packet use share-safe artifact names such as `portfolio_pack.zip` instead
 of machine-specific absolute paths.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,

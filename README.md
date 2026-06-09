@@ -264,7 +264,9 @@ reporting, quality checks, submission materials, pack validation, the final zip,
 post-archive zip validation report.
 Open `results/pipeline_runs/<scene>/submission_packet/submission_checklist.md` first before
 sharing: its `Readiness Summary` section lists failed checks, warning checks, pack status,
-and the next action to take before CV/professor outreach.
+query-evidence counter/risk counts, and the next action to take before CV/professor outreach.
+Unresolved query risk flags block the packet; counter-evidence without overlap is kept as a
+warning so the run can still be reviewed with calibrated language.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
 time or send the run externally. It consolidates pipeline success, evidence mode, capture,
 preflight, environment, language training, quality gate, claim audit, submission packet,
@@ -535,7 +537,9 @@ explicit risk flags and lowers confidence conservatively. A successful query als
 `query_montage.gif`.
 The run-level `query_evidence_audit.json` and Dashboard summarize these same
 counter-evidence/risk-flag counts per task, so a visually strong query can still be
-marked `warn` when disambiguation prompts conflict with positive evidence.
+marked `warn` when disambiguation prompts conflict with positive evidence. The submission
+packet also reads this audit: risk flags become an external-sharing blocker, while
+non-overlapping counter-evidence remains a reviewer-facing warning.
 - `results/<run_name>/train_summary.json`
 - `results/query_outputs/<query_id>/query_result.json`
 - `results/query_outputs/query_grid.png`
