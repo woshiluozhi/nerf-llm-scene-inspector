@@ -200,6 +200,9 @@ cleaned by default to avoid stale results; pass `--no-clean-run` only when you i
 want to preserve prior files.
 Full command stdout/stderr logs are saved under `results/pipeline_runs/<scene>/logs/`
 for debugging Nerfstudio, LERF, annotation, demo, and evaluation failures.
+If baseline or language training returns `success=false` in its train summary, the matching
+`train_baseline_nerf` or `train_language_field` step in `pipeline_summary.json` is marked
+`failed` with the command and a short missing-config/return-code diagnostic.
 Run `diagnose_run_failures.py` when a real run fails or falls back to manual viewer
 workflow: it summarizes common CUDA, LERF registration, COLMAP/FFmpeg, missing-config,
 and query-rendering failure modes in `failure_diagnostics.md`.

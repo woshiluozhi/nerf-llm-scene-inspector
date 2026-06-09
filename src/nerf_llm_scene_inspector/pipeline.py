@@ -416,9 +416,11 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             steps.append(
                 PipelineStep(
                     "train_baseline_nerf",
-                    "success",
+                    _training_step_status(baseline_summary),
                     summary=_small_dict(baseline_summary),
                     outputs=baseline_outputs,
+                    command=_summary_command(baseline_summary),
+                    error=_training_step_error(baseline_summary),
                 )
             )
 
@@ -453,9 +455,11 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             steps.append(
                 PipelineStep(
                     "train_language_field",
-                    "success",
+                    _training_step_status(language_summary),
                     summary=_small_dict(language_summary),
                     outputs=language_outputs,
+                    command=_summary_command(language_summary),
+                    error=_training_step_error(language_summary),
                 )
             )
 
@@ -1193,6 +1197,32 @@ def _write_step_json(path: Path, payload: dict[str, object]) -> Path:
 def _add_if_exists(outputs: dict[str, str], name: str, path: Path) -> None:
     if path.exists():
         outputs[name] = str(path)
+
+
+def _training_step_status(summary: dict[str, object]) -> str:
+    return "success" if summary.get("success") is True else "failed"
+
+
+def _training_step_error(summary: dict[str, object]) -> str | None:
+    if summary.get("success") is True:
+        return None
+    details: list[str] = []
+    if summary.get("returncode") not in {None, 0}:
+        details.append(f"returncode={summary.get('returncode')}")
+    if not summary.get("config_path"):
+        details.append("missing config_path")
+    if not details:
+        details.append("training summary success=false")
+    return "Training did not produce a usable model config (" + ", ".join(details) + ")."
+
+
+def _summary_command(summary: dict[str, object]) -> str | None:
+    command = summary.get("command")
+    if isinstance(command, list):
+        return format_command([str(item) for item in command])
+    if isinstance(command, str):
+        return command
+    return None
 
 
 def _reset_run_subdir(path: Path, run_dir: Path) -> None:

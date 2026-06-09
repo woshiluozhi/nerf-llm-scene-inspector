@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from nerf_llm_scene_inspector import pipeline
 from nerf_llm_scene_inspector.pipeline import PipelineConfig, run_scene_pipeline
 from nerf_llm_scene_inspector.reproducibility import verify_reproduction_manifest
 
@@ -496,6 +497,97 @@ def test_run_scene_pipeline_writes_run_scoped_training_summaries(tmp_path: Path)
     language_step = next(step for step in summary.steps if step.name == "train_language_field")
     assert baseline_step.outputs["train_summary"] == str(baseline_summary)
     assert language_step.outputs["train_summary"] == str(language_summary)
+
+
+def test_run_scene_pipeline_marks_failed_baseline_training_step(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train_baseline_nerf(*args, **kwargs):  # noqa: ANN001, ANN202, ARG001
+        return {
+            "run_type": "baseline",
+            "method": "nerfacto",
+            "dry_run": False,
+            "success": False,
+            "returncode": 1,
+            "config_path": None,
+            "command": ["ns-train", "nerfacto", "--data", str(tmp_path / "data")],
+        }
+
+    monkeypatch.setattr(pipeline, "train_baseline_nerf", fake_train_baseline_nerf)
+
+    summary = run_scene_pipeline(
+        PipelineConfig(
+            input_path=tmp_path,
+            scene_name="failed_baseline_scene",
+            data_type="images",
+            queries=["mug"],
+            data_root=tmp_path / "data",
+            runs_root=tmp_path / "runs",
+            output_root=tmp_path / "pipeline_runs",
+            dry_run=True,
+            skip_language=True,
+            skip_queries=True,
+            skip_demo=True,
+            skip_eval=True,
+        )
+    )
+
+    baseline_step = next(step for step in summary.steps if step.name == "train_baseline_nerf")
+    diagnostics_step = next(step for step in summary.steps if step.name == "diagnose_run_failures")
+
+    assert summary.success is False
+    assert baseline_step.status == "failed"
+    assert baseline_step.error is not None
+    assert "returncode=1" in baseline_step.error
+    assert "missing config_path" in baseline_step.error
+    assert diagnostics_step.status == "failed"
+
+
+def test_run_scene_pipeline_marks_failed_language_training_step(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train_language_field(*args, **kwargs):  # noqa: ANN001, ANN202, ARG001
+        return {
+            "run_type": "language",
+            "method": "lerf-lite",
+            "backend": "lerf",
+            "variant": "lerf-lite",
+            "dry_run": False,
+            "success": False,
+            "returncode": 0,
+            "config_path": None,
+            "command": ["ns-train", "lerf-lite", "--data", str(tmp_path / "data")],
+        }
+
+    monkeypatch.setattr(pipeline, "train_language_field", fake_train_language_field)
+
+    summary = run_scene_pipeline(
+        PipelineConfig(
+            input_path=tmp_path,
+            scene_name="failed_language_scene",
+            data_type="images",
+            queries=["mug"],
+            data_root=tmp_path / "data",
+            runs_root=tmp_path / "runs",
+            output_root=tmp_path / "pipeline_runs",
+            dry_run=True,
+            skip_baseline=True,
+            skip_queries=True,
+            skip_demo=True,
+            skip_eval=True,
+        )
+    )
+
+    language_step = next(step for step in summary.steps if step.name == "train_language_field")
+    diagnostics_step = next(step for step in summary.steps if step.name == "diagnose_run_failures")
+
+    assert summary.success is False
+    assert language_step.status == "failed"
+    assert language_step.error is not None
+    assert "missing config_path" in language_step.error
+    assert diagnostics_step.status == "failed"
 
 
 def test_run_scene_pipeline_cleans_stale_run_outputs(tmp_path: Path) -> None:

@@ -38,6 +38,14 @@ conda install -c conda-forge ffmpeg colmap
 
 Full training requires an NVIDIA GPU, a CUDA-compatible PyTorch build, and Tiny CUDA NN support. Start with `lerf-lite` on smaller GPUs.
 
+## Pipeline Marks Training As Failed
+
+`run_scene_pipeline.py` marks `train_baseline_nerf` or `train_language_field` as `failed`
+whenever the corresponding train summary has `success=false`. Check
+`results/pipeline_runs/<scene>/training/*_train_summary.json` first: a nonzero
+`returncode` points to the upstream command failure, while a missing `config_path` means
+the command did not produce a discoverable Nerfstudio `config.yml`.
+
 ## Low Pose Coverage Or Duplicate Camera Poses
 
 `inspect_scene_data.py` reports camera translation extent, path length, median step, and
