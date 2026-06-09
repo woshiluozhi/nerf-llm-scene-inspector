@@ -21,6 +21,7 @@ def test_run_readiness_calibrates_dry_run(tmp_path: Path) -> None:
     assert any(gate.name == "evidence_mode" and gate.status == "warn" for gate in report.gates)
     assert any(gate.name == "failure_diagnostics" and gate.status == "pass" for gate in report.gates)
     assert any(gate.name == "environment_gpu_upstream" and gate.status == "warn" for gate in report.gates)
+    assert any(gate.name == "query_evidence" and gate.status == "pass" for gate in report.gates)
     assert any("without --dry-run" in action or "CUDA-backed" in action for action in report.next_actions)
 
 
@@ -38,6 +39,30 @@ def test_run_readiness_real_run_with_validated_pack_is_review_ready(tmp_path: Pa
     assert any(gate.name == "portfolio_pack" and gate.status == "pass" for gate in report.gates)
 
 
+def test_run_readiness_blocks_external_review_on_query_risk_flags(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "warn",
+            "ok": True,
+            "totals": {"counter_evidence_count": 1, "risk_flag_count": 1},
+            "tasks": [{"task": "safe place", "counter_evidence_count": 1, "risk_flag_count": 1}],
+        },
+    )
+
+    report = build_run_readiness(run_dir)
+
+    query_gate = next(gate for gate in report.gates if gate.name == "query_evidence")
+    assert report.readiness_level == "blocked"
+    assert report.ready_for_external_review is False
+    assert query_gate.status == "fail"
+    assert "counter-evidence conflicts" in query_gate.action
+    assert report.query_evidence_status == "warn"
+    assert report.query_counter_evidence_count == 1
+    assert report.query_risk_flag_count == 1
+
+
 def test_write_run_readiness_outputs_json_and_markdown(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True)
 
@@ -46,9 +71,11 @@ def test_write_run_readiness_outputs_json_and_markdown(tmp_path: Path) -> None:
     payload = json.loads((run_dir / "run_readiness.json").read_text(encoding="utf-8"))
     assert payload["readiness_level"] == report.readiness_level
     assert payload["ready_to_start_real_run"] is False
+    assert payload["query_evidence_status"] == "pass"
     markdown = (run_dir / "run_readiness.md").read_text(encoding="utf-8")
     assert "# Run Readiness Gate" in markdown
     assert "Ready to start real run: False" in markdown
+    assert "Query evidence: pass" in markdown
 
 
 def test_create_run_readiness_cli(tmp_path: Path) -> None:
@@ -109,6 +136,10 @@ def _write_run(tmp_path: Path, *, dry_run: bool) -> Path:
         },
     )
     _write_json(run_dir / "quality_gate.json", {"status": "pass", "passed": True})
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {"status": "pass", "ok": True, "task_count": 1, "fail_count": 0, "totals": {}},
+    )
     _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True})
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",

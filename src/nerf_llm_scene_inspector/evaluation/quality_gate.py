@@ -24,6 +24,8 @@ class GatePolicy:
     allow_dry_run: bool
     require_audit_ready: bool
     require_capture_ready: bool
+    require_query_evidence_pass: bool
+    fail_on_query_risk_flags: bool
     require_portfolio_level: bool
     require_pack: bool
     fail_on_annotation_warnings: bool
@@ -37,6 +39,8 @@ PROFILE_POLICIES: dict[GateProfile, GatePolicy] = {
         allow_dry_run=True,
         require_audit_ready=False,
         require_capture_ready=False,
+        require_query_evidence_pass=False,
+        fail_on_query_risk_flags=False,
         require_portfolio_level=False,
         require_pack=False,
         fail_on_annotation_warnings=False,
@@ -48,6 +52,8 @@ PROFILE_POLICIES: dict[GateProfile, GatePolicy] = {
         allow_dry_run=False,
         require_audit_ready=False,
         require_capture_ready=True,
+        require_query_evidence_pass=False,
+        fail_on_query_risk_flags=False,
         require_portfolio_level=False,
         require_pack=False,
         fail_on_annotation_warnings=False,
@@ -59,6 +65,8 @@ PROFILE_POLICIES: dict[GateProfile, GatePolicy] = {
         allow_dry_run=False,
         require_audit_ready=True,
         require_capture_ready=True,
+        require_query_evidence_pass=True,
+        fail_on_query_risk_flags=True,
         require_portfolio_level=True,
         require_pack=True,
         fail_on_annotation_warnings=True,
@@ -95,6 +103,9 @@ class QualityGateReport:
     evidence_max_score: int = 0
     audit_status: str = ""
     capture_manifest_status: str = ""
+    query_evidence_status: str = ""
+    query_counter_evidence_count: int = 0
+    query_risk_flag_count: int = 0
     query_report_count: int = 0
     evaluated_query_count: int = 0
     criteria: list[QualityGateCriterion] = field(default_factory=list)
@@ -121,6 +132,9 @@ class QualityGateReport:
             "evidence_max_score": self.evidence_max_score,
             "audit_status": self.audit_status,
             "capture_manifest_status": self.capture_manifest_status,
+            "query_evidence_status": self.query_evidence_status,
+            "query_counter_evidence_count": self.query_counter_evidence_count,
+            "query_risk_flag_count": self.query_risk_flag_count,
             "query_report_count": self.query_report_count,
             "evaluated_query_count": self.evaluated_query_count,
             "fail_count": self.fail_count,
@@ -150,6 +164,9 @@ class QualityGateReport:
             f"- Evidence score: {self.evidence_score}/{self.evidence_max_score}",
             f"- Audit status: {self.audit_status or 'unknown'}",
             f"- Capture manifest: {self.capture_manifest_status or 'unknown'}",
+            f"- Query evidence: {self.query_evidence_status or 'unknown'}",
+            f"- Query counter-evidence items: {self.query_counter_evidence_count}",
+            f"- Query risk flags: {self.query_risk_flag_count}",
             f"- Query reports: {self.query_report_count}",
             f"- Evaluated queries: {self.evaluated_query_count}",
             "",
@@ -188,8 +205,10 @@ def check_run_quality(
     diagnostics = _read_json(root / "failure_diagnostics.json")
     scorecard = _read_json(root / "evidence_scorecard.json")
     capture = _read_json(root / "capture_manifest_validation.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
 
     criteria = [
         _pipeline_criterion(pipeline),
@@ -198,6 +217,7 @@ def check_run_quality(
         _failure_diagnostics_criterion(diagnostics),
         _evidence_criterion(scorecard, policy),
         _capture_criterion(capture, policy),
+        _query_evidence_criterion(query_evidence, policy),
         _query_criterion(root, pipeline, scorecard, policy),
         _evaluation_criterion(scorecard, evaluation, policy),
         _annotation_criterion(annotations, policy),
@@ -216,6 +236,9 @@ def check_run_quality(
         evidence_max_score=_safe_int(scorecard.get("max_score")),
         audit_status=str(audit.get("status") or ""),
         capture_manifest_status=str(capture.get("status") or ""),
+        query_evidence_status=str(query_evidence.get("status") or ""),
+        query_counter_evidence_count=counter_evidence_count,
+        query_risk_flag_count=risk_flag_count,
         query_report_count=_query_report_count(root, scorecard),
         evaluated_query_count=_evaluated_query_count(scorecard, evaluation),
         criteria=criteria,
@@ -470,6 +493,71 @@ def _capture_criterion(capture: dict[str, Any], policy: GatePolicy) -> QualityGa
     )
 
 
+def _query_evidence_criterion(
+    audit: dict[str, Any],
+    policy: GatePolicy,
+) -> QualityGateCriterion:
+    if not audit:
+        gate_status: GateStatus = "fail" if policy.require_query_evidence_pass else "warn"
+        return QualityGateCriterion(
+            "query_evidence",
+            gate_status,
+            "query_evidence_audit.json is missing or unreadable.",
+            "Run python scripts/audit_query_evidence.py --run-dir <run-dir>.",
+            "query_evidence_audit.json",
+        )
+    status = str(audit.get("status") or "")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(audit)
+    if audit.get("ok") is False or status == "fail":
+        return QualityGateCriterion(
+            "query_evidence",
+            "fail",
+            "Query evidence audit reports failed query artifacts.",
+            "Open query_evidence_audit.md and regenerate missing query reports or overlays.",
+            "query_evidence_audit.md",
+        )
+    if risk_flag_count:
+        gate_status: GateStatus = "fail" if policy.fail_on_query_risk_flags else "warn"
+        return QualityGateCriterion(
+            "query_evidence",
+            gate_status,
+            f"Query answers include {risk_flag_count} risk flag(s) from counter-evidence conflicts.",
+            "Resolve or document query risk flags before using answers for physical-action or safety claims.",
+            "query_evidence_audit.md",
+        )
+    if counter_evidence_count:
+        return QualityGateCriterion(
+            "query_evidence",
+            "warn",
+            f"Query answers include {counter_evidence_count} counter-evidence item(s).",
+            "Review negative/disambiguation prompt evidence before sharing scene-answer claims.",
+            "query_evidence_audit.md",
+        )
+    if status == "warn":
+        gate_status = "fail" if policy.require_query_evidence_pass else "warn"
+        return QualityGateCriterion(
+            "query_evidence",
+            gate_status,
+            "Query evidence audit reports warning-level evidence.",
+            "Inspect fallback modes, missing artifacts, and query warnings before sharing.",
+            "query_evidence_audit.md",
+        )
+    if status == "pass":
+        return QualityGateCriterion(
+            "query_evidence",
+            "pass",
+            "Query evidence audit passed with no counter-evidence risk flags.",
+            artifact="query_evidence_audit.md",
+        )
+    return QualityGateCriterion(
+        "query_evidence",
+        "warn",
+        f"Query evidence audit has unrecognized status: {status or 'missing'}.",
+        "Regenerate query_evidence_audit.json.",
+        "query_evidence_audit.json",
+    )
+
+
 def _query_criterion(
     root: Path,
     pipeline: dict[str, Any],
@@ -617,6 +705,26 @@ def _evaluated_query_count(scorecard: dict[str, Any], evaluation: dict[str, Any]
     return _safe_int(scorecard.get("evaluated_query_count")) or _safe_int(
         evaluation.get("num_evaluated_queries")
     )
+
+
+def _query_evidence_counts(audit: dict[str, Any]) -> tuple[int, int]:
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter = _safe_int(totals.get("counter_evidence_count"))
+    risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
 
 
 def _overall_status(criteria: list[QualityGateCriterion]) -> GateStatus:

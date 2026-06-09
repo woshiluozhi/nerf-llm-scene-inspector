@@ -155,6 +155,27 @@ def test_validate_portfolio_pack_warns_partial_viewer_repair(tmp_path: Path) -> 
     assert any("kept 1 query result" in warning for warning in report.warnings)
 
 
+def test_validate_portfolio_pack_warns_query_risk_flags(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "query_evidence_audit.json").write_text(
+        json.dumps(
+            {
+                "status": "warn",
+                "ok": True,
+                "totals": {"counter_evidence_count": 1, "risk_flag_count": 2},
+                "tasks": [{"task": "safe place", "counter_evidence_count": 1, "risk_flag_count": 2}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is True
+    assert any("counter-evidence item" in warning for warning in report.warnings)
+    assert any("risk flag" in warning for warning in report.warnings)
+
+
 def test_validate_portfolio_pack_fails_digest_mismatch(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     target = pack / "run" / "pipeline_summary.json"

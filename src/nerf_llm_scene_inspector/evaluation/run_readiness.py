@@ -49,6 +49,9 @@ class RunReadinessReport:
     readiness_level: ReadinessLevel
     ready_to_start_real_run: bool
     ready_for_external_review: bool
+    query_evidence_status: str = ""
+    query_counter_evidence_count: int = 0
+    query_risk_flag_count: int = 0
     gates: list[ReadinessGate] = field(default_factory=list)
     next_actions: list[str] = field(default_factory=list)
     evidence_notes: list[str] = field(default_factory=list)
@@ -71,6 +74,9 @@ class RunReadinessReport:
             "readiness_level": self.readiness_level,
             "ready_to_start_real_run": self.ready_to_start_real_run,
             "ready_for_external_review": self.ready_for_external_review,
+            "query_evidence_status": self.query_evidence_status,
+            "query_counter_evidence_count": self.query_counter_evidence_count,
+            "query_risk_flag_count": self.query_risk_flag_count,
             "fail_count": self.fail_count,
             "warn_count": self.warn_count,
             "gates": [gate.to_dict() for gate in self.gates],
@@ -101,6 +107,9 @@ class RunReadinessReport:
             f"- Readiness level: `{self.readiness_level}`",
             f"- Ready to start real run: {self.ready_to_start_real_run}",
             f"- Ready for external review: {self.ready_for_external_review}",
+            f"- Query evidence: {self.query_evidence_status or 'unknown'}",
+            f"- Query counter-evidence items: {self.query_counter_evidence_count}",
+            f"- Query risk flags: {self.query_risk_flag_count}",
             f"- Failed gates: {self.fail_count}",
             f"- Warning gates: {self.warn_count}",
             f"- Generated: `{self.generated_at}`",
@@ -136,6 +145,7 @@ def build_run_readiness(
     capture = _read_json(root / "capture_manifest_validation.json")
     scene = _read_json(root / "scene_data_inspection.json")
     language = _read_json(root / "training" / "language_train_summary.json")
+    query_evidence = _read_json(root / "query_evidence_audit.json")
     failure_diagnostics = _read_json(root / "failure_diagnostics.json")
     quality = _read_json(root / "quality_gate.json")
     claim_audit = _read_json(root / "claim_audit.json")
@@ -146,6 +156,7 @@ def build_run_readiness(
     dry_run = bool(pipeline.get("dry_run", result_card.get("dry_run", False)))
     scene_name = str(pipeline.get("scene_name") or root.name)
     backend = str(pipeline.get("backend") or language.get("backend") or "unknown")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence)
     gates = [
         _pipeline_gate(pipeline),
         _evidence_mode_gate(dry_run),
@@ -154,6 +165,7 @@ def build_run_readiness(
         _environment_gate(environment, dry_run=dry_run),
         _scene_gate(scene),
         _language_training_gate(language, dry_run=dry_run),
+        _query_evidence_gate(query_evidence),
         _failure_diagnostics_gate(failure_diagnostics),
         _quality_gate(quality),
         _claim_audit_gate(claim_audit),
@@ -178,6 +190,9 @@ def build_run_readiness(
         readiness_level=readiness_level,
         ready_to_start_real_run=ready_to_start_real_run,
         ready_for_external_review=ready_for_external_review,
+        query_evidence_status=str(query_evidence.get("status") or ""),
+        query_counter_evidence_count=counter_evidence_count,
+        query_risk_flag_count=risk_flag_count,
         gates=gates,
         next_actions=_next_actions(gates, readiness_level),
         evidence_notes=_evidence_notes(dry_run=dry_run, readiness_level=readiness_level),
@@ -385,6 +400,60 @@ def _language_training_gate(language: dict[str, Any], *, dry_run: bool) -> Readi
         "Language-field training summary has no config_path.",
         "Confirm ns-train completed and write the generated config.yml path.",
         "training/language_train_summary.json",
+    )
+
+
+def _query_evidence_gate(audit: dict[str, Any]) -> ReadinessGate:
+    if not audit:
+        return ReadinessGate(
+            "query_evidence",
+            "warn",
+            "Query evidence audit is missing.",
+            "Run scripts/audit_query_evidence.py before external review.",
+            "query_evidence_audit.md",
+        )
+    status = str(audit.get("status") or "")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(audit)
+    if audit.get("ok") is False or status == "fail":
+        return ReadinessGate(
+            "query_evidence",
+            "fail",
+            "Query evidence audit reports failed query artifacts.",
+            "Regenerate missing query reports, overlays, or visual summaries.",
+            "query_evidence_audit.md",
+        )
+    if risk_flag_count:
+        return ReadinessGate(
+            "query_evidence",
+            "fail",
+            f"Query evidence audit reports {risk_flag_count} risk flag(s).",
+            "Resolve or document counter-evidence conflicts before external review.",
+            "query_evidence_audit.md",
+        )
+    if counter_evidence_count:
+        return ReadinessGate(
+            "query_evidence",
+            "warn",
+            f"Query evidence audit reports {counter_evidence_count} counter-evidence item(s).",
+            "Review disambiguation prompts before sharing scene-answer claims.",
+            "query_evidence_audit.md",
+        )
+    if status == "warn":
+        return ReadinessGate(
+            "query_evidence",
+            "warn",
+            "Query evidence audit reports warning-level evidence.",
+            "Inspect fallback modes, missing artifacts, and query warnings.",
+            "query_evidence_audit.md",
+        )
+    if status == "pass":
+        return ReadinessGate("query_evidence", "pass", "Query evidence audit passed.", artifact="query_evidence_audit.md")
+    return ReadinessGate(
+        "query_evidence",
+        "warn",
+        f"Query evidence audit status is {status or 'unknown'}.",
+        "Regenerate query_evidence_audit.json.",
+        "query_evidence_audit.json",
     )
 
 
@@ -608,6 +677,26 @@ def _evidence_notes(*, dry_run: bool, readiness_level: ReadinessLevel) -> list[s
     return notes
 
 
+def _query_evidence_counts(audit: dict[str, Any]) -> tuple[int, int]:
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter = _safe_int(totals.get("counter_evidence_count"))
+    risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
+
+
 def _pack_validation(
     pack_dir: str | Path | None,
     pack_validation_path: str | Path | None,
@@ -647,6 +736,13 @@ def _read_json(path: str | Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _display_run_dir(path: Path) -> str:

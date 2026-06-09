@@ -275,7 +275,8 @@ directory or the final `.zip` archive, including archives whose contents are wra
 top-level `portfolio_pack/` folder.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
-evidence and a validated shareable pack:
+evidence, passing query-evidence audit, no unresolved query risk flags, and a validated
+shareable pack:
 
 ```bash
 python scripts/check_run_quality.py --run-dir results/pipeline_runs/desk_scene --profile portfolio --pack results/portfolio_pack

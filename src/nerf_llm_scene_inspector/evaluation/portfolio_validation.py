@@ -454,9 +454,20 @@ def _check_query_evidence_audit(pack_path: Path, warnings: list[str], errors: li
     if audit.get("ok") is False or status == "fail":
         errors.append("query_evidence_audit.json reports failed query evidence.")
     elif status == "warn":
-        warnings.append("query_evidence_audit.json reports warning-level query evidence; inspect fallback mode and missing artifacts.")
+        warnings.append(
+            "query_evidence_audit.json reports warning-level query evidence; inspect fallback mode, missing artifacts, counter-evidence, and risk flags."
+        )
     elif status and status != "pass":
         warnings.append(f"query_evidence_audit.json has unrecognized status: {status}")
+    counter_evidence_count, risk_flag_count = _query_evidence_counts(audit)
+    if counter_evidence_count:
+        warnings.append(
+            f"query_evidence_audit.json reports {counter_evidence_count} counter-evidence item(s); review disambiguation prompts before sharing."
+        )
+    if risk_flag_count:
+        warnings.append(
+            f"query_evidence_audit.json reports {risk_flag_count} risk flag(s); resolve or document spatial conflicts before sharing actionable scene answers."
+        )
 
 
 def _check_failure_diagnostics(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
@@ -612,6 +623,26 @@ def _scan_path_leaks(pack_path: Path) -> tuple[list[str], list[PathLeak]]:
     return checked_files, leaks
 
 
+def _query_evidence_counts(audit: dict[str, object]) -> tuple[int, int]:
+    totals = audit.get("totals") if isinstance(audit.get("totals"), dict) else {}
+    counter = _safe_int(totals.get("counter_evidence_count"))
+    risk = _safe_int(totals.get("risk_flag_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    if not counter:
+        counter = sum(
+            _safe_int(task.get("counter_evidence_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    if not risk:
+        risk = sum(
+            _safe_int(task.get("risk_flag_count"))
+            for task in tasks
+            if isinstance(task, dict)
+        )
+    return counter, risk
+
+
 def _read_json(path: Path, errors: list[str]) -> Any:
     if not path.exists():
         return None
@@ -620,6 +651,13 @@ def _read_json(path: Path, errors: list[str]) -> Any:
     except json.JSONDecodeError as exc:
         errors.append(f"Could not parse JSON {path.name}: {exc}")
         return None
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _is_text_file(path: Path) -> bool:

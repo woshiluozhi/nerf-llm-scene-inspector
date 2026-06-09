@@ -90,7 +90,7 @@ class ProjectPortfolioSite:
                 ),
                 _capability(
                     "Query evidence audit",
-                    "Per-query checks for overlays, localization evidence, fallback mode, confidence, and missing artifacts.",
+                    "Per-query checks for overlays, localization evidence, fallback mode, confidence, counter-evidence, risk flags, and missing artifacts.",
                 ),
                 _capability("Scene relations", "Heuristic entity-relation reports from query boxes or 3D points with explicit evidence tags."),
                 _capability(
