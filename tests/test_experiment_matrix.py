@@ -65,13 +65,142 @@ def test_experiment_matrix_collects_existing_runs(tmp_path: Path) -> None:
     assert rows[0]["experiment_name"] == "lerf_lite"
     assert rows[0]["candidate_status"] == "portfolio_candidate"
     assert rows[0]["failure_diagnostics_status"] == "clear"
+    assert rows[0]["query_evidence_status"] == "pass"
+    assert rows[0]["query_risk_flag_count"] == "0"
     assert rows[0]["relation_edge_count"] == "4"
     assert rows[1]["candidate_status"] == "blocked"
     assert "failure diagnostics blockers=1" in rows[1]["blocking_reasons"]
     assert "run readiness is blocked" in rows[1]["blocking_reasons"]
     markdown = (output / "experiment_matrix_report.md").read_text(encoding="utf-8")
     assert "## Selection Summary" in markdown
+    assert "Query Evidence" in markdown
     assert "Recommended portfolio run" in markdown
+
+
+def test_experiment_matrix_blocks_unresolved_query_risk_flags(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: query_risk_matrix\n"
+        "experiments:\n"
+        "  - name: risky_real_run\n"
+        "    scene_name: risky_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "risky_scene",
+        scene_name="risky_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        query_evidence_status="warn",
+        query_counter_evidence_count=1,
+        query_risk_flag_count=2,
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    assert report.portfolio_candidate_count == 0
+    assert report.blocked_experiment_count == 1
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.portfolio_score == 0.0
+    assert entry.query_evidence_status == "warn"
+    assert entry.query_counter_evidence_count == 1
+    assert entry.query_risk_flag_count == 2
+    assert "query evidence risk flags=2" in entry.blocking_reasons
+
+
+def test_experiment_matrix_demotes_counter_evidence_without_risk_flags(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: counter_evidence_matrix\n"
+        "experiments:\n"
+        "  - name: counter_real_run\n"
+        "    scene_name: counter_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    _write_run(
+        output / "pipeline_runs" / "counter_scene",
+        scene_name="counter_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        query_evidence_status="warn",
+        query_counter_evidence_count=1,
+        query_risk_flag_count=0,
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    assert report.portfolio_candidate_count == 0
+    assert report.blocked_experiment_count == 0
+    entry = report.entries[0]
+    assert entry.candidate_status == "real_run_review_ready"
+    assert entry.query_counter_evidence_count == 1
+    assert "query evidence counter-evidence=1" in entry.blocking_reasons
+
+
+def test_experiment_matrix_prefers_fresh_query_audit_over_stale_submission(tmp_path: Path) -> None:
+    output = tmp_path / "matrix"
+    config = tmp_path / "matrix.yaml"
+    config.write_text(
+        "matrix_name: stale_submission_matrix\n"
+        "experiments:\n"
+        "  - name: stale_submission\n"
+        "    scene_name: stale_scene\n"
+        "    backend: lerf\n",
+        encoding="utf-8",
+    )
+    run_dir = output / "pipeline_runs" / "stale_scene"
+    _write_run(
+        run_dir,
+        scene_name="stale_scene",
+        backend="lerf",
+        score=95,
+        dry_run=False,
+        evidence_level="portfolio_ready_real_run",
+        diagnostics_status="clear",
+        readiness_level="portfolio_ready",
+        ready_for_external_review=True,
+        submission_readiness="portfolio_ready",
+        quality_status="pass",
+        query_evidence_status="pass",
+        query_counter_evidence_count=0,
+        query_risk_flag_count=0,
+    )
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "warn",
+            "ok": True,
+            "totals": {"counter_evidence_count": 0, "risk_flag_count": 0},
+            "tasks": [{"task": "safe place", "counter_evidence_count": 0, "risk_flag_count": 1}],
+        },
+    )
+
+    report = run_experiment_matrix(config_path=config, output_dir=output, collect_only=True)
+
+    entry = report.entries[0]
+    assert entry.candidate_status == "blocked"
+    assert entry.query_evidence_status == "warn"
+    assert entry.query_risk_flag_count == 1
+    assert "query evidence risk flags=1" in entry.blocking_reasons
 
 
 def test_run_experiment_matrix_cli_dry_run(tmp_path: Path) -> None:
@@ -139,6 +268,10 @@ def _write_run(
     ready_for_external_review: bool = False,
     submission_readiness: str = "shareable_smoke_demo",
     quality_status: str = "warn",
+    result_status: str | None = None,
+    query_evidence_status: str = "pass",
+    query_counter_evidence_count: int = 0,
+    query_risk_flag_count: int = 0,
 ) -> None:
     _write_json(
         run_dir / "pipeline_summary.json",
@@ -174,10 +307,34 @@ def _write_run(
         run_dir / "submission_packet" / "submission_packet.json",
         {
             "readiness_level": submission_readiness,
+            "query_evidence_status": query_evidence_status,
+            "query_counter_evidence_count": query_counter_evidence_count,
+            "query_risk_flag_count": query_risk_flag_count,
             "share_decision": "Ready for portfolio sharing with the recorded evidence and limitations.",
         },
     )
-    _write_json(run_dir / "run_result_card.json", {"result_status": "portfolio_ready" if not dry_run else "shareable_smoke_demo"})
+    _write_json(
+        run_dir / "run_result_card.json",
+        {"result_status": result_status or ("portfolio_ready" if not dry_run else "shareable_smoke_demo")},
+    )
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": query_evidence_status,
+            "ok": query_evidence_status != "fail",
+            "totals": {
+                "counter_evidence_count": query_counter_evidence_count,
+                "risk_flag_count": query_risk_flag_count,
+            },
+            "tasks": [
+                {
+                    "task": "mug",
+                    "counter_evidence_count": query_counter_evidence_count,
+                    "risk_flag_count": query_risk_flag_count,
+                }
+            ],
+        },
+    )
     _write_json(
         run_dir / "evaluation" / "eval_summary.json",
         {
