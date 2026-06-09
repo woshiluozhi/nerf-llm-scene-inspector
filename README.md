@@ -371,6 +371,10 @@ streamlit run src/nerf_llm_scene_inspector/visualization/dashboard.py
 python scripts/evaluate_queries.py --queries examples/queries_demo.yaml --annotations results/annotations_merged.json --results results/query_outputs
 ```
 
+In real mode, both baseline `nerfacto` training and language-field training first verify
+that `ns-train -h` lists the requested method as an exact token, then store the method-check
+and training command logs under the run's `logs/` directory.
+
 The real-run preflight also inspects raw capture quality before you spend GPU time:
 image directories are checked for count, decode failures, minimum resolution, and consistent
 dimensions; videos are checked for non-empty input and, when `ffprobe` is available, duration,

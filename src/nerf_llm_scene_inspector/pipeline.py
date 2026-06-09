@@ -398,20 +398,27 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 max_num_iterations=config.max_num_iterations,
                 dry_run=config.dry_run,
                 command_log_path=logs_dir / "train_baseline_nerf_command.json",
+                method_check_log_path=logs_dir / "train_baseline_nerf_method_check.json",
             )
             baseline_summary_path = _write_step_json(
                 training_dir / "baseline_train_summary.json",
                 baseline_summary,
+            )
+            baseline_outputs = {
+                "train_summary": str(baseline_summary_path),
+                "command_log": str(logs_dir / "train_baseline_nerf_command.json"),
+            }
+            _add_if_exists(
+                baseline_outputs,
+                "method_check_log",
+                logs_dir / "train_baseline_nerf_method_check.json",
             )
             steps.append(
                 PipelineStep(
                     "train_baseline_nerf",
                     "success",
                     summary=_small_dict(baseline_summary),
-                    outputs={
-                        "train_summary": str(baseline_summary_path),
-                        "command_log": str(logs_dir / "train_baseline_nerf_command.json"),
-                    },
+                    outputs=baseline_outputs,
                 )
             )
 
@@ -434,15 +441,21 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                 training_dir / "language_train_summary.json",
                 language_summary,
             )
+            language_outputs = {
+                "train_summary": str(language_summary_path),
+                "command_log": str(logs_dir / "train_language_field_command.json"),
+            }
+            _add_if_exists(
+                language_outputs,
+                "method_check_log",
+                logs_dir / "train_language_field_method_check.json",
+            )
             steps.append(
                 PipelineStep(
                     "train_language_field",
                     "success",
                     summary=_small_dict(language_summary),
-                    outputs={
-                        "train_summary": str(language_summary_path),
-                        "command_log": str(logs_dir / "train_language_field_command.json"),
-                    },
+                    outputs=language_outputs,
                 )
             )
 
@@ -1175,6 +1188,11 @@ def _write_step_json(path: Path, payload: dict[str, object]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
+
+
+def _add_if_exists(outputs: dict[str, str], name: str, path: Path) -> None:
+    if path.exists():
+        outputs[name] = str(path)
 
 
 def _reset_run_subdir(path: Path, run_dir: Path) -> None:

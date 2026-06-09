@@ -29,6 +29,31 @@ def test_validate_ns_train_method_uses_exact_matching(monkeypatch) -> None:
         training.validate_ns_train_method("lerf", backend="lerf")
 
 
+def test_train_baseline_nerf_validates_method_before_real_training(monkeypatch, tmp_path: Path) -> None:
+    calls: list[tuple[str, str, str]] = []
+
+    def fake_validate(method, *, backend, log_path=None):  # noqa: ANN001, ANN202
+        calls.append((str(method), str(backend), str(log_path)))
+
+    def fake_run_train(command, output_path, *, dry_run, config_name, command_log_path=None):  # noqa: ANN001, ANN202
+        config = Path(output_path) / "config.yml"
+        config.write_text(f"method_name: {config_name}\n", encoding="utf-8")
+        return CommandResult(command=[str(item) for item in command], returncode=0)
+
+    monkeypatch.setattr(training, "validate_ns_train_method", fake_validate)
+    monkeypatch.setattr(training, "_run_train", fake_run_train)
+
+    summary = training.train_baseline_nerf(
+        tmp_path / "data",
+        "nerfacto",
+        tmp_path / "baseline",
+        method_check_log_path=tmp_path / "logs" / "baseline_method_check.json",
+    )
+
+    assert summary["success"] is True
+    assert calls == [("nerfacto", "nerfstudio", str(tmp_path / "logs" / "baseline_method_check.json"))]
+
+
 def test_train_language_field_cli_opennerf_variant_dry_run(tmp_path: Path) -> None:
     output = tmp_path / "language_opennerf"
 

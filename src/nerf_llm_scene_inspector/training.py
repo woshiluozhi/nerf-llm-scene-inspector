@@ -31,11 +31,16 @@ def train_baseline_nerf(
     max_num_iterations: int | None = None,
     dry_run: bool = False,
     command_log_path: str | Path | None = None,
+    method_check_log_path: str | Path | None = None,
 ) -> dict[str, object]:
     """Train a baseline Nerfstudio model such as nerfacto."""
 
     output_path = Path(output)
     output_path.mkdir(parents=True, exist_ok=True)
+
+    if not dry_run:
+        validate_ns_train_method(method, backend="nerfstudio", log_path=method_check_log_path)
+
     command = ["ns-train", method, "--data", str(data)]
     if max_num_iterations is not None:
         command.extend(["--max-num-iterations", str(max_num_iterations)])
@@ -121,15 +126,29 @@ def validate_ns_train_method(
     """Check that ns-train recognizes the requested method."""
 
     if shutil.which("ns-train") is None:
-        hint = LERF_INSTALL_INSTRUCTIONS if backend == "lerf" else OPENNERF_INSTALL_INSTRUCTIONS
-        raise RuntimeError(f"ns-train was not found on PATH.\n\n{NERFSTUDIO_TRAIN_HINT}\n\n{hint}")
+        raise RuntimeError(f"ns-train was not found on PATH.\n\n{_combined_install_hint(backend)}")
     result = run_command(["ns-train", "-h"], check=False, log_path=log_path)
     if not result.ok:
         raise RuntimeError(f"Could not inspect ns-train methods:\n{result.stderr}")
     help_text = f"{result.stdout}\n{result.stderr}"
     if not ns_train_method_listed(method, help_text):
-        hint = LERF_INSTALL_INSTRUCTIONS if backend == "lerf" else OPENNERF_INSTALL_INSTRUCTIONS
+        hint = _install_hint_for_backend(backend)
         raise RuntimeError(f"ns-train does not list method '{method}'.\n\n{hint}")
+
+
+def _install_hint_for_backend(backend: str) -> str:
+    if backend == "lerf":
+        return LERF_INSTALL_INSTRUCTIONS
+    if backend == "opennerf":
+        return OPENNERF_INSTALL_INSTRUCTIONS
+    return NERFSTUDIO_TRAIN_HINT
+
+
+def _combined_install_hint(backend: str) -> str:
+    hint = _install_hint_for_backend(backend)
+    if hint == NERFSTUDIO_TRAIN_HINT:
+        return NERFSTUDIO_TRAIN_HINT
+    return f"{NERFSTUDIO_TRAIN_HINT}\n\n{hint}"
 
 
 def _language_method_name(backend: str, variant: str) -> str:

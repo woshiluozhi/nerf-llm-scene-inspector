@@ -56,7 +56,7 @@ python scripts/run_scene_pipeline.py \
 - `../run_index.md`: compact comparison table across pipeline runs in the same root.
 - `../run_comparison.md`: ranked comparison across repeated captures/training attempts, with dry-runs separated from real portfolio candidates.
 - `environment_report.json`: Python, platform, CUDA, Nerfstudio, LERF, COLMAP, and FFmpeg checks.
-- `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps.
+- `logs/*.json`: full command, return code, stdout, stderr, and dry-run flag for subprocess-backed steps, including exact `ns-train -h` method checks before real baseline and language training.
 - `failure_diagnostics.md`: classified CUDA, Nerfstudio/LERF, COLMAP/FFmpeg, missing-config, and viewer-fallback repair actions inferred from saved logs and run artifacts.
 - `scene_data_inspection.md`: frame count, missing images, pose validity, pose coverage, and capture recommendations.
 - `training/baseline_train_summary.json`: baseline Nerfstudio command, status, final config, and viewer command.
