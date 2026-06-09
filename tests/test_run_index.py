@@ -28,6 +28,31 @@ def test_index_pipeline_runs_summarizes_runs(tmp_path: Path) -> None:
     assert index.entries[0].submission_readiness_level == "shareable_smoke_demo"
     assert index.entries[0].query_evidence_status == "pass"
     assert index.entries[0].query_risk_flag_count == 0
+    assert index.entries[0].audit_blocker_count == 0
+    assert index.entries[0].capture_manifest_status == "ready"
+    assert index.entries[0].capture_manifest_fail_count == 0
+
+
+def test_index_pipeline_runs_exposes_audit_and_capture_counts(tmp_path: Path) -> None:
+    root = tmp_path / "pipeline_runs"
+    _write_run(
+        root / "stale_scene",
+        scene_name="stale_scene",
+        audit_status="ready",
+        score=96,
+        audit_blockers=1,
+        capture_fail_count=1,
+    )
+
+    index = index_pipeline_runs(root)
+
+    entry = index.entries[0]
+    assert index.ready_runs == 0
+    assert entry.audit_status == "ready"
+    assert entry.audit_blocker_count == 1
+    assert entry.blocker_count == 1
+    assert entry.capture_manifest_status == "ready"
+    assert entry.capture_manifest_fail_count == 1
 
 
 def test_index_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -59,9 +84,20 @@ def test_index_runs_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "# Pipeline Run Index" in markdown_text
     assert "Result" in markdown_text
     assert "Submission" in markdown_text
+    assert "Audit Blockers" in markdown_text
+    assert "Capture Fails" in markdown_text
 
 
-def _write_run(run_dir: Path, *, scene_name: str, audit_status: str, score: int) -> None:
+def _write_run(
+    run_dir: Path,
+    *,
+    scene_name: str,
+    audit_status: str,
+    score: int,
+    audit_blockers: int = 0,
+    capture_status: str = "ready",
+    capture_fail_count: int = 0,
+) -> None:
     _write_json(
         run_dir / "pipeline_summary.json",
         {
@@ -78,9 +114,13 @@ def _write_run(run_dir: Path, *, scene_name: str, audit_status: str, score: int)
         {
             "status": audit_status,
             "score": score,
-            "blocker_count": 0,
+            "blocker_count": audit_blockers,
             "warning_count": 0 if audit_status == "ready" else 1,
         },
+    )
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": capture_status, "fail_count": capture_fail_count},
     )
     _write_json(run_dir / "scene_data_inspection.json", {"quality_score": 0.9, "pose_coverage_score": 1.0})
     _write_json(
