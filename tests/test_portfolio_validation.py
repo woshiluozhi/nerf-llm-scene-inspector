@@ -85,6 +85,20 @@ def test_validate_portfolio_pack_fails_claim_audit_failure(tmp_path: Path) -> No
     assert "claim_audit.json reports unsupported external-facing claims." in report.errors
 
 
+def test_validate_portfolio_pack_warns_claim_audit_warning(tmp_path: Path) -> None:
+    pack = _write_complete_pack(tmp_path)
+    (pack / "run" / "claim_audit.json").write_text(
+        json.dumps({"status": "warn", "ok": False, "warn_count": 1, "fail_count": 0}),
+        encoding="utf-8",
+    )
+
+    report = validate_portfolio_pack(pack)
+
+    assert report.ok is True
+    assert "claim_audit.json reports unsupported external-facing claims." not in report.errors
+    assert any("claim_audit.json status is warn" in warning for warning in report.warnings)
+
+
 def test_validate_portfolio_pack_fails_blocked_result_card(tmp_path: Path) -> None:
     pack = _write_complete_pack(tmp_path)
     (pack / "run" / "run_result_card.json").write_text(

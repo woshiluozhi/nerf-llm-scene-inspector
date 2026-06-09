@@ -212,6 +212,9 @@ python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scen
 Use `export_portfolio_pack.py` directly only when debugging packaging internals. For normal
 run-scoped sharing, the finalizer is preferred because it refreshes evaluation, visual QA,
 reports, scorecards, submission materials, pack validation, and the final zip.
+Run `audit_claims.py` with `--pack results/portfolio_pack` before outreach when you have an
+exported pack; the claim audit now reads `portfolio_pack_validation.json` and fails if the
+pack is not clean.
 
 Refresh the multi-run index after manual edits or copied-in run folders:
 

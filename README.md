@@ -187,7 +187,7 @@ python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_
 python scripts/create_submission_packet.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_real_run_plan.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_run_readiness.py --run-dir results/pipeline_runs/desk_scene
-python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene
+python scripts/audit_claims.py --run-dir results/pipeline_runs/desk_scene --pack results/portfolio_pack
 python scripts/generate_project_site.py --run-index results/pipeline_runs/run_index.json
 ```
 

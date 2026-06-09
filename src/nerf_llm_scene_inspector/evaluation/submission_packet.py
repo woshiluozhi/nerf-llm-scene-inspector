@@ -492,10 +492,10 @@ def _claim_audit_item(claim_audit: dict[str, Any]) -> SubmissionChecklistItem:
             "claim_audit.json",
         )
     status = str(claim_audit.get("status") or "")
-    if status == "fail" or claim_audit.get("ok") is False:
+    if status == "fail" or (claim_audit.get("ok") is False and status not in {"warn", "pass"}):
         checklist_status: ChecklistStatus = "fail"
         action = "Fix unsupported external-facing claims before sharing."
-    elif status == "warn":
+    elif status == "warn" or claim_audit.get("ok") is False:
         checklist_status = "warn"
         action = "Review claim_audit.md warnings before professor outreach."
     else:

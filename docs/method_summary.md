@@ -67,7 +67,7 @@ Each run can also produce `real_run_plan.md` and `real_run_plan.json`, a concret
 
 ## Claim Audits
 
-Before sharing a run externally, `claim_audit.md` scans README/docs, run reports, and optional portfolio packs for unsupported wording such as unqualified state-of-the-art claims, novel-architecture claims, benchmark superiority, production guarantees, or implemented robotics policy claims. The audit also checks that dry-run, upstream-attribution, no-new-architecture, no-SOTA, and GPU-requirement disclaimers are present.
+Before sharing a run externally, `claim_audit.md` scans README/docs, run reports, and optional portfolio packs for unsupported wording such as unqualified state-of-the-art claims, novel-architecture claims, benchmark superiority, production guarantees, or implemented robotics policy claims. The audit also checks that dry-run, upstream-attribution, no-new-architecture, no-SOTA, and GPU-requirement disclaimers are present. When a portfolio pack is provided, the audit reads `portfolio_pack_validation.json` and fails if the pack validation is not clean, so a broken or query-risk-blocked pack cannot pass professor-outreach claim review merely because the validation file exists.
 
 ## Reproduction Evidence
 

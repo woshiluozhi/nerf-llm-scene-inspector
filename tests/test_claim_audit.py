@@ -47,6 +47,51 @@ def test_write_claim_audit_outputs_json_and_markdown(tmp_path: Path) -> None:
     assert "# Claim Audit" in (run_dir / "claim_audit.md").read_text(encoding="utf-8")
 
 
+def test_claim_audit_passes_clean_pack_validation(tmp_path: Path) -> None:
+    _write_project_docs(tmp_path)
+    run_dir = _write_run(tmp_path)
+    pack_dir = _write_pack_validation(tmp_path, ok=True)
+
+    report = audit_claims(root=tmp_path, run_dir=run_dir, pack_dir=pack_dir)
+
+    assert report.status == "pass"
+    assert any(
+        check.name == "pack_validation" and check.status == "pass"
+        for check in report.checks
+    )
+
+
+def test_claim_audit_warns_on_pack_validation_warnings(tmp_path: Path) -> None:
+    _write_project_docs(tmp_path)
+    run_dir = _write_run(tmp_path)
+    pack_dir = _write_pack_validation(tmp_path, ok=True, warnings=["smoke evidence only"])
+
+    report = audit_claims(root=tmp_path, run_dir=run_dir, pack_dir=pack_dir)
+
+    assert report.status == "warn"
+    pack_check = next(check for check in report.checks if check.name == "pack_validation")
+    assert pack_check.status == "warn"
+    assert "warning" in pack_check.detail
+
+
+def test_claim_audit_fails_on_invalid_pack_validation(tmp_path: Path) -> None:
+    _write_project_docs(tmp_path)
+    run_dir = _write_run(tmp_path)
+    pack_dir = _write_pack_validation(
+        tmp_path,
+        ok=False,
+        errors=["query_evidence_audit.json reports 1 risk flag"],
+    )
+
+    report = audit_claims(root=tmp_path, run_dir=run_dir, pack_dir=pack_dir)
+
+    assert report.status == "fail"
+    assert report.ok is False
+    pack_check = next(check for check in report.checks if check.name == "pack_validation")
+    assert pack_check.status == "fail"
+    assert "ok=False" in pack_check.detail
+
+
 def test_audit_claims_cli(tmp_path: Path) -> None:
     _write_project_docs(tmp_path)
     run_dir = _write_run(tmp_path)
@@ -120,6 +165,28 @@ def _write_run(root: Path) -> Path:
         encoding="utf-8",
     )
     return run_dir
+
+
+def _write_pack_validation(
+    root: Path,
+    *,
+    ok: bool,
+    errors: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> Path:
+    pack_dir = root / "results" / "portfolio_pack"
+    _write_json(
+        pack_dir / "portfolio_pack_validation.json",
+        {
+            "ok": ok,
+            "errors": errors or [],
+            "warnings": warnings or [],
+            "missing_files": [],
+            "path_leaks": [],
+            "artifact_issues": [],
+        },
+    )
+    return pack_dir
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

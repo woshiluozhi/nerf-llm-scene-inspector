@@ -531,9 +531,9 @@ def _check_claim_audit(pack_path: Path, warnings: list[str], errors: list[str]) 
     if not isinstance(audit, dict):
         return
     status = str(audit.get("status") or "")
-    if audit.get("ok") is False or status == "fail":
+    if status == "fail" or (audit.get("ok") is False and status not in {"warn", "pass"}):
         errors.append("claim_audit.json reports unsupported external-facing claims.")
-    elif status == "warn":
+    elif status == "warn" or audit.get("ok") is False:
         warnings.append("claim_audit.json status is warn; inspect claim_audit.md before sharing.")
     elif status and status != "pass":
         warnings.append(f"claim_audit.json has unrecognized status: {status}")

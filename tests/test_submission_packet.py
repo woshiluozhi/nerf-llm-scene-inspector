@@ -209,6 +209,18 @@ def test_submission_packet_blocks_failed_claim_audit(tmp_path: Path) -> None:
     assert any(item.name == "claim_audit" and item.status == "fail" for item in packet.checklist)
 
 
+def test_submission_packet_warns_claim_audit_warning(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path / "run", dry_run=True)
+    _write_json(run_dir / "claim_audit.json", {"status": "warn", "ok": False, "warn_count": 1, "fail_count": 0})
+
+    packet = build_submission_packet(run_dir)
+
+    assert packet.readiness_level == "needs_pack_validation"
+    assert "claim_audit" not in packet.readiness_summary["failed_checks"]
+    assert "claim_audit" in packet.readiness_summary["warning_checks"]
+    assert any(item.name == "claim_audit" and item.status == "warn" for item in packet.checklist)
+
+
 def test_submission_packet_blocks_query_risk_flags(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path / "run", dry_run=False)
     validation = tmp_path / "portfolio_pack_validation.json"

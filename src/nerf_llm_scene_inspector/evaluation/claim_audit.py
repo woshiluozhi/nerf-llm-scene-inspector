@@ -399,17 +399,7 @@ def _required_checks(
     if run_dir:
         checks.extend(_run_checks(run_dir, dry_run=dry_run))
     if pack_dir:
-        checks.append(
-            ClaimCheck(
-                "pack_validation_present",
-                "pass" if (pack_dir / "portfolio_pack_validation.json").exists() else "warn",
-                "portfolio_pack_validation.json is present."
-                if (pack_dir / "portfolio_pack_validation.json").exists()
-                else "Portfolio pack validation was not found in the pack directory.",
-                "portfolio_pack_validation.json",
-                "Run validate_portfolio_pack.py before external sharing.",
-            )
-        )
+        checks.append(_pack_validation_check(pack_dir))
     return checks
 
 
@@ -442,6 +432,59 @@ def _run_checks(run_dir: Path, *, dry_run: bool | None) -> list[ClaimCheck]:
             )
         )
     return checks
+
+
+def _pack_validation_check(pack_dir: Path) -> ClaimCheck:
+    validation_path = pack_dir / "portfolio_pack_validation.json"
+    if not validation_path.exists():
+        return ClaimCheck(
+            "pack_validation",
+            "warn",
+            "Portfolio pack validation was not found in the pack directory.",
+            "portfolio_pack_validation.json",
+            "Run validate_portfolio_pack.py before external sharing.",
+        )
+    validation = _read_json(validation_path)
+    if not validation:
+        return ClaimCheck(
+            "pack_validation",
+            "fail",
+            "portfolio_pack_validation.json could not be read as a validation report.",
+            "portfolio_pack_validation.json",
+            "Regenerate the portfolio pack validation report.",
+        )
+    errors = _count_items(validation.get("errors"))
+    missing = _count_items(validation.get("missing_files"))
+    path_leaks = _count_items(validation.get("path_leaks"))
+    artifact_issues = _count_items(validation.get("artifact_issues"))
+    warnings = _count_items(validation.get("warnings"))
+    if validation.get("ok") is not True or errors or missing or path_leaks or artifact_issues:
+        return ClaimCheck(
+            "pack_validation",
+            "fail",
+            (
+                f"portfolio_pack_validation.json is not clean: ok={validation.get('ok')}, "
+                f"errors={errors}, missing_files={missing}, path_leaks={path_leaks}, "
+                f"artifact_issues={artifact_issues}."
+            ),
+            "portfolio_pack_validation.json",
+            "Fix pack validation errors before professor outreach or CV sharing.",
+        )
+    if warnings:
+        return ClaimCheck(
+            "pack_validation",
+            "warn",
+            f"portfolio_pack_validation.json is ok but has {warnings} warning(s).",
+            "portfolio_pack_validation.json",
+            "Review pack validation warnings before external sharing.",
+        )
+    return ClaimCheck(
+        "pack_validation",
+        "pass",
+        "portfolio_pack_validation.json reports ok=true with no blocking issues.",
+        "portfolio_pack_validation.json",
+        "",
+    )
 
 
 def _text_check(
@@ -521,6 +564,12 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _count_items(value: object) -> int:
+    if isinstance(value, list):
+        return len(value)
+    return 0
 
 
 def _dedupe_paths(paths: list[Path]) -> list[Path]:
