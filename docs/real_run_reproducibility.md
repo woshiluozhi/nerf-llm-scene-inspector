@@ -108,9 +108,10 @@ counter-evidence is retained as a warning for calibrated review. The same inform
 `capture_manifest_*` and `query_*` fields for automation. Pack
 references in this packet use share-safe artifact names such as `portfolio_pack.zip` instead
 of machine-specific absolute paths.
-`run_result_card.md` consumes the same submission and query-evidence fields, so it will
-mark a run as blocked when query evidence fails or unresolved risk flags remain, even if
-the evidence scorecard is otherwise strong.
+`run_result_card.md` consumes the same submission and query-evidence fields and directly
+checks local capture validation, so it will mark a run as blocked when query evidence
+fails, unresolved risk flags remain, or real-run capture validation is missing/failed,
+even if the evidence scorecard is otherwise strong.
 Blocked run-audit findings and blocker-level failure diagnostics are also treated as
 external-sharing blockers in both the submission packet and the result card; refresh those
 artifacts after any manual edits or copied run folders.

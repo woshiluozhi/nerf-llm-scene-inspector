@@ -275,8 +275,9 @@ Unresolved query risk flags block the packet; counter-evidence without overlap i
 warning so the run can still be reviewed with calibrated language.
 For real runs, missing or failed capture validation is also a packet blocker, including
 nonzero `capture_manifest_validation.fail_count` from stale-looking ready artifacts.
-The run result card consumes the same packet/audit fields, so a high evidence score alone
-cannot promote a run to `portfolio_ready` while submission or query-evidence gates are blocked.
+The run result card consumes the same packet/audit fields and independently checks local
+capture validation, so a high evidence score alone cannot promote a run to
+`portfolio_ready` while submission, query-evidence, or capture gates are blocked.
 The generated `portfolio_page.html` surfaces the same result status and query-risk counts
 near the top of the page, so a reviewer sees blocked evidence without opening raw JSON.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU

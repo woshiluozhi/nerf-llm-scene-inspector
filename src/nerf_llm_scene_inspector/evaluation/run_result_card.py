@@ -127,6 +127,7 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
     diagnostics = _read_json(root / "failure_diagnostics.json")
     claim_audit = _read_json(root / "claim_audit.json")
     submission = _read_json(root / "submission_packet" / "submission_packet.json")
+    capture = _read_json(root / "capture_manifest_validation.json")
     query_evidence = _read_json(root / "query_evidence_audit.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
     annotations = _read_json(root / "evaluation" / "annotation_validation.json")
@@ -139,11 +140,16 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
     dry_run = bool(summary.get("dry_run", scorecard.get("dry_run", False)))
     query_counter_evidence_count, query_risk_flag_count = _query_evidence_counts(query_evidence, submission)
     query_evidence_status = str(submission.get("query_evidence_status") or query_evidence.get("status") or "")
+    capture_status = _capture_manifest_status(capture, submission)
+    capture_fail_count = _capture_manifest_fail_count(capture, submission)
     status = _result_status(
         dry_run=dry_run,
         success=summary.get("success") is True,
         evidence_level=str(scorecard.get("evidence_level") or ""),
         quality_status=str(quality.get("status") or ""),
+        capture_present=bool(capture),
+        capture_status=capture_status,
+        capture_fail_count=capture_fail_count,
         audit_status=str(audit.get("status") or ""),
         audit_blocker_count=_safe_int(audit.get("blocker_count")),
         diagnostics_status=str(diagnostics.get("status") or ""),
@@ -163,6 +169,7 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
         diagnostics,
         claim_audit,
         submission,
+        capture,
         query_evidence,
         annotations,
         query_counter_evidence_count=query_counter_evidence_count,
@@ -178,7 +185,18 @@ def build_run_result_card(run_dir: str | Path) -> RunResultCard:
     )
     next_actions = _next_actions(submission, recommendations, dry_run)
     do_not_claim = _do_not_claim(submission, dry_run, query_risk_flag_count=query_risk_flag_count)
-    checks = _checks(summary, scorecard, quality, audit, diagnostics, claim_audit, submission, query_evidence, annotations)
+    checks = _checks(
+        summary,
+        scorecard,
+        quality,
+        audit,
+        diagnostics,
+        claim_audit,
+        submission,
+        capture,
+        query_evidence,
+        annotations,
+    )
     return RunResultCard(
         scene_name=scene_name,
         backend=backend,
@@ -220,6 +238,9 @@ def _result_status(
     success: bool,
     evidence_level: str,
     quality_status: str,
+    capture_present: bool,
+    capture_status: str,
+    capture_fail_count: int,
     audit_status: str,
     audit_blocker_count: int,
     diagnostics_status: str,
@@ -233,6 +254,9 @@ def _result_status(
     if (
         not success
         or quality_status == "fail"
+        or (not dry_run and not capture_present)
+        or capture_status == "blocked"
+        or capture_fail_count
         or audit_status == "blocked"
         or audit_blocker_count
         or diagnostics_status == "blocked"
@@ -313,6 +337,7 @@ def _evidence_snapshot(
     diagnostics: dict[str, Any],
     claim_audit: dict[str, Any],
     submission: dict[str, Any],
+    capture: dict[str, Any],
     query_evidence: dict[str, Any],
     annotations: dict[str, Any],
     *,
@@ -326,6 +351,8 @@ def _evidence_snapshot(
         "quality_gate": quality.get("status"),
         "run_audit": audit.get("status"),
         "failure_diagnostics": diagnostics.get("status"),
+        "capture_manifest": str(capture.get("status") or "missing"),
+        "capture_manifest_fail_count": _capture_manifest_fail_count(capture, submission),
         "claim_audit": claim_audit.get("status"),
         "submission_readiness": submission.get("readiness_level"),
         "query_evidence": submission.get("query_evidence_status") or query_evidence.get("status"),
@@ -454,6 +481,7 @@ def _checks(
     diagnostics: dict[str, Any],
     claim_audit: dict[str, Any],
     submission: dict[str, Any],
+    capture: dict[str, Any],
     query_evidence: dict[str, Any],
     annotations: dict[str, Any],
 ) -> list[ResultCardCheck]:
@@ -489,14 +517,15 @@ def _checks(
         ResultCardCheck(
             "failure_diagnostics",
             "pass"
-            if diagnostics.get("status") == "clear"
+            if diagnostics.get("status") == "clear" and not _safe_int(diagnostics.get("blocker_count"))
             else "warn"
-            if diagnostics.get("status") == "needs_attention"
+            if diagnostics.get("status") == "needs_attention" and not _safe_int(diagnostics.get("blocker_count"))
             else "fail",
             f"status={diagnostics.get('status')}, blockers={diagnostics.get('blocker_count', 0)}, warnings={diagnostics.get('warning_count', 0)}",
             "Open failure_diagnostics.md before sharing or rerunning." if diagnostics.get("status") != "clear" else "",
             "failure_diagnostics.md",
         ),
+        _capture_manifest_check(capture, submission, dry_run=bool(summary.get("dry_run", scorecard.get("dry_run", False)))),
         ResultCardCheck(
             "claim_audit",
             "pass" if claim_audit.get("status") == "pass" else "warn" if claim_audit.get("status") == "warn" else "fail",
@@ -566,6 +595,50 @@ def _query_evidence_check(query_evidence: dict[str, Any], submission: dict[str, 
     )
 
 
+def _capture_manifest_check(
+    capture: dict[str, Any],
+    submission: dict[str, Any],
+    *,
+    dry_run: bool,
+) -> ResultCardCheck:
+    status = _capture_manifest_status(capture, submission)
+    fail_count = _capture_manifest_fail_count(capture, submission)
+    warn_count = _safe_int(capture.get("warn_count"))
+    if not capture:
+        check_status = "warn" if dry_run else "fail"
+        return ResultCardCheck(
+            "capture_manifest",
+            check_status,
+            "capture_manifest_validation.json missing",
+            "Create and validate capture metadata before sharing real-scene evidence.",
+            "capture_manifest_validation.md",
+        )
+    if status == "blocked" or fail_count:
+        return ResultCardCheck(
+            "capture_manifest",
+            "fail",
+            f"status={status or 'unknown'}, failures={fail_count}, warnings={warn_count}",
+            "Fix capture-manifest failures before using this result card externally.",
+            "capture_manifest_validation.md",
+        )
+    if status == "ready":
+        return ResultCardCheck(
+            "capture_manifest",
+            "pass",
+            f"status=ready, failures=0, warnings={warn_count}",
+            "",
+            "capture_manifest_validation.md",
+        )
+    check_status = "warn" if dry_run else "fail"
+    return ResultCardCheck(
+        "capture_manifest",
+        check_status,
+        f"status={status or 'missing'}, failures=0, warnings={warn_count}",
+        "Refresh capture validation and resolve capture metadata warnings before outreach.",
+        "capture_manifest_validation.md",
+    )
+
+
 def _submission_check_status(readiness: str) -> str:
     if readiness in {"shareable_smoke_demo", "portfolio_ready"}:
         return "pass"
@@ -595,6 +668,7 @@ def _artifacts(root: Path) -> dict[str, str]:
         "quality_gate": "quality_gate.md",
         "query_evidence_audit": "query_evidence_audit.md",
         "failure_diagnostics": "failure_diagnostics.md",
+        "capture_manifest_validation": "capture_manifest_validation.md",
         "claim_audit": "claim_audit.md",
         "submission_checklist": "submission_packet/submission_checklist.md",
         "real_run_plan": "real_run_plan/real_run_plan.md",
@@ -640,6 +714,16 @@ def _query_evidence_counts(query_evidence: dict[str, Any], submission: dict[str,
             if isinstance(task, dict)
         )
     return counter, risk
+
+
+def _capture_manifest_status(capture: dict[str, Any], submission: dict[str, Any]) -> str:
+    return str(capture.get("status") or submission.get("capture_manifest_status") or "")
+
+
+def _capture_manifest_fail_count(capture: dict[str, Any], submission: dict[str, Any]) -> int:
+    capture_count = _safe_int(capture.get("fail_count"))
+    submission_count = _safe_int(submission.get("capture_manifest_fail_count"))
+    return max(capture_count, submission_count)
 
 
 def _safe_int(value: object) -> int:

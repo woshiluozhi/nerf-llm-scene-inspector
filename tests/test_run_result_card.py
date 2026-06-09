@@ -23,12 +23,16 @@ def test_build_run_result_card_calibrates_dry_run_claims(tmp_path: Path) -> None
     assert "does not prove trained NeRF/LERF" in card.primary_takeaway
     assert any("dry-run" in claim.lower() for claim in card.do_not_claim)
     assert card.evidence_snapshot["failure_diagnostics"] == "clear"
+    assert card.evidence_snapshot["capture_manifest"] == "needs_review"
+    assert card.evidence_snapshot["capture_manifest_fail_count"] == 0
     assert card.evidence_snapshot["claim_audit"] == "pass"
     assert card.evidence_snapshot["query_evidence"] == "pass"
     assert card.evidence_snapshot["query_risk_flag_count"] == 0
     assert card.metrics["mean_iou_2d"] == 0.42
     assert card.artifacts["failure_diagnostics"] == "failure_diagnostics.md"
+    assert card.artifacts["capture_manifest_validation"] == "capture_manifest_validation.md"
     assert any(check.name == "failure_diagnostics" and check.status == "pass" for check in card.checks)
+    assert any(check.name == "capture_manifest" and check.status == "warn" for check in card.checks)
     assert any(check.name == "claim_audit" and check.status == "pass" for check in card.checks)
     assert any(check.name == "query_evidence" and check.status == "pass" for check in card.checks)
 
@@ -180,6 +184,32 @@ def test_run_result_card_blocks_stale_submission_when_diagnostics_have_blockers(
     assert any(check.name == "failure_diagnostics" and check.status == "fail" for check in card.checks)
 
 
+def test_run_result_card_blocks_stale_submission_when_capture_has_failures(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "ready", "fail_count": "1", "warn_count": 0},
+    )
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert card.evidence_snapshot["capture_manifest"] == "ready"
+    assert card.evidence_snapshot["capture_manifest_fail_count"] == 1
+    assert any(check.name == "capture_manifest" and check.status == "fail" for check in card.checks)
+
+
+def test_run_result_card_blocks_real_run_missing_capture_validation(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    (run_dir / "capture_manifest_validation.json").unlink()
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert card.evidence_snapshot["capture_manifest"] == "missing"
+    assert any(check.name == "capture_manifest" and check.status == "fail" for check in card.checks)
+
+
 def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     run_dir = tmp_path / "run"
     _write_json(
@@ -212,11 +242,21 @@ def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     )
     _write_json(run_dir / "run_audit.json", {"status": "needs_review" if dry_run else "ready", "score": 52})
     _write_json(run_dir / "failure_diagnostics.json", {"status": "clear", "blocker_count": 0, "warning_count": 0})
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {
+            "status": "needs_review" if dry_run else "ready",
+            "fail_count": 0,
+            "warn_count": 1 if dry_run else 0,
+        },
+    )
     _write_json(run_dir / "claim_audit.json", {"status": "pass", "ok": True, "fail_count": 0, "warn_count": 0})
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
         {
             "readiness_level": "shareable_smoke_demo" if dry_run else "portfolio_ready",
+            "capture_manifest_status": "needs_review" if dry_run else "ready",
+            "capture_manifest_fail_count": 0,
             "query_evidence_status": "pass",
             "query_counter_evidence_count": 0,
             "query_risk_flag_count": 0,
@@ -256,6 +296,7 @@ def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     _write_text(run_dir / "evidence_scorecard.md", "# Scorecard\n")
     _write_text(run_dir / "quality_gate.md", "# Quality\n")
     _write_text(run_dir / "failure_diagnostics.md", "# Failure Diagnostics\n")
+    _write_text(run_dir / "capture_manifest_validation.md", "# Capture Validation\n")
     _write_text(run_dir / "claim_audit.md", "# Claim\n")
     _write_text(run_dir / "submission_packet" / "submission_checklist.md", "# Submission\n")
     _write_text(run_dir / "real_run_plan" / "real_run_plan.md", "# Plan\n")
