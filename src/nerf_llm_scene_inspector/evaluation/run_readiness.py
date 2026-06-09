@@ -532,7 +532,7 @@ def _claim_audit_gate(claim_audit: dict[str, Any]) -> ReadinessGate:
         )
     if status == "pass" and claim_audit.get("ok") is not False:
         return ReadinessGate("claim_audit", "pass", "Claim audit passed.", artifact="claim_audit.md")
-    if status == "fail" or claim_audit.get("ok") is False:
+    if status == "fail" or (claim_audit.get("ok") is False and status not in {"warn", "pass"}):
         return ReadinessGate(
             "claim_audit",
             "fail",

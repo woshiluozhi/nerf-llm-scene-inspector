@@ -215,6 +215,9 @@ reports, scorecards, submission materials, pack validation, and the final zip.
 Run `audit_claims.py` with `--pack results/portfolio_pack` before outreach when you have an
 exported pack; the claim audit now reads `portfolio_pack_validation.json` and fails if the
 pack is not clean.
+`create_run_readiness.py` treats claim-audit failures as blockers and claim-audit warnings
+as review items, so dry-run caveats and pack warnings do not get confused with unsupported
+external-facing claims.
 
 Refresh the multi-run index after manual edits or copied-in run folders:
 

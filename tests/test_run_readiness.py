@@ -63,6 +63,33 @@ def test_run_readiness_blocks_external_review_on_query_risk_flags(tmp_path: Path
     assert report.query_risk_flag_count == 1
 
 
+def test_run_readiness_blocks_failed_claim_audit(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "claim_audit.json", {"status": "fail", "ok": False, "fail_count": 1})
+
+    report = build_run_readiness(run_dir)
+
+    claim_gate = next(gate for gate in report.gates if gate.name == "claim_audit")
+    assert report.readiness_level == "blocked"
+    assert report.ready_for_external_review is False
+    assert claim_gate.status == "fail"
+
+
+def test_run_readiness_warns_claim_audit_warning_without_blocking(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    validation = tmp_path / "portfolio_pack_validation.json"
+    _write_json(validation, {"ok": True, "errors": [], "warnings": [], "path_leaks": []})
+    _write_json(run_dir / "claim_audit.json", {"status": "warn", "ok": False, "warn_count": 1, "fail_count": 0})
+
+    report = build_run_readiness(run_dir, pack_validation_path=validation)
+
+    claim_gate = next(gate for gate in report.gates if gate.name == "claim_audit")
+    assert report.fail_count == 0
+    assert report.readiness_level == "portfolio_ready"
+    assert report.ready_for_external_review is True
+    assert claim_gate.status == "warn"
+
+
 def test_write_run_readiness_outputs_json_and_markdown(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True)
 
