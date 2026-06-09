@@ -192,7 +192,10 @@ The normal finalization path runs validation and re-archives the pack afterward,
 shareable zip also includes `portfolio_pack_validation.json`. It then validates the final
 zip itself and writes `results/portfolio_pack_validation.json` next to the archive.
 `validate_portfolio_pack.py` accepts both zip layouts: files at the archive root, or files
-inside one top-level `portfolio_pack/` directory.
+inside one top-level `portfolio_pack/` directory. Pack validation fails on unresolved
+query risk flags from `query_evidence_audit.json`, because those conflicts should not be
+sent as clean scene-understanding evidence. Counter-evidence without risk flags remains a
+warning for reviewer calibration.
 
 ## Finalize And Export
 

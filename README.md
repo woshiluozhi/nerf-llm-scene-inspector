@@ -284,7 +284,9 @@ The validation step verifies that required project/run artifacts exist, indexed 
 resolve inside the pack, copied-file SHA256/size digests still match, and text/JSON files do
 not leak user-home, temporary, or CI workspace directories. It accepts either the exported
 directory or the final `.zip` archive, including archives whose contents are wrapped in one
-top-level `portfolio_pack/` folder.
+top-level `portfolio_pack/` folder. It also reads `query_evidence_audit.json`: unresolved
+query risk flags make the pack validation fail, while non-overlapping counter-evidence
+remains a warning that should be reviewed before writing scene-answer claims.
 The quality gate is intentionally profile-based: `smoke` allows CPU-only dry-run artifacts,
 while `portfolio` requires a real non-dry-run scene with clean audit/capture/evaluation
 evidence, passing query-evidence audit, no unresolved query risk flags, and a validated

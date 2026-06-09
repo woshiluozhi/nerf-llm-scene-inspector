@@ -465,8 +465,8 @@ def _check_query_evidence_audit(pack_path: Path, warnings: list[str], errors: li
             f"query_evidence_audit.json reports {counter_evidence_count} counter-evidence item(s); review disambiguation prompts before sharing."
         )
     if risk_flag_count:
-        warnings.append(
-            f"query_evidence_audit.json reports {risk_flag_count} risk flag(s); resolve or document spatial conflicts before sharing actionable scene answers."
+        errors.append(
+            f"query_evidence_audit.json reports {risk_flag_count} risk flag(s); resolve spatial conflicts before validating this pack for external sharing."
         )
 
 
