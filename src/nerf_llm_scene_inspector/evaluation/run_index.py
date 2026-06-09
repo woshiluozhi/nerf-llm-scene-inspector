@@ -26,6 +26,8 @@ class RunIndexEntry:
     audit_blocker_count: int = 0
     blocker_count: int = 0
     warning_count: int = 0
+    failure_diagnostics_status: str = ""
+    failure_diagnostics_blocker_count: int = 0
     capture_manifest_status: str = ""
     capture_manifest_fail_count: int = 0
     result_status: str = ""
@@ -86,13 +88,13 @@ class RunIndex:
             f"- Successful runs: {self.successful_runs}",
             f"- Ready runs: {self.ready_runs}",
             "",
-            "| Scene | Status | Result | Submission | Audit | Score | Audit Blockers | Capture | Capture Fails | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
-            "| --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| Scene | Status | Result | Submission | Audit | Score | Audit Blockers | Diagnostics | Diagnostic Blockers | Capture | Capture Fails | Query Evidence | Risk Flags | Backend | Dry Run | Queries | Evaluated | Top-k Hit | Mean IoU | Quality | Run Dir |",
+            "| --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | ---: | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for entry in self.entries:
             lines.append(
                 "| {scene} | {success} | {result} | {submission} | {audit} | {score} | "
-                "{audit_blockers} | {capture} | {capture_fails} | {query_evidence} | {risk_flags} | {backend} | {dry_run} | {queries} | "
+                "{audit_blockers} | {diagnostics} | {diagnostic_blockers} | {capture} | {capture_fails} | {query_evidence} | {risk_flags} | {backend} | {dry_run} | {queries} | "
                 "{evaluated} | {topk} | {iou} | {quality} | `{run_dir}` |".format(
                     scene=entry.scene_name,
                     success="success" if entry.success else "failed",
@@ -101,6 +103,8 @@ class RunIndex:
                     audit=entry.audit_status or "unknown",
                     score=_display(entry.audit_score),
                     audit_blockers=entry.audit_blocker_count,
+                    diagnostics=entry.failure_diagnostics_status or "unknown",
+                    diagnostic_blockers=entry.failure_diagnostics_blocker_count,
                     capture=entry.capture_manifest_status or "unknown",
                     capture_fails=entry.capture_manifest_fail_count,
                     query_evidence=entry.query_evidence_status or "unknown",
@@ -142,13 +146,7 @@ def index_pipeline_runs(root: str | Path) -> RunIndex:
         generated_at=utc_timestamp(),
         total_runs=len(entries),
         successful_runs=sum(1 for entry in entries if entry.success),
-        ready_runs=sum(
-            1
-            for entry in entries
-            if entry.audit_status == "ready"
-            and entry.audit_blocker_count == 0
-            and entry.capture_manifest_fail_count == 0
-        ),
+        ready_runs=sum(1 for entry in entries if _is_ready_entry(entry)),
         entries=entries,
         warnings=warnings,
     )
@@ -157,6 +155,7 @@ def index_pipeline_runs(root: str | Path) -> RunIndex:
 def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
     summary = _read_json(run_dir / "pipeline_summary.json")
     audit = _read_json(run_dir / "run_audit.json")
+    diagnostics = _read_json(run_dir / "failure_diagnostics.json")
     capture = _read_json(run_dir / "capture_manifest_validation.json")
     query_evidence = _read_json(run_dir / "query_evidence_audit.json")
     result_card = _read_json(run_dir / "run_result_card.json")
@@ -179,6 +178,8 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
         audit_blocker_count=audit_blocker_count,
         blocker_count=audit_blocker_count,
         warning_count=_safe_int(audit.get("warning_count")),
+        failure_diagnostics_status=str(diagnostics.get("status") or ""),
+        failure_diagnostics_blocker_count=_safe_int(diagnostics.get("blocker_count")),
         capture_manifest_status=str(capture.get("status") or ""),
         capture_manifest_fail_count=_safe_int(capture.get("fail_count")),
         result_status=str(result_card.get("result_status") or ""),
@@ -193,6 +194,23 @@ def _entry_from_run(run_dir: Path, root: Path) -> RunIndexEntry:
         mean_iou_2d=_optional_float(evaluation.get("mean_iou_2d")),
         average_relevancy_score=_optional_float(evaluation.get("average_relevancy_score")),
         artifacts=_artifacts(run_dir),
+    )
+
+
+def _is_ready_entry(entry: RunIndexEntry) -> bool:
+    return (
+        entry.success
+        and not entry.dry_run
+        and entry.result_status == "portfolio_ready"
+        and entry.submission_readiness_level == "portfolio_ready"
+        and entry.audit_status == "ready"
+        and entry.audit_blocker_count == 0
+        and entry.failure_diagnostics_status == "clear"
+        and entry.failure_diagnostics_blocker_count == 0
+        and entry.capture_manifest_status == "ready"
+        and entry.capture_manifest_fail_count == 0
+        and entry.query_evidence_status == "pass"
+        and entry.query_risk_flag_count == 0
     )
 
 

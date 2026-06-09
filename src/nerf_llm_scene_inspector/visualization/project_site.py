@@ -26,6 +26,7 @@ class SiteRunEntry:
     query_count: int
     audit_score: str
     audit_blocker_count: int
+    failure_diagnostics_blocker_count: int
     capture_manifest_fail_count: int
     result_status: str
     submission_readiness_level: str
@@ -216,6 +217,7 @@ def _run_entries(
                 query_count=_safe_int(raw.get("query_count")),
                 audit_score=_display(raw.get("audit_score")),
                 audit_blocker_count=_safe_int(raw.get("audit_blocker_count", raw.get("blocker_count"))),
+                failure_diagnostics_blocker_count=_safe_int(raw.get("failure_diagnostics_blocker_count")),
                 capture_manifest_fail_count=_safe_int(raw.get("capture_manifest_fail_count")),
                 result_status=str(raw.get("result_status") or "unknown"),
                 submission_readiness_level=str(raw.get("submission_readiness_level") or "unknown"),
@@ -311,7 +313,7 @@ def _runs_section(entries: list[SiteRunEntry], run_index_link: str, run_comparis
             '        <table class="runs">',
             "          <thead><tr><th>Scene</th><th>Status</th><th>Result</th><th>Submission</th>"
             "<th>Backend</th><th>Mode</th><th>Queries</th><th>Audit</th><th>Audit Blockers</th>"
-            "<th>Capture Fails</th><th>Risk Flags</th>"
+            "<th>Diagnostic Blockers</th><th>Capture Fails</th><th>Risk Flags</th>"
             "<th>Top-k</th><th>IoU</th><th>Page</th></tr></thead>",
             "          <tbody>",
         ]
@@ -330,6 +332,7 @@ def _runs_section(entries: list[SiteRunEntry], run_index_link: str, run_comparis
             f"<td>{entry.query_count}</td>"
             f"<td>{_escape(entry.audit_score)}</td>"
             f"<td>{entry.audit_blocker_count}</td>"
+            f"<td>{entry.failure_diagnostics_blocker_count}</td>"
             f"<td>{entry.capture_manifest_fail_count}</td>"
             f"<td>{entry.query_risk_flag_count}</td>"
             f"<td>{_escape(entry.top_k_hit_rate)}</td>"
