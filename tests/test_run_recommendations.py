@@ -111,6 +111,25 @@ def test_recommendations_include_capture_manifest_review(tmp_path: Path) -> None
     assert any(item.category == "capture_manifest" for item in report.recommendations)
 
 
+def test_recommendations_include_query_evidence_warnings(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, audit_status="ready")
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {
+            "status": "warn",
+            "ok": True,
+            "fail_count": 0,
+            "warn_count": 1,
+            "tasks": [{"task": "mug", "evidence_mode": "2d_fallback"}],
+        },
+    )
+
+    report = build_run_recommendations(run_dir)
+
+    assert report.readiness_level == "needs_review"
+    assert any(item.category == "query_evidence" for item in report.recommendations)
+
+
 def test_recommend_next_steps_cli_writes_reports(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=True, audit_status="needs_review")
     output = tmp_path / "recommendations.json"

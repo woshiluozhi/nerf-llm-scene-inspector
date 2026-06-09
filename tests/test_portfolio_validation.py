@@ -312,6 +312,8 @@ def _write_complete_pack(tmp_path: Path) -> Path:
         "run/run_result_card.md",
         "run/run_audit.json",
         "run/run_audit.md",
+        "run/query_evidence_audit.json",
+        "run/query_evidence_audit.md",
         "run/run_recommendations.json",
         "run/run_recommendations.md",
         "run/research_report.json",
@@ -384,6 +386,7 @@ def _write_complete_pack(tmp_path: Path) -> Path:
                 "portfolio_page": "run/portfolio_page.html",
                 "run_index": "run_index.md",
                 "run_audit": "run/run_audit.md",
+                "query_evidence_audit": "run/query_evidence_audit.md",
                 "run_recommendations": "run/run_recommendations.md",
                 "research_report": "run/research_report.md",
                 "real_run_plan": "run/real_run_plan/real_run_plan.md",
@@ -421,6 +424,8 @@ def _zip_pack(pack: Path, *, include_top_level: bool = False) -> Path:
 def _file_payload(relative_path: str) -> str:
     if relative_path.endswith("run_audit.json"):
         return json.dumps({"status": "ready", "score": 100})
+    if relative_path.endswith("query_evidence_audit.json"):
+        return json.dumps({"status": "pass", "ok": True, "task_count": 1, "fail_count": 0})
     if relative_path.endswith("run_recommendations.json"):
         return json.dumps({"readiness_level": "ready_for_portfolio", "recommendations": []})
     if relative_path.endswith("research_report.json"):

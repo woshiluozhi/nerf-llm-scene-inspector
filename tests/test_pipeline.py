@@ -39,6 +39,8 @@ def test_run_scene_pipeline_dry_run_with_existing_config(tmp_path: Path) -> None
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "evidence_scorecard.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "quality_gate.md").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "query_evidence_audit.json").exists()
+    assert (tmp_path / "pipeline_runs" / "unit_scene" / "query_evidence_audit.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_readiness.json").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "run_readiness.md").exists()
     assert (tmp_path / "pipeline_runs" / "unit_scene" / "claim_audit.json").exists()
@@ -215,6 +217,8 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert (run_dir / "evidence_scorecard.md").exists()
     assert (run_dir / "quality_gate.json").exists()
     assert (run_dir / "quality_gate.md").exists()
+    assert (run_dir / "query_evidence_audit.json").exists()
+    assert (run_dir / "query_evidence_audit.md").exists()
     assert (run_dir / "run_readiness.json").exists()
     assert (run_dir / "run_readiness.md").exists()
     assert (run_dir / "claim_audit.json").exists()
@@ -314,6 +318,11 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
         run_dir / "queries" / "coffee_mug" / "scene_query_report.json"
     )
     assert (run_dir / "queries" / "coffee_mug" / "query_grid.png").exists()
+    query_audit_step = next(step for step in summary.steps if step.name == "audit_query_evidence")
+    assert query_audit_step.summary["status"] == "warn"
+    assert query_audit_step.outputs["json"] == str(run_dir / "query_evidence_audit.json")
+    query_audit_payload = json.loads((run_dir / "query_evidence_audit.json").read_text(encoding="utf-8"))
+    assert query_audit_payload["totals"]["mode_counts"]["2d_fallback"] == 2
     prompt_step = next(step for step in summary.steps if step.name == "analyze_prompt_sensitivity")
     assert prompt_step.outputs["markdown"] == str(
         run_dir / "prompt_sensitivity" / "prompt_sensitivity_report.md"
@@ -362,6 +371,10 @@ def test_run_scene_pipeline_writes_run_scoped_demo_and_evaluation(tmp_path: Path
     assert any(artifact["name"] == "claim_audit" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "annotation_workbench" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
     assert any(artifact["name"] == "run_result_card" and artifact["exists"] for artifact in reproduction_payload["artifacts"])
+    assert any(
+        artifact["name"] == "query_evidence_audit" and artifact["exists"]
+        for artifact in reproduction_payload["artifacts"]
+    )
     query_grid_artifact = next(
         artifact for artifact in reproduction_payload["artifacts"] if artifact["name"] == "query_mug_grid"
     )

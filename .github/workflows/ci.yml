@@ -59,6 +59,7 @@ jobs:
           python scripts/evaluate_queries.py --help
           python scripts/diagnose_run_failures.py --help
           python scripts/audit_run.py --help
+          python scripts/audit_query_evidence.py --help
           python scripts/recommend_next_steps.py --help
           python scripts/create_evidence_scorecard.py --help
           python scripts/check_run_quality.py --help

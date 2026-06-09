@@ -463,6 +463,7 @@ def _artifacts(root: Path) -> dict[str, str]:
         "research_report": "research_report.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "quality_gate": "quality_gate.md",
+        "query_evidence_audit": "query_evidence_audit.md",
         "failure_diagnostics": "failure_diagnostics.md",
         "claim_audit": "claim_audit.md",
         "submission_checklist": "submission_packet/submission_checklist.md",

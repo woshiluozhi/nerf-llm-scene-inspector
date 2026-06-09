@@ -18,6 +18,7 @@ from nerf_llm_scene_inspector.evaluation.evidence_scorecard import build_evidenc
 from nerf_llm_scene_inspector.evaluation.failure_diagnostics import write_failure_diagnostics
 from nerf_llm_scene_inspector.evaluation.claim_audit import write_claim_audit
 from nerf_llm_scene_inspector.evaluation.prompt_sensitivity import prompt_suite_queries
+from nerf_llm_scene_inspector.evaluation.query_evidence_audit import write_query_evidence_audit
 from nerf_llm_scene_inspector.evaluation.quality_gate import check_run_quality
 from nerf_llm_scene_inspector.evaluation.run_audit import audit_pipeline_run
 from nerf_llm_scene_inspector.evaluation.run_comparison import compare_pipeline_runs
@@ -187,6 +188,8 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         "run_comparison_json": str(runs_root / "run_comparison.json"),
         "run_comparison_markdown": str(runs_root / "run_comparison.md"),
         "queries": str(query_dir),
+        "query_evidence_audit_json": str(run_dir / "query_evidence_audit.json"),
+        "query_evidence_audit_markdown": str(run_dir / "query_evidence_audit.md"),
         "demo_assets": str(demo_dir),
         "evaluation": str(eval_dir),
         "prompt_sensitivity": str(prompt_sensitivity_dir),
@@ -457,6 +460,26 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
                     "success",
                     summary={"num_queries": len(config.queries)},
                     outputs=query_outputs,
+                )
+            )
+            query_audit = write_query_evidence_audit(run_dir, queries_dir=query_dir)
+            steps.append(
+                PipelineStep(
+                    "audit_query_evidence",
+                    "failed" if query_audit.status == "fail" else "warning" if query_audit.status == "warn" else "success",
+                    summary={
+                        "status": query_audit.status,
+                        "ok": query_audit.ok,
+                        "task_count": query_audit.task_count,
+                        "pass_count": query_audit.pass_count,
+                        "warn_count": query_audit.warn_count,
+                        "fail_count": query_audit.fail_count,
+                        "mode_counts": query_audit.totals.get("mode_counts", {}),
+                    },
+                    outputs={
+                        "json": str(run_dir / "query_evidence_audit.json"),
+                        "markdown": str(run_dir / "query_evidence_audit.md"),
+                    },
                 )
             )
 

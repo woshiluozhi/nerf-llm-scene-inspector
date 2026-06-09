@@ -64,6 +64,7 @@ python scripts/run_scene_pipeline.py \
 - `queries/<query>/scene_query_report.json`: query plan, backend outputs, synthesized answer summary, warnings, and provenance.
 - `queries/<query>/scene_query_report.md`: human-readable natural-language answer with ranked evidence, support level, limitations, and follow-up checks.
 - `queries/<query>/query_grid.png` and `query_visual_summary.json`: compact visual overview and machine-readable summary for expanded backend prompts in one task.
+- `query_evidence_audit.md`: run-level audit of each query task's overlays, localization evidence, fallback mode, confidence, and missing artifacts.
 - `prompt_sensitivity/prompt_sensitivity_report.md`: prompt wording stability diagnostic across grouped query variants.
 - `prompt_sensitivity/prompt_sensitivity_summary.json`: machine-readable confidence, view-agreement, and top-region consistency metrics.
 - `scene_relations/scene_relations_report.md`: deterministic relation graph over query-derived entities, with `3d` or `2d_fallback` evidence tags.
@@ -254,7 +255,7 @@ python scripts/finalize_annotations.py \
 The lower-level tools are still available for debugging individual steps:
 `merge_annotation_workbench.py`, `validate_annotations.py`, `review_annotations.py`,
 `evaluate_queries.py`, `audit_run.py`, `recommend_next_steps.py`,
-`create_evidence_scorecard.py`, `check_run_quality.py`, `generate_research_report.py`,
+`audit_query_evidence.py`, `create_evidence_scorecard.py`, `check_run_quality.py`, `generate_research_report.py`,
 `create_run_result_card.py`, `generate_portfolio_page.py`, `create_reproduction_bundle.py`,
 `diagnose_run_failures.py`, `audit_claims.py`, and `create_submission_packet.py`.
 

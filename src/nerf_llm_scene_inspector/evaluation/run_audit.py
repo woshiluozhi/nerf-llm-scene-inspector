@@ -527,6 +527,7 @@ def _key_artifacts(root: Path) -> dict[str, str]:
         "failure_diagnostics": "failure_diagnostics.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "run_audit": "run_audit.json",
+        "query_evidence_audit": "query_evidence_audit.md",
         "command_logs": "logs/",
         "environment_report": "environment_report.json",
         "scene_data_inspection": "scene_data_inspection.md",

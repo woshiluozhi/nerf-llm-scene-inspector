@@ -652,6 +652,7 @@ def _recommended_links(
         "failure_diagnostics": "failure_diagnostics.md",
         "evidence_scorecard": "evidence_scorecard.md",
         "quality_gate": "quality_gate.md",
+        "query_evidence_audit": "query_evidence_audit.md",
     }
     if repo_url:
         links["repository"] = repo_url

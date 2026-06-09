@@ -278,6 +278,15 @@ def _command_specs(
             },
         ),
         _CommandSpec(
+            "audit_query_evidence",
+            [py, "scripts/audit_query_evidence.py", "--run-dir", str(run_root)],
+            {
+                "query_evidence_audit": str(run_root / "query_evidence_audit.json"),
+                "query_evidence_audit_markdown": str(run_root / "query_evidence_audit.md"),
+            },
+            critical=False,
+        ),
+        _CommandSpec(
             "diagnose_run_failures",
             [py, "scripts/diagnose_run_failures.py", "--run-dir", str(run_root)],
             {

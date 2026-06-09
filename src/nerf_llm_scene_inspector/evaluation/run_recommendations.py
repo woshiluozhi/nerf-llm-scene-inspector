@@ -97,6 +97,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     root = Path(run_dir)
     pipeline_summary = _read_json(root / "pipeline_summary.json")
     run_audit = _read_json(root / "run_audit.json")
+    query_evidence_audit = _read_json(root / "query_evidence_audit.json")
     capture_validation = _read_json(root / "capture_manifest_validation.json")
     preflight_report = _read_json(root / "preflight_report.json")
     failure_diagnostics = _read_json(root / "failure_diagnostics.json")
@@ -110,6 +111,7 @@ def build_run_recommendations(run_dir: str | Path) -> RunRecommendationReport:
     recommendations: list[RecommendationItem] = []
 
     _add_audit_findings(run_audit, recommendations)
+    _add_query_evidence_actions(query_evidence_audit, recommendations)
     _add_failure_diagnostics_actions(failure_diagnostics, recommendations)
     _add_capture_manifest_actions(capture_validation, recommendations, dry_run=dry_run)
     _add_preflight_actions(preflight_report, recommendations, dry_run=dry_run)
@@ -151,6 +153,44 @@ def _add_audit_findings(audit: dict[str, Any], recommendations: list[Recommendat
                 artifact=str(finding.get("artifact") or "run_audit.json"),
             )
         )
+
+
+def _add_query_evidence_actions(
+    audit: dict[str, Any],
+    recommendations: list[RecommendationItem],
+) -> None:
+    if not audit:
+        return
+    status = str(audit.get("status") or "")
+    if status not in {"fail", "warn"} and audit.get("ok") is not False:
+        return
+    failed = _safe_int(audit.get("fail_count"))
+    warned = _safe_int(audit.get("warn_count"))
+    tasks = audit.get("tasks") if isinstance(audit.get("tasks"), list) else []
+    weak_modes = sorted(
+        {
+            str(task.get("evidence_mode") or "")
+            for task in tasks
+            if isinstance(task, dict) and str(task.get("evidence_mode") or "") in {"2d_fallback", "render_only", "missing"}
+        }
+    )
+    recommendations.append(
+        RecommendationItem(
+            severity="critical" if status == "fail" or audit.get("ok") is False else "medium",
+            category="query_evidence",
+            action=(
+                "Repair missing query artifacts before sharing this run."
+                if status == "fail" or audit.get("ok") is False
+                else "Review query fallback modes and missing visual evidence before making scene-understanding claims."
+            ),
+            rationale=(
+                f"query_evidence_audit.json reports status={status}, failed={failed}, "
+                f"warnings={warned}, modes={', '.join(weak_modes) or 'none'}."
+            ),
+            command="python scripts/audit_query_evidence.py --run-dir results/pipeline_runs/<scene>",
+            artifact="query_evidence_audit.md",
+        )
+    )
 
 
 def _add_failure_diagnostics_actions(

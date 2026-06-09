@@ -172,6 +172,7 @@ python scripts/run_scene_pipeline.py --dry-run
 python scripts/create_capture_manifest.py --input examples --type images --scene-name desk_scene --output results/capture_manifest --allow-warnings
 python scripts/diagnose_run_failures.py --run-dir results/pipeline_runs/desk_scene
 python scripts/audit_run.py --run-dir results/pipeline_runs/desk_scene
+python scripts/audit_query_evidence.py --run-dir results/pipeline_runs/desk_scene
 python scripts/recommend_next_steps.py --run-dir results/pipeline_runs/desk_scene
 python scripts/generate_research_report.py --run-dir results/pipeline_runs/desk_scene
 python scripts/create_evidence_scorecard.py --run-dir results/pipeline_runs/desk_scene
@@ -439,6 +440,8 @@ when a `--require-all` repair left required queries unresolved.
 - `results/pipeline_runs/<scene>/queries/<query>/scene_query_report.md`
 - `results/pipeline_runs/<scene>/queries/<query>/query_grid.png`
 - `results/pipeline_runs/<scene>/queries/<query>/query_visual_summary.json`
+- `results/pipeline_runs/<scene>/query_evidence_audit.json`
+- `results/pipeline_runs/<scene>/query_evidence_audit.md`
 - `results/pipeline_runs/<scene>/queries/<query>/viewer_repair_summary.json` when manual viewer repair is used
 - `results/pipeline_runs/<scene>/queries/<query>/<expanded_query>/viewer_import_summary.json` when manual viewer outputs are imported
 - `results/pipeline_runs/<scene>/prompt_sensitivity/prompt_sensitivity_summary.json`
@@ -595,6 +598,7 @@ python scripts/analyze_scene_relations.py --help
 python scripts/evaluate_queries.py --help
 python scripts/diagnose_run_failures.py --help
 python scripts/audit_run.py --help
+python scripts/audit_query_evidence.py --help
 python scripts/recommend_next_steps.py --help
 python scripts/create_evidence_scorecard.py --help
 python scripts/create_reproduction_bundle.py --help

@@ -105,6 +105,7 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert index["run_summary"]["artifacts"]["run_readiness"] == "run/run_readiness.md"
     assert index["run_summary"]["artifacts"]["claim_audit"] == "run/claim_audit.md"
     assert index["run_summary"]["artifacts"]["run_result_card"] == "run/run_result_card.md"
+    assert index["run_summary"]["artifacts"]["query_evidence_audit"] == "run/query_evidence_audit.md"
     assert index["run_summary"]["artifacts"]["query_reports"] == "run/queries/"
     assert index["run_summary"]["artifacts"]["prompt_sensitivity"] == "run/prompt_sensitivity/"
     assert index["run_summary"]["artifacts"]["scene_relations"] == "run/scene_relations/"
@@ -187,6 +188,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "logs" / "generate_demo_assets_command.json").exists()
     assert (output_dir / "run" / "run_audit.json").exists()
     assert (output_dir / "run" / "run_audit.md").exists()
+    assert (output_dir / "run" / "query_evidence_audit.json").exists()
+    assert (output_dir / "run" / "query_evidence_audit.md").exists()
     assert (output_dir / "run" / "run_recommendations.json").exists()
     assert (output_dir / "run" / "run_recommendations.md").exists()
     assert (output_dir / "run" / "reproduction_manifest.json").exists()
@@ -207,6 +210,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
     assert (output_dir / "run" / "annotation_finalize_report.md").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "scene_query_report.md").exists()
+    assert (output_dir / "run" / "queries" / "mug" / "query_visual_summary.json").exists()
+    assert (output_dir / "run" / "queries" / "mug" / "query_grid.png").exists()
     assert (output_dir / "run" / "queries" / "mug" / "viewer_repair_summary.json").exists()
     assert (output_dir / "run" / "queries" / "mug" / "mug" / "viewer_import_summary.json").exists()
     assert (output_dir / "run" / "prompt_sensitivity" / "prompt_sensitivity_summary.json").exists()
@@ -243,6 +248,8 @@ def test_export_portfolio_pack_from_pipeline_run(tmp_path: Path) -> None:
         assert "professor_review_checklist.md" in names
         assert "portfolio_pack_index.json" in names
         assert "run/pipeline_summary.json" in names
+        assert "run/queries/mug/query_visual_summary.json" in names
+        assert "run/queries/mug/query_grid.png" in names
         assert "run/queries/mug/viewer_repair_summary.json" in names
         assert "run/queries/mug/mug/viewer_import_summary.json" in names
         zipped_index = json.loads(archive.read("portfolio_pack_index.json").decode("utf-8"))

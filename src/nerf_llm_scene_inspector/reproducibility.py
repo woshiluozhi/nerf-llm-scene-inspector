@@ -623,6 +623,7 @@ def _verification_commands(root: Path) -> list[str]:
     runs_root = _display_path(root.parent)
     return [
         _format_command(["python", "scripts/verify_reproduction_manifest.py", "--run-dir", run_dir]),
+        _format_command(["python", "scripts/audit_query_evidence.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/diagnose_run_failures.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/audit_run.py", "--run-dir", run_dir]),
         _format_command(["python", "scripts/recommend_next_steps.py", "--run-dir", run_dir]),
@@ -732,6 +733,18 @@ def _artifacts(root: Path) -> list[ReproductionArtifact]:
         ("environment_report", root / "environment_report.json", "environment_report.json", "Runtime and upstream dependency checks."),
         ("scene_inspection", root / "scene_data_inspection.md", "scene_data_inspection.md", "Processed scene quality and pose readiness."),
         ("run_audit", root / "run_audit.md", "run_audit.md", "Run health audit."),
+        (
+            "query_evidence_audit",
+            root / "query_evidence_audit.md",
+            "query_evidence_audit.md",
+            "Per-query audit of visual overlays, localization evidence, fallback mode, and missing artifacts.",
+        ),
+        (
+            "query_evidence_audit_json",
+            root / "query_evidence_audit.json",
+            "query_evidence_audit.json",
+            "Machine-readable per-query evidence audit.",
+        ),
         ("recommendations", root / "run_recommendations.md", "run_recommendations.md", "Actionable next steps."),
         ("evidence_scorecard", root / "evidence_scorecard.md", "evidence_scorecard.md", "Portfolio evidence quality scorecard."),
         ("quality_gate", root / "quality_gate.md", "quality_gate.md", "Pass/warn/fail run quality gate report."),

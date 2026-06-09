@@ -55,6 +55,8 @@ RUN_REQUIRED_FILES = [
     "run/run_result_card.md",
     "run/run_audit.json",
     "run/run_audit.md",
+    "run/query_evidence_audit.json",
+    "run/query_evidence_audit.md",
     "run/run_recommendations.json",
     "run/run_recommendations.md",
     "run/research_report.json",
@@ -214,6 +216,7 @@ def _validate_portfolio_directory(
         _check_required_files(pack_path, RUN_REQUIRED_FILES, missing_files)
         _check_run_logs(pack_path, artifact_issues)
         _check_run_audit(pack_path, warnings, errors)
+        _check_query_evidence_audit(pack_path, warnings, errors)
         _check_failure_diagnostics(pack_path, warnings, errors)
         _check_capture_manifest(pack_path, warnings, errors)
         _check_evidence_scorecard(pack_path, warnings, errors)
@@ -441,6 +444,19 @@ def _check_run_audit(pack_path: Path, warnings: list[str], errors: list[str]) ->
         warnings.append("run_audit.json status is needs_review; inspect warnings before sharing.")
     elif status and status != "ready":
         warnings.append(f"run_audit.json has unrecognized status: {status}")
+
+
+def _check_query_evidence_audit(pack_path: Path, warnings: list[str], errors: list[str]) -> None:
+    audit = _read_json(pack_path / "run" / "query_evidence_audit.json", errors)
+    if not isinstance(audit, dict):
+        return
+    status = str(audit.get("status") or "")
+    if audit.get("ok") is False or status == "fail":
+        errors.append("query_evidence_audit.json reports failed query evidence.")
+    elif status == "warn":
+        warnings.append("query_evidence_audit.json reports warning-level query evidence; inspect fallback mode and missing artifacts.")
+    elif status and status != "pass":
+        warnings.append(f"query_evidence_audit.json has unrecognized status: {status}")
 
 
 def _check_failure_diagnostics(pack_path: Path, warnings: list[str], errors: list[str]) -> None:

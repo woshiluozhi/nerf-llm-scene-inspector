@@ -18,6 +18,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert bundle.dry_run is True
     assert bundle.replay_command == "python scripts/run_scene_pipeline.py --dry-run --query mug"
     assert "python scripts/verify_reproduction_manifest.py --run-dir run" in bundle.verification_commands
+    assert "python scripts/audit_query_evidence.py --run-dir run" in bundle.verification_commands
     assert "python scripts/diagnose_run_failures.py --run-dir run" in bundle.verification_commands
     assert "python scripts/audit_run.py --run-dir run" in bundle.verification_commands
     assert "python scripts/create_evidence_scorecard.py --run-dir run" in bundle.verification_commands
@@ -46,6 +47,7 @@ def test_build_reproduction_bundle_from_pipeline_summary(tmp_path: Path) -> None
     assert any(artifact.name == "quality_gate" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "claim_audit" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "run_result_card" and artifact.exists for artifact in bundle.artifacts)
+    assert any(artifact.name == "query_evidence_audit" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "portfolio_page" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "real_run_plan" and artifact.exists for artifact in bundle.artifacts)
     assert any(artifact.name == "run_readiness" and artifact.exists for artifact in bundle.artifacts)
@@ -100,6 +102,7 @@ def test_reproduction_bundle_writes_json_markdown_and_script(tmp_path: Path) -> 
     assert "set -euo pipefail" in script_text
     assert "python scripts/run_scene_pipeline.py --dry-run --query mug" in script_text
     assert "python scripts/verify_reproduction_manifest.py --run-dir run" in script_text
+    assert "python scripts/audit_query_evidence.py --run-dir run" in script_text
     assert "python scripts/diagnose_run_failures.py --run-dir run" in script_text
     assert "python scripts/create_real_run_plan.py --run-dir run" in script_text
     assert "python scripts/create_run_readiness.py --run-dir run" in script_text
@@ -246,6 +249,11 @@ def _write_run(tmp_path: Path) -> Path:
     _write_text(run_dir / "submission_packet" / "submission_checklist.md", "# Submission\n")
     _write_text(run_dir / "scene_data_inspection.md", "# Scene\n")
     _write_text(run_dir / "run_audit.md", "# Audit\n")
+    _write_json(
+        run_dir / "query_evidence_audit.json",
+        {"status": "warn", "ok": True, "task_count": 1, "fail_count": 0},
+    )
+    _write_text(run_dir / "query_evidence_audit.md", "# Query Evidence Audit\n")
     _write_text(run_dir / "run_recommendations.md", "# Recommendations\n")
     _write_text(run_dir / "demo_assets" / "query_grid.png", "image")
     _write_json(run_dir / "queries" / "mug" / "scene_query_report.json", {"scene_name": "desk_scene"})

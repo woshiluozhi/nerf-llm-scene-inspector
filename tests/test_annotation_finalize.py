@@ -30,6 +30,8 @@ def test_finalize_workbench_annotations_refreshes_run_artifacts(tmp_path: Path) 
     assert (run_dir / "annotation_finalize_report.json").exists()
     assert (run_dir / "annotation_finalize_report.md").exists()
     assert (run_dir / "evaluation" / "eval_summary.json").exists()
+    assert (run_dir / "query_evidence_audit.json").exists()
+    assert (run_dir / "query_evidence_audit.md").exists()
     assert (run_dir / "run_result_card.json").exists()
     assert (run_dir / "portfolio_page.html").exists()
     assert (run_dir.parent / "run_index.json").exists()
@@ -37,6 +39,8 @@ def test_finalize_workbench_annotations_refreshes_run_artifacts(tmp_path: Path) 
     step_names = [step.name for step in report.steps]
     assert step_names[:3] == ["merge_annotation_workbench", "evaluate_queries", "review_annotations"]
     assert "diagnose_run_failures" in step_names
+    assert "audit_query_evidence" in step_names
+    assert step_names.index("audit_query_evidence") < step_names.index("diagnose_run_failures")
     assert step_names.index("diagnose_run_failures") < step_names.index("audit_run")
     assert "create_run_result_card" in step_names
     assert "create_run_readiness" in step_names
