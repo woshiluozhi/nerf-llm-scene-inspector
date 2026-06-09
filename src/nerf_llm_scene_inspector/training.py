@@ -13,6 +13,7 @@ from nerf_llm_scene_inspector.utils.paths import (
     find_latest_config,
     utc_timestamp,
 )
+from nerf_llm_scene_inspector.utils.env_check import ns_train_method_listed
 from nerf_llm_scene_inspector.utils.shell import CommandResult, require_executable, run_command
 
 
@@ -126,7 +127,7 @@ def validate_ns_train_method(
     if not result.ok:
         raise RuntimeError(f"Could not inspect ns-train methods:\n{result.stderr}")
     help_text = f"{result.stdout}\n{result.stderr}"
-    if method not in help_text:
+    if not ns_train_method_listed(method, help_text):
         hint = LERF_INSTALL_INSTRUCTIONS if backend == "lerf" else OPENNERF_INSTALL_INSTRUCTIONS
         raise RuntimeError(f"ns-train does not list method '{method}'.\n\n{hint}")
 

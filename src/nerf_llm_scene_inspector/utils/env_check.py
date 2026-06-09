@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -175,17 +176,27 @@ def check_ns_train_methods(
             )
             for method in expected_methods
         ]
-    return [
-        CheckItem(
-            name=f"ns-train method:{method}",
-            ok=method in help_text,
-            category="ns_train_method",
-            detail="listed" if method in help_text else "not listed",
-            required=required,
-            hint="" if method in help_text else INSTALL_HINTS["ns-train"],
+    checks: list[CheckItem] = []
+    for method in expected_methods:
+        listed = ns_train_method_listed(method, help_text)
+        checks.append(
+            CheckItem(
+                name=f"ns-train method:{method}",
+                ok=listed,
+                category="ns_train_method",
+                detail="listed" if listed else "not listed",
+                required=required,
+                hint="" if listed else INSTALL_HINTS["ns-train"],
+            )
         )
-        for method in expected_methods
-    ]
+    return checks
+
+
+def ns_train_method_listed(method: str, help_text: str) -> bool:
+    """Return True when ns-train help lists an exact method token."""
+
+    pattern = rf"(?<![\w-]){re.escape(method)}(?![\w-])"
+    return re.search(pattern, help_text) is not None
 
 
 def build_env_report(require_gpu: bool = False, check_upstream: bool = False) -> EnvReport:

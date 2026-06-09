@@ -22,7 +22,9 @@ ns-install-cli
 ns-train -h
 ```
 
-The help output should include `lerf`, `lerf-lite`, and `lerf-big`.
+The help output should include `lerf`, `lerf-lite`, and `lerf-big` as separate method
+tokens. The project checks exact method names, so seeing only `lerf-lite` is not enough for
+commands that request `--variant lerf`.
 
 ## COLMAP Or FFmpeg Missing
 

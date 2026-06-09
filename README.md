@@ -147,6 +147,8 @@ ns-train -h
 ```
 
 `ns-train -h` should list `lerf`, `lerf-lite`, and `lerf-big`.
+The preflight and training wrappers check exact method tokens, so `lerf-lite` does not
+count as the standalone `lerf` method.
 
 ## Phone Video Capture Advice
 
