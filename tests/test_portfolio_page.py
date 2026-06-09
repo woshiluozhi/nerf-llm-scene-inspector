@@ -20,6 +20,9 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "shareable_smoke_demo" in html
     assert "Capture manifest" in html
     assert "Capture failures" in html
+    assert "Real-run plan" in html
+    assert "Plan blockers" in html
+    assert "Plan warnings" in html
     assert "Query evidence" in html
     assert "Query risk flags" in html
     assert "counter-evidence" in html
@@ -37,6 +40,9 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "portfolio_pack" in html
     assert page.capture_manifest_status == "needs_review"
     assert page.capture_manifest_fail_count == 0
+    assert page.real_run_plan_status == "needs_review"
+    assert page.real_run_plan_blocker_count == 0
+    assert page.real_run_plan_warning_count == 1
     assert str(tmp_path) not in html
     assert "C:\\Users" not in html
 
@@ -144,6 +150,21 @@ def test_portfolio_page_blocks_real_run_missing_capture_validation(tmp_path: Pat
     assert "capture_manifest" in page.sharing_readiness["failed_checks"]
 
 
+def test_portfolio_page_blocks_real_run_plan_blockers(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False, plan_blockers=1, plan_warnings=2)
+
+    page = build_portfolio_page(run_dir)
+    html = page.to_html()
+
+    assert page.result_status == "blocked"
+    assert page.real_run_plan_status == "blocked"
+    assert page.real_run_plan_blocker_count == 1
+    assert page.real_run_plan_warning_count == 2
+    assert page.sharing_readiness["readiness_level"] == "blocked"
+    assert "real_run_plan" in page.sharing_readiness["failed_checks"]
+    assert "Resolve real-run plan blockers before external sharing." in html
+
+
 def test_generate_portfolio_page_cli_writes_html(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path)
     output = tmp_path / "page.html"
@@ -172,7 +193,15 @@ def test_generate_portfolio_page_cli_writes_html(tmp_path: Path) -> None:
     assert "Sharing Readiness" in html
 
 
-def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
+def _write_run(
+    tmp_path: Path,
+    *,
+    dry_run: bool = True,
+    plan_blockers: int = 0,
+    plan_warnings: int | None = None,
+) -> Path:
+    if plan_warnings is None:
+        plan_warnings = 1 if dry_run else 0
     run_dir = tmp_path / "run"
     _write_json(
         run_dir / "pipeline_summary.json",
@@ -227,6 +256,11 @@ def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     _write_text(run_dir / "scene_data_inspection.md", "# Scene\n")
     _write_text(run_dir / "evaluation" / "annotation_workbench" / "annotation_workbench.html", "<!doctype html>\n")
     _write_text(run_dir / "research_report.md", "# Research Report\n")
+    _write_json(
+        run_dir / "real_run_plan" / "real_run_plan.json",
+        {"blocker_count": plan_blockers, "warning_count": plan_warnings},
+    )
+    _write_text(run_dir / "real_run_plan" / "real_run_plan.md", "# Real-Run Action Plan\n")
     _write_json(
         run_dir / "submission_packet" / "submission_packet.json",
         {

@@ -172,7 +172,12 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     (run_dir / "research_report.md").write_text("# Research Report\n", encoding="utf-8")
     _write_json(
         run_dir / "real_run_plan" / "real_run_plan.json",
-        {"scene_name": "run", "current_mode": "dry-run smoke demo"},
+        {
+            "scene_name": "run",
+            "current_mode": "dry-run smoke demo",
+            "blocker_count": 0,
+            "warning_count": 1,
+        },
     )
     (run_dir / "real_run_plan" / "real_run_plan.md").write_text(
         "# Real-Run Action Plan\n",
@@ -366,6 +371,9 @@ def test_load_run_bundle_collects_artifacts(tmp_path: Path) -> None:
     assert inspector["failure_diagnostics_blocker_count"] == 0
     assert inspector["capture_manifest_status"] == "ready"
     assert inspector["capture_manifest_fail_count"] == 0
+    assert inspector["real_run_plan_status"] == "needs_review"
+    assert inspector["real_run_plan_blocker_count"] == 0
+    assert inspector["real_run_plan_warning_count"] == 1
     assert inspector["portfolio_pack_ok"] is False
     assert inspector["portfolio_pack_errors"] == 1
 
@@ -392,6 +400,10 @@ def test_run_inspector_summary_surfaces_review_blocker_counts() -> None:
                 "fail_count": "1",
                 "warn_count": "4",
             },
+            "real_run_plan": {
+                "blocker_count": "2",
+                "warning_count": "5",
+            },
             "evidence_scorecard": {"evidence_level": "portfolio_ready_real_run", "score": 94},
             "query_evidence_audit": {
                 "status": "pass",
@@ -416,6 +428,9 @@ def test_run_inspector_summary_surfaces_review_blocker_counts() -> None:
     assert inspector["capture_manifest_status"] == "ready"
     assert inspector["capture_manifest_fail_count"] == 1
     assert inspector["capture_manifest_warning_count"] == 4
+    assert inspector["real_run_plan_status"] == "blocked"
+    assert inspector["real_run_plan_blocker_count"] == 2
+    assert inspector["real_run_plan_warning_count"] == 5
 
 
 def test_run_inspector_summary_uses_submission_capture_fallback() -> None:
@@ -435,6 +450,7 @@ def test_run_inspector_summary_uses_submission_capture_fallback() -> None:
     assert inspector["capture_manifest_status"] == "needs_review"
     assert inspector["capture_manifest_fail_count"] == 2
     assert inspector["failure_diagnostics_status"] == "missing"
+    assert inspector["real_run_plan_status"] == "missing"
 
 
 def test_dashboard_collectors_tolerate_missing_run(tmp_path: Path) -> None:

@@ -242,6 +242,7 @@ def run_inspector_summary(bundle: dict[str, Any]) -> dict[str, Any]:
     audit = bundle.get("run_audit") or {}
     diagnostics = bundle.get("failure_diagnostics") or {}
     capture = bundle.get("capture_manifest_validation") or {}
+    real_run_plan = bundle.get("real_run_plan") or {}
     scorecard = bundle.get("evidence_scorecard") or {}
     query_audit = bundle.get("query_evidence_audit") or {}
     quality_gate = bundle.get("quality_gate") or {}
@@ -281,6 +282,9 @@ def run_inspector_summary(bundle: dict[str, Any]) -> dict[str, Any]:
         "capture_manifest_status": _capture_manifest_status(capture, submission),
         "capture_manifest_fail_count": _capture_manifest_fail_count(capture, submission),
         "capture_manifest_warning_count": _safe_int(capture.get("warn_count")),
+        "real_run_plan_status": _real_run_plan_status(real_run_plan),
+        "real_run_plan_blocker_count": _safe_int(real_run_plan.get("blocker_count")),
+        "real_run_plan_warning_count": _safe_int(real_run_plan.get("warning_count")),
         "submission_status": submission.get("status", "unknown"),
         "portfolio_pack_ok": pack_validation.get("ok") if pack_validation else None,
         "portfolio_pack_errors": len(pack_validation.get("errors") or []) if pack_validation else 0,
@@ -355,6 +359,12 @@ def _render_run_review(st: Any, bundle: dict[str, Any]) -> None:
         "Capture",
         f"{inspector['capture_manifest_status']} / {inspector['capture_manifest_fail_count']} fail",
     )
+
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Real-Run Plan", str(inspector["real_run_plan_status"]))
+    col_b.metric("Plan Blockers", str(inspector["real_run_plan_blocker_count"]))
+    col_c.metric("Plan Warnings", str(inspector["real_run_plan_warning_count"]))
+    col_d.metric("Readiness", str(inspector["readiness"]))
 
     if bundle["run_audit"]:
         audit = bundle["run_audit"]
@@ -1042,6 +1052,18 @@ def _capture_manifest_status(capture: dict[str, Any], submission: dict[str, Any]
 
 def _capture_manifest_fail_count(capture: dict[str, Any], submission: dict[str, Any]) -> int:
     return max(_safe_int(capture.get("fail_count")), _safe_int(submission.get("capture_manifest_fail_count")))
+
+
+def _real_run_plan_status(plan: dict[str, Any]) -> str:
+    if not plan:
+        return "missing"
+    blocker_count = _safe_int(plan.get("blocker_count"))
+    warning_count = _safe_int(plan.get("warning_count"))
+    if blocker_count:
+        return "blocked"
+    if warning_count:
+        return "needs_review"
+    return "ready"
 
 
 def _safe_int(value: object) -> int:
