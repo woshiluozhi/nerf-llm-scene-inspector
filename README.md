@@ -194,6 +194,8 @@ python scripts/generate_project_site.py --run-index results/pipeline_runs/run_in
 ```
 
 This writes a reproducible pipeline record to `results/pipeline_runs/desk_scene/pipeline_summary.json`.
+`pipeline_summary.success` is synchronized with step status: `success`, `warning`, and
+`skipped` steps are allowed, while any `failed` step marks the run unsuccessful.
 Each pipeline run writes run-scoped query, demo, evaluation, and report artifacts under
 `results/pipeline_runs/<scene>/`. Existing run-scoped query/demo/evaluation folders are
 cleaned by default to avoid stale results; pass `--no-clean-run` only when you intentionally

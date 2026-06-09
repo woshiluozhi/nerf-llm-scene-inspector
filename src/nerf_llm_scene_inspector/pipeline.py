@@ -707,7 +707,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     except Exception as exc:
         steps.append(PipelineStep("pipeline", "failed", error=str(exc)))
 
-    success = all(step.status in {"success", "skipped", "warning"} for step in steps)
+    success = _steps_allow_success(steps)
     summary = PipelineRunSummary(
         scene_name=config.scene_name,
         success=success,
@@ -721,7 +721,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
         warnings=warnings,
     )
     summary_path = run_dir / "pipeline_summary.json"
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     diagnostics = write_failure_diagnostics(run_dir)
     diagnostics_json = run_dir / "failure_diagnostics.json"
     diagnostics_md = run_dir / "failure_diagnostics.md"
@@ -744,7 +744,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     )
     if diagnostics.status == "blocked":
         summary.success = False
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     audit = audit_pipeline_run(run_dir)
     audit_json = audit.to_json(run_dir / "run_audit.json")
     audit_md = audit.to_markdown(run_dir / "run_audit.md")
@@ -763,7 +763,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     )
     if audit.status == "blocked":
         summary.success = False
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     recommendations = build_run_recommendations(run_dir)
     recommendations_json = recommendations.to_json(run_dir / "run_recommendations.json")
     recommendations_md = recommendations.to_markdown(run_dir / "run_recommendations.md")
@@ -780,7 +780,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             outputs={"json": str(recommendations_json), "markdown": str(recommendations_md)},
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     # Seed this artifact before the evidence scorecard checks portfolio packaging.
     # The report is rewritten after quality/reproduction artifacts are available.
     write_research_report(run_dir)
@@ -800,7 +800,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             outputs={"json": str(scorecard_json), "markdown": str(scorecard_md)},
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     quality_gate = check_run_quality(run_dir, profile="smoke")
     quality_gate_json = quality_gate.to_json(run_dir / "quality_gate.json")
     quality_gate_md = quality_gate.to_markdown(run_dir / "quality_gate.md")
@@ -818,7 +818,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             outputs={"json": str(quality_gate_json), "markdown": str(quality_gate_md)},
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     research = write_research_report(run_dir)
     steps.append(
         PipelineStep(
@@ -835,7 +835,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     portfolio_page = build_portfolio_page(run_dir)
     portfolio_page_path = portfolio_page.write_html(run_dir / "portfolio_page.html")
     steps.append(
@@ -851,7 +851,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             outputs={"html": str(portfolio_page_path)},
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     run_index = index_pipeline_runs(runs_root)
     run_index.to_json(runs_root / "run_index.json")
     run_index.to_markdown(runs_root / "run_index.md")
@@ -870,7 +870,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             outputs={"json": str(comparison_json), "markdown": str(comparison_md)},
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction_manifest = reproduction.to_json(run_dir / "reproduction_manifest.json")
     reproduction_report = reproduction.to_markdown(run_dir / "reproduction_report.md")
@@ -891,7 +891,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     submission = write_submission_packet(run_dir)
     steps.append(
         PipelineStep(
@@ -910,7 +910,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     real_run_plan = write_real_run_plan(
         run_dir,
         output_dir=real_run_plan_dir,
@@ -939,7 +939,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     refreshed_index = index_pipeline_runs(runs_root)
     refreshed_index.to_json(runs_root / "run_index.json")
     refreshed_index.to_markdown(runs_root / "run_index.md")
@@ -968,7 +968,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     )
     if claim_audit.status == "fail":
         summary.success = False
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     write_submission_packet(run_dir)
     result_card = write_run_result_card(run_dir)
     steps.append(
@@ -987,7 +987,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     claim_audit = write_claim_audit(root=root, run_dir=run_dir)
     steps.append(
         PipelineStep(
@@ -1008,7 +1008,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     )
     if claim_audit.status == "fail":
         summary.success = False
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     write_submission_packet(run_dir)
     write_run_result_card(run_dir)
     claim_audit = write_claim_audit(root=root, run_dir=run_dir)
@@ -1032,7 +1032,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
             },
         )
     )
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction.to_json(run_dir / "reproduction_manifest.json")
     reproduction.to_markdown(run_dir / "reproduction_report.md")
@@ -1048,7 +1048,7 @@ def run_scene_pipeline(config: PipelineConfig) -> PipelineRunSummary:
     build_portfolio_page(run_dir).write_html(run_dir / "portfolio_page.html")
     reproduction = build_reproduction_bundle(run_dir)
     _update_reproduction_step(steps, reproduction, run_dir)
-    summary.to_json(summary_path)
+    _write_pipeline_summary(summary, summary_path)
     reproduction = build_reproduction_bundle(run_dir)
     reproduction.to_json(run_dir / "reproduction_manifest.json")
     reproduction.to_markdown(run_dir / "reproduction_report.md")
@@ -1192,6 +1192,15 @@ def _write_step_json(path: Path, payload: dict[str, object]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
+
+
+def _write_pipeline_summary(summary: PipelineRunSummary, path: Path) -> Path:
+    summary.success = summary.success and _steps_allow_success(summary.steps)
+    return summary.to_json(path)
+
+
+def _steps_allow_success(steps: list[PipelineStep]) -> bool:
+    return all(step.status in {"success", "skipped", "warning"} for step in steps)
 
 
 def _add_if_exists(outputs: dict[str, str], name: str, path: Path) -> None:

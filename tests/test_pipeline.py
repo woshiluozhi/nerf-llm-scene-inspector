@@ -590,6 +590,76 @@ def test_run_scene_pipeline_marks_failed_language_training_step(
     assert diagnostics_step.status == "failed"
 
 
+def test_run_scene_pipeline_persists_late_failed_step_as_failed_summary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    class BlockedRecommendations:
+        readiness_level = "blocked"
+        critical_count = 1
+        high_count = 0
+        top_next_action = "Fix the blocked recommendation."
+
+        def to_json(self, path: str | Path) -> Path:
+            output_path = Path(path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(
+                json.dumps(
+                    {
+                        "readiness_level": self.readiness_level,
+                        "critical_count": self.critical_count,
+                        "high_count": self.high_count,
+                        "top_next_action": self.top_next_action,
+                        "recommendations": [
+                            {
+                                "severity": "critical",
+                                "category": "test",
+                                "action": self.top_next_action,
+                                "rationale": "Synthetic blocked recommendation.",
+                            }
+                        ],
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            return output_path
+
+        def to_markdown(self, path: str | Path) -> Path:
+            output_path = Path(path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("# Run Recommendations\n\n- Readiness: blocked\n", encoding="utf-8")
+            return output_path
+
+    monkeypatch.setattr(pipeline, "build_run_recommendations", lambda _run_dir: BlockedRecommendations())
+
+    summary = run_scene_pipeline(
+        PipelineConfig(
+            input_path=tmp_path,
+            scene_name="late_failed_step_scene",
+            data_type="images",
+            queries=[],
+            data_root=tmp_path / "data",
+            runs_root=tmp_path / "runs",
+            output_root=tmp_path / "pipeline_runs",
+            dry_run=True,
+            skip_baseline=True,
+            skip_language=True,
+            skip_queries=True,
+            skip_demo=True,
+            skip_eval=True,
+        )
+    )
+
+    run_dir = tmp_path / "pipeline_runs" / "late_failed_step_scene"
+    persisted_summary = json.loads((run_dir / "pipeline_summary.json").read_text(encoding="utf-8"))
+    recommendation_step = next(step for step in summary.steps if step.name == "recommend_next_steps")
+
+    assert recommendation_step.status == "failed"
+    assert summary.success is False
+    assert persisted_summary["success"] is False
+
+
 def test_run_scene_pipeline_cleans_stale_run_outputs(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     config_path.write_text("method_name: lerf-lite\n", encoding="utf-8")
