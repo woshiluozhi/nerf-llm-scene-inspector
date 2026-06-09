@@ -123,7 +123,9 @@ The run quality gate applies the same count-based check: nonzero
 `capture_manifest_validation.fail_count` fails the gate even if a stale status field still
 looks ready.
 `portfolio_page.html` mirrors those fields in its top-level metrics and Sharing Readiness
-panel, including query-evidence status, counter-evidence count, and risk-flag count.
+panel, including capture validation status/failures, query-evidence status,
+counter-evidence count, and risk-flag count. It also reads local capture validation before
+rendering, so a stale result card cannot hide a real-run capture blocker.
 Use `run_readiness.md` before launching or sharing a run: it combines pipeline success,
 dry-run/real-run mode, capture metadata, preflight status, GPU/upstream environment checks,
 language training, query evidence risk flags, run audit, failure diagnostics, quality gates,

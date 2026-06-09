@@ -24,6 +24,8 @@ class PortfolioPage:
     audit_status: str
     summary: str
     result_status: str = "unknown"
+    capture_manifest_status: str = "unknown"
+    capture_manifest_fail_count: int = 0
     query_evidence_status: str = "unknown"
     query_counter_evidence_count: int = 0
     query_risk_flag_count: int = 0
@@ -51,6 +53,11 @@ class PortfolioPage:
             dry_run_note = (
                 "This run has unresolved query-risk flags; review query evidence "
                 "before using scene-answer claims externally."
+            )
+        elif self.capture_manifest_fail_count:
+            dry_run_note = (
+                "This run has capture-manifest validation failures; resolve capture "
+                "metadata, privacy, static-scene, or overlap issues before sharing."
             )
         return "\n".join(
             [
@@ -127,22 +134,34 @@ def build_portfolio_page(run_dir: str | Path) -> PortfolioPage:
     scorecard = _read_json(root / "evidence_scorecard.json")
     audit = _read_json(root / "run_audit.json")
     result_card = _read_json(root / "run_result_card.json")
+    capture = _read_json(root / "capture_manifest_validation.json")
     query_evidence = _read_json(root / "query_evidence_audit.json")
     evaluation = _read_json(root / "evaluation" / "eval_summary.json")
     scene_name = str(summary.get("scene_name") or scorecard.get("scene_name") or root.name)
     score = scorecard.get("score", "?")
     max_score = scorecard.get("max_score", "?")
-    sharing_readiness = _sharing_readiness(root)
+    dry_run = bool(summary.get("dry_run", scorecard.get("dry_run", False)))
+    sharing_readiness = _sharing_readiness(root, capture=capture, dry_run=dry_run)
     counter_evidence_count, risk_flag_count = _query_evidence_counts(query_evidence, sharing_readiness)
+    capture_status = _capture_manifest_status(capture, sharing_readiness)
+    capture_fail_count = _capture_manifest_fail_count(capture, sharing_readiness)
     return PortfolioPage(
         run_dir=".",
         scene_name=scene_name,
         backend=str(summary.get("backend") or scorecard.get("backend") or "unknown"),
-        dry_run=bool(summary.get("dry_run", scorecard.get("dry_run", False))),
+        dry_run=dry_run,
         evidence_level=str(scorecard.get("evidence_level") or "unknown"),
         evidence_score=f"{score}/{max_score}",
         audit_status=str(audit.get("status") or "unknown"),
-        result_status=str(result_card.get("result_status") or "unknown"),
+        result_status=_page_result_status(
+            str(result_card.get("result_status") or "unknown"),
+            dry_run=dry_run,
+            capture_present=bool(capture),
+            capture_status=capture_status,
+            capture_fail_count=capture_fail_count,
+        ),
+        capture_manifest_status=capture_status or "unknown",
+        capture_manifest_fail_count=capture_fail_count,
         query_evidence_status=str(sharing_readiness.get("query_evidence_status") or query_evidence.get("status") or "unknown"),
         query_counter_evidence_count=counter_evidence_count,
         query_risk_flag_count=risk_flag_count,
@@ -178,26 +197,38 @@ def _recommendations(scorecard: dict[str, Any]) -> list[str]:
     return [str(item) for item in raw[:5]] or ["No scorecard recommendations were recorded."]
 
 
-def _sharing_readiness(root: Path) -> dict[str, Any]:
+def _sharing_readiness(root: Path, *, capture: dict[str, Any], dry_run: bool) -> dict[str, Any]:
     packet = _read_json(root / "submission_packet" / "submission_packet.json")
     query_evidence = _read_json(root / "query_evidence_audit.json")
     summary = packet.get("readiness_summary")
     if isinstance(summary, dict) and summary:
-        return _with_query_evidence(dict(summary), packet, query_evidence)
-    if packet:
-        return _with_query_evidence(
-            {
-            "status": "unknown",
-            "readiness_level": packet.get("readiness_level", "unknown"),
-            "failed_check_count": _count_items(packet.get("checklist"), "fail"),
-            "warning_check_count": _count_items(packet.get("checklist"), "warn"),
-            "packet_warning_count": len(packet.get("warnings") or []),
-            "pack_ok": packet.get("pack_ok"),
-            "recommended_next_action": packet.get("share_decision") or "Review the submission checklist.",
-            },
+        return _with_capture_validation(
+            _with_query_evidence(dict(summary), packet, query_evidence),
             packet,
-            query_evidence,
+            capture,
+            dry_run=dry_run,
         )
+    if packet:
+        return _with_capture_validation(
+            _with_query_evidence(
+                {
+                    "status": "unknown",
+                    "readiness_level": packet.get("readiness_level", "unknown"),
+                    "failed_check_count": _count_items(packet.get("checklist"), "fail"),
+                    "warning_check_count": _count_items(packet.get("checklist"), "warn"),
+                    "packet_warning_count": len(packet.get("warnings") or []),
+                    "pack_ok": packet.get("pack_ok"),
+                    "recommended_next_action": packet.get("share_decision") or "Review the submission checklist.",
+                },
+                packet,
+                query_evidence,
+            ),
+            packet,
+            capture,
+            dry_run=dry_run,
+        )
+    if capture:
+        return _with_capture_validation({}, {}, capture, dry_run=dry_run)
     return {}
 
 
@@ -263,6 +294,8 @@ def _stat_cards(page: PortfolioPage) -> list[str]:
     stats = [
         ("Evidence", page.evidence_level),
         ("Result", page.result_status),
+        ("Capture", page.capture_manifest_status),
+        ("Capture fails", str(page.capture_manifest_fail_count)),
         ("Query evidence", page.query_evidence_status),
         ("Risk flags", str(page.query_risk_flag_count)),
         ("Backend", page.backend),
@@ -318,6 +351,8 @@ def _sharing_readiness_panel(summary: dict[str, Any]) -> str:
         ("Warning checks", summary.get("warning_check_count", 0)),
         ("Packet warnings", summary.get("packet_warning_count", 0)),
         ("Pack OK", summary.get("pack_ok")),
+        ("Capture manifest", summary.get("capture_manifest_status", "unknown")),
+        ("Capture failures", summary.get("capture_manifest_fail_count", 0)),
         ("Query evidence", summary.get("query_evidence_status", "unknown")),
         ("Query counter-evidence", summary.get("query_counter_evidence_count", 0)),
         ("Query risk flags", summary.get("query_risk_flag_count", 0)),
@@ -484,6 +519,82 @@ def _with_query_evidence(
     if "query_risk_flag_count" not in summary:
         summary["query_risk_flag_count"] = risk_flag_count
     return summary
+
+
+def _with_capture_validation(
+    summary: dict[str, Any],
+    packet: dict[str, Any],
+    capture: dict[str, Any],
+    *,
+    dry_run: bool,
+) -> dict[str, Any]:
+    capture_status = _capture_manifest_status(capture, packet)
+    fail_count = _capture_manifest_fail_count(capture, packet)
+    summary["capture_manifest_status"] = str(capture.get("status") or capture_status or "missing")
+    summary["capture_manifest_fail_count"] = fail_count
+    should_block = (not dry_run and not capture) or (not dry_run and capture_status != "ready") or fail_count
+    if should_block:
+        summary["status"] = "fail"
+        summary["readiness_level"] = "blocked"
+        _append_unique(summary, "failed_checks", "capture_manifest")
+        _append_unique(
+            summary,
+            "top_blockers",
+            (
+                "capture_manifest: "
+                f"status={summary['capture_manifest_status']}, failures={fail_count}. "
+                "Fix capture validation before external sharing."
+            ),
+        )
+        summary["failed_check_count"] = max(
+            _safe_int(summary.get("failed_check_count")),
+            len(summary.get("failed_checks") or []),
+        )
+        summary["recommended_next_action"] = "Fix capture validation before external sharing."
+    elif capture_status and capture_status != "ready":
+        _append_unique(summary, "warning_checks", "capture_manifest")
+        _append_unique(
+            summary,
+            "top_warnings",
+            f"capture_manifest: status={summary['capture_manifest_status']}, failures={fail_count}.",
+        )
+        summary["warning_check_count"] = max(
+            _safe_int(summary.get("warning_check_count")),
+            len(summary.get("warning_checks") or []),
+        )
+    return summary
+
+
+def _page_result_status(
+    result_status: str,
+    *,
+    dry_run: bool,
+    capture_present: bool,
+    capture_status: str,
+    capture_fail_count: int,
+) -> str:
+    if (not dry_run and not capture_present) or (not dry_run and capture_status != "ready") or capture_fail_count:
+        return "blocked"
+    return result_status
+
+
+def _capture_manifest_status(capture: dict[str, Any], source: dict[str, Any]) -> str:
+    if capture:
+        return str(capture.get("status") or "")
+    return str(source.get("capture_manifest_status") or "")
+
+
+def _capture_manifest_fail_count(capture: dict[str, Any], source: dict[str, Any]) -> int:
+    return max(_safe_int(capture.get("fail_count")), _safe_int(source.get("capture_manifest_fail_count")))
+
+
+def _append_unique(payload: dict[str, Any], key: str, value: str) -> None:
+    items = payload.get(key)
+    if not isinstance(items, list):
+        items = []
+        payload[key] = items
+    if value not in items:
+        items.append(value)
 
 
 def _query_evidence_counts(query_evidence: dict[str, Any], source: dict[str, Any]) -> tuple[int, int]:

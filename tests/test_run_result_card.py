@@ -199,6 +199,21 @@ def test_run_result_card_blocks_stale_submission_when_capture_has_failures(tmp_p
     assert any(check.name == "capture_manifest" and check.status == "fail" for check in card.checks)
 
 
+def test_run_result_card_blocks_real_run_capture_needs_review(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "needs_review", "fail_count": 0, "warn_count": 1},
+    )
+
+    card = build_run_result_card(run_dir)
+
+    assert card.result_status == "blocked"
+    assert card.evidence_snapshot["capture_manifest"] == "needs_review"
+    assert card.evidence_snapshot["capture_manifest_fail_count"] == 0
+    assert any(check.name == "capture_manifest" and check.status == "fail" for check in card.checks)
+
+
 def test_run_result_card_blocks_real_run_missing_capture_validation(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, dry_run=False)
     (run_dir / "capture_manifest_validation.json").unlink()

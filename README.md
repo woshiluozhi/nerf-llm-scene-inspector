@@ -278,8 +278,9 @@ nonzero `capture_manifest_validation.fail_count` from stale-looking ready artifa
 The run result card consumes the same packet/audit fields and independently checks local
 capture validation, so a high evidence score alone cannot promote a run to
 `portfolio_ready` while submission, query-evidence, or capture gates are blocked.
-The generated `portfolio_page.html` surfaces the same result status and query-risk counts
-near the top of the page, so a reviewer sees blocked evidence without opening raw JSON.
+The generated `portfolio_page.html` independently surfaces capture validation status,
+capture failure counts, result status, and query-risk counts near the top of the page, so a
+reviewer sees blocked evidence without opening raw JSON.
 Open `results/pipeline_runs/<scene>/run_readiness.md` when deciding whether to spend GPU
 time or send the run externally. It consolidates pipeline success, evidence mode, capture,
 preflight, environment, language training, query evidence, run audit, failure diagnostics,

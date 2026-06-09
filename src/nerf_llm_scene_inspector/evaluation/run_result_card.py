@@ -255,6 +255,7 @@ def _result_status(
         not success
         or quality_status == "fail"
         or (not dry_run and not capture_present)
+        or (not dry_run and capture_status != "ready")
         or capture_status == "blocked"
         or capture_fail_count
         or audit_status == "blocked"

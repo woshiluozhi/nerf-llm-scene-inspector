@@ -18,6 +18,8 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "desk_scene" in html
     assert "dry_run_demo_ready" in html
     assert "shareable_smoke_demo" in html
+    assert "Capture manifest" in html
+    assert "Capture failures" in html
     assert "Query evidence" in html
     assert "Query risk flags" in html
     assert "counter-evidence" in html
@@ -33,6 +35,8 @@ def test_build_portfolio_page_uses_relative_links(tmp_path: Path) -> None:
     assert "needs_pack_validation" in html
     assert "Finalize annotations with --export-pack --zip-pack." in html
     assert "portfolio_pack" in html
+    assert page.capture_manifest_status == "needs_review"
+    assert page.capture_manifest_fail_count == 0
     assert str(tmp_path) not in html
     assert "C:\\Users" not in html
 
@@ -86,6 +90,60 @@ def test_portfolio_page_surfaces_blocked_query_risk_flags(tmp_path: Path) -> Non
     assert "C:\\Users" not in html
 
 
+def test_portfolio_page_blocks_stale_result_card_on_capture_failures(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    _write_json(run_dir / "run_result_card.json", {"result_status": "portfolio_ready"})
+    _write_json(
+        run_dir / "submission_packet" / "submission_packet.json",
+        {
+            "readiness_level": "portfolio_ready",
+            "pack_ok": True,
+            "readiness_summary": {
+                "status": "pass",
+                "readiness_level": "portfolio_ready",
+                "failed_check_count": 0,
+                "warning_check_count": 0,
+                "packet_warning_count": 0,
+                "failed_checks": [],
+                "warning_checks": [],
+                "top_blockers": [],
+                "top_warnings": [],
+                "pack_ok": True,
+                "capture_manifest_status": "ready",
+                "capture_manifest_fail_count": 0,
+                "query_evidence_status": "pass",
+                "query_counter_evidence_count": 0,
+                "query_risk_flag_count": 0,
+                "recommended_next_action": "Share with recorded limitations.",
+            },
+        },
+    )
+    _write_json(run_dir / "capture_manifest_validation.json", {"status": "ready", "fail_count": "1", "warn_count": 0})
+
+    page = build_portfolio_page(run_dir)
+    html = page.to_html()
+
+    assert page.result_status == "blocked"
+    assert page.sharing_readiness["status"] == "fail"
+    assert page.sharing_readiness["readiness_level"] == "blocked"
+    assert page.capture_manifest_status == "ready"
+    assert page.capture_manifest_fail_count == 1
+    assert "capture_manifest" in page.sharing_readiness["failed_checks"]
+    assert "Fix capture validation before external sharing." in html
+
+
+def test_portfolio_page_blocks_real_run_missing_capture_validation(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, dry_run=False)
+    (run_dir / "capture_manifest_validation.json").unlink()
+
+    page = build_portfolio_page(run_dir)
+
+    assert page.result_status == "blocked"
+    assert page.sharing_readiness["readiness_level"] == "blocked"
+    assert page.sharing_readiness["capture_manifest_status"] == "missing"
+    assert "capture_manifest" in page.sharing_readiness["failed_checks"]
+
+
 def test_generate_portfolio_page_cli_writes_html(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path)
     output = tmp_path / "page.html"
@@ -114,14 +172,14 @@ def test_generate_portfolio_page_cli_writes_html(tmp_path: Path) -> None:
     assert "Sharing Readiness" in html
 
 
-def _write_run(tmp_path: Path) -> Path:
+def _write_run(tmp_path: Path, *, dry_run: bool = True) -> Path:
     run_dir = tmp_path / "run"
     _write_json(
         run_dir / "pipeline_summary.json",
         {
             "scene_name": "desk_scene",
             "success": True,
-            "dry_run": True,
+            "dry_run": dry_run,
             "backend": "lerf",
             "queries": ["mug"],
         },
@@ -131,8 +189,8 @@ def _write_run(tmp_path: Path) -> Path:
         {
             "scene_name": "desk_scene",
             "backend": "lerf",
-            "dry_run": True,
-            "evidence_level": "dry_run_demo_ready",
+            "dry_run": dry_run,
+            "evidence_level": "dry_run_demo_ready" if dry_run else "portfolio_ready_real_run",
             "score": 77,
             "max_score": 100,
             "summary": "Run is a useful smoke demo.",
@@ -140,8 +198,12 @@ def _write_run(tmp_path: Path) -> Path:
             "metrics": {"top_k_hit_rate": 0.0},
         },
     )
-    _write_json(run_dir / "run_audit.json", {"status": "needs_review"})
-    _write_json(run_dir / "run_result_card.json", {"result_status": "shareable_smoke_demo"})
+    _write_json(run_dir / "run_audit.json", {"status": "needs_review" if dry_run else "ready"})
+    _write_json(run_dir / "run_result_card.json", {"result_status": "shareable_smoke_demo" if dry_run else "portfolio_ready"})
+    _write_json(
+        run_dir / "capture_manifest_validation.json",
+        {"status": "needs_review" if dry_run else "ready", "fail_count": 0, "warn_count": 1 if dry_run else 0},
+    )
     _write_json(
         run_dir / "query_evidence_audit.json",
         {
@@ -181,6 +243,8 @@ def _write_run(tmp_path: Path) -> Path:
                 "top_blockers": [],
                 "top_warnings": ["portfolio_pack: portfolio pack was not validated"],
                 "pack_ok": None,
+                "capture_manifest_status": "needs_review" if dry_run else "ready",
+                "capture_manifest_fail_count": 0,
                 "query_evidence_status": "pass",
                 "query_counter_evidence_count": 0,
                 "query_risk_flag_count": 0,
